@@ -1,0 +1,11 @@
+{
+  "recommendations": [
+    "dbaeumer.vscode-eslint",
+    "esbenp.prettier-vscode",
+    "rangav.vscode-thunder-client",
+    "mongodb.mongodb-vscode",
+    "ms-vscode.vscode-typescript-next",
+    "bradlc.vscode-tailwindcss",
+    "expo.vscode-expo-tools"
+  ]
+}

@@ -1,0 +1,50 @@
+{
+  "compilerOptions": {
+    // Target & output
+    "target": "ES2022",
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "lib": ["ES2022"],
+    "outDir": "./dist",
+    "rootDir": "./src",
+
+    // Interop
+    "allowSyntheticDefaultImports": true,
+    "esModuleInterop": true,
+    "allowImportingTsExtensions": true,
+    "verbatimModuleSyntax": true,
+
+    // Path aliases
+    "baseUrl": ".",
+    "paths": {
+      "@/*": ["./src/*"]
+    },
+
+    // Emit
+    "noEmit": true,
+    "declaration": true,
+    "sourceMap": true,
+
+    // Strict mode
+    "strict": true,
+    "noImplicitAny": true,
+    "strictNullChecks": true,
+    "noFallthroughCasesInSwitch": true,
+    "noImplicitOverride": true,
+    "noUncheckedIndexedAccess": false,
+
+    // Quality
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+
+    // Performance
+    "skipLibCheck": true,
+    "forceConsistentCasingInFileNames": true,
+
+    // Bun runtime
+    "moduleDetection": "force",
+    "types": ["bun-types", "node"]
+  },
+  "include": ["src/**/*"],
+  "exclude": ["node_modules", "dist"]
+}
