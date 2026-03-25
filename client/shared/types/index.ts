@@ -1,0 +1,107 @@
+/**
+ * Shared TypeScript interfaces & types used across all feature modules.
+ * Each member can add their own types here or keep them in their feature folder.
+ */
+
+// ── API Response ───────────────────────────────────────────────────────────────
+
+export interface ApiSuccessResponse<T = unknown> {
+  success: true;
+  message?: string;
+  data: T;
+}
+
+export interface ApiErrorResponse {
+  success: false;
+  message: string;
+  errors?: { field: string; message: string }[];
+}
+
+// ── User / Auth ────────────────────────────────────────────────────────────────
+
+export type UserRole = 'patient' | 'doctor' | 'admin';
+
+export interface User {
+  _id: string;
+  name: string;
+  email: string;
+  role: UserRole;
+  phone?: string;
+  dateOfBirth?: string;
+  idDocumentUrl?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface AuthResponse {
+  token: string;
+  user: User;
+}
+
+// ── Doctor ─────────────────────────────────────────────────────────────────────
+
+export type DoctorAvailability = 'Available' | 'Unavailable' | 'On Leave';
+
+export interface Doctor {
+  _id: string;
+  userId: User;
+  specialization: string;
+  experienceYears: number;
+  consultationFee: number;
+  availability: DoctorAvailability;
+  licenseDocumentUrl: string;
+}
+
+// ── Appointment ────────────────────────────────────────────────────────────────
+
+export type AppointmentStatus = 'Pending' | 'Confirmed' | 'Completed' | 'Cancelled';
+
+export interface Appointment {
+  _id: string;
+  patientId: string | User;
+  doctorId: string | Doctor;
+  appointmentDate: string;
+  reasonForVisit?: string;
+  status: AppointmentStatus;
+  referralDocumentUrl?: string;
+  createdAt: string;
+}
+
+// ── Medical Record ─────────────────────────────────────────────────────────────
+
+export interface MedicalRecord {
+  _id: string;
+  patientId: string | User;
+  doctorId: string | Doctor;
+  diagnosis: string;
+  prescription?: string;
+  dateRecorded: string;
+  labReportUrl?: string;
+  createdAt: string;
+}
+
+// ── Medicine ───────────────────────────────────────────────────────────────────
+
+export interface Medicine {
+  _id: string;
+  name: string;
+  category: string;
+  price: number;
+  stockQuantity: number;
+  expiryDate: string;
+  packagingImageUrl: string;
+}
+
+// ── Invoice ────────────────────────────────────────────────────────────────────
+
+export type PaymentStatus = 'Unpaid' | 'Pending Verification' | 'Paid';
+
+export interface Invoice {
+  _id: string;
+  patientId: string | User;
+  appointmentId?: string | Appointment;
+  totalAmount: number;
+  paymentStatus: PaymentStatus;
+  issuedDate: string;
+  paymentReceiptUrl?: string;
+}
