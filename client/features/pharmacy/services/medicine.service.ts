@@ -22,8 +22,11 @@ export interface UpdateMedicinePayload {
   name?: string;
   category?: string;
   price?: number;
-  stockQuantity?: number;
   expiryDate?: string;
+}
+
+export interface AdjustStockPayload {
+  quantityChange: number;
 }
 
 export const medicineService = {
@@ -31,18 +34,23 @@ export const medicineService = {
    * Fetch all medicines, optionally filtered by category.
    */
   getMedicines: async (filters?: MedicineFilters): Promise<Medicine[]> => {
-    const res = await apiClient.get<ApiSuccessResponse<Medicine[]>>(ENDPOINTS.MEDICINES.BASE, {
-      params: filters,
-    });
-    return res.data.data;
+    const res = await apiClient.get<ApiSuccessResponse<{ medicines: Medicine[]; count: number }>>(
+      ENDPOINTS.MEDICINES.BASE,
+      {
+        params: filters,
+      },
+    );
+    return res.data.data.medicines;
   },
 
   /**
    * Fetch a single medicine by ID.
    */
   getMedicineById: async (id: string): Promise<Medicine> => {
-    const res = await apiClient.get<ApiSuccessResponse<Medicine>>(ENDPOINTS.MEDICINES.BY_ID(id));
-    return res.data.data;
+    const res = await apiClient.get<ApiSuccessResponse<{ medicine: Medicine }>>(
+      ENDPOINTS.MEDICINES.BY_ID(id),
+    );
+    return res.data.data.medicine;
   },
 
   /**
@@ -51,29 +59,32 @@ export const medicineService = {
    */
   createMedicine: async (payload: CreateMedicinePayload | FormData): Promise<Medicine> => {
     const isFormData = payload instanceof FormData;
-    const res = await apiClient.post<ApiSuccessResponse<Medicine>>(
+    const res = await apiClient.post<ApiSuccessResponse<{ medicine: Medicine }>>(
       ENDPOINTS.MEDICINES.BASE,
       payload,
       isFormData ? { headers: { 'Content-Type': 'multipart/form-data' } } : undefined,
     );
-    return res.data.data;
+    return res.data.data.medicine;
   },
 
   /**
    * Update a medicine. Admin only.
-   * Pass FormData to replace the packaging image.
+   * Sends JSON fields such as name/category/price/expiryDate.
    */
-  updateMedicine: async (
-    id: string,
-    payload: UpdateMedicinePayload | FormData,
-  ): Promise<Medicine> => {
-    const isFormData = payload instanceof FormData;
-    const res = await apiClient.put<ApiSuccessResponse<Medicine>>(
+  updateMedicine: async (id: string, payload: UpdateMedicinePayload): Promise<Medicine> => {
+    const res = await apiClient.put<ApiSuccessResponse<{ medicine: Medicine }>>(
       ENDPOINTS.MEDICINES.BY_ID(id),
       payload,
-      isFormData ? { headers: { 'Content-Type': 'multipart/form-data' } } : undefined,
     );
-    return res.data.data;
+    return res.data.data.medicine;
+  },
+
+  adjustStock: async (id: string, payload: AdjustStockPayload): Promise<Medicine> => {
+    const res = await apiClient.patch<ApiSuccessResponse<{ medicine: Medicine; quantityChange: number }>>(
+      ENDPOINTS.MEDICINES.ADJUST_STOCK(id),
+      payload,
+    );
+    return res.data.data.medicine;
   },
 
   /**

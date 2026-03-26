@@ -18,6 +18,15 @@ router.get('/health', (_req: Request, res: Response) => {
   });
 });
 
+router.get('/api/health', (_req: Request, res: Response) => {
+  res.json({
+    success: true,
+    message: 'Hospital Management API is running',
+    timestamp: new Date().toISOString(),
+    environment: process.env['NODE_ENV'] ?? 'development',
+  });
+});
+
 // ── Module Routes ──────────────────────────────────────────────────────────────
 // Member 1: Auth (/api/auth/register, /api/auth/login) + Patients (/api/patients/me)
 router.use('/api', authRoutes);

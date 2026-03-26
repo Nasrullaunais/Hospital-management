@@ -1,6 +1,7 @@
 import type { Request, Response, NextFunction } from 'express';
 import type { Error as MongooseError } from 'mongoose';
 import { ApiError } from '../utils/ApiError.js';
+import { getRequestContext, logger } from '../utils/logger.js';
 
 interface MongoServerError extends Error {
   code?: number;
@@ -24,9 +25,13 @@ export const errorHandler = (
   _next: NextFunction,
 ): void => {
   const isDev = process.env.NODE_ENV === 'development';
+  const requestContext = getRequestContext(req);
 
   // ── 1. Already an ApiError (operational) ────────────────────────────────────
   if (err instanceof ApiError) {
+    if (err.statusCode >= 500) {
+      logger.error({ event: 'api_error', statusCode: err.statusCode, ...requestContext, err }, err.message);
+    }
     res.status(err.statusCode).json({
       success: false,
       message: err.message,
@@ -88,7 +93,14 @@ export const errorHandler = (
   }
 
   // ── 7. Unknown / unexpected error ────────────────────────────────────────────
-  console.error('Unhandled error:', err);
+  logger.error(
+    {
+      event: 'unhandled_error',
+      ...requestContext,
+      err,
+    },
+    'Unhandled error',
+  );
   res.status(500).json({
     success: false,
     message: isDev ? err.message : 'Something went wrong. Please try again.',

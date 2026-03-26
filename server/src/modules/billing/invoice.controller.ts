@@ -2,6 +2,7 @@ import type { Request, Response, NextFunction } from 'express';
 import { validationResult } from 'express-validator';
 import { Invoice } from './invoice.model.js';
 import { ApiError } from '../../shared/utils/ApiError.js';
+import { getRequestContext, logger } from '../../shared/utils/logger.js';
 
 /** POST /api/invoices — Create invoice (Staff/Admin) */
 export const createInvoice = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
@@ -14,6 +15,17 @@ export const createInvoice = async (req: Request, res: Response, next: NextFunct
       totalAmount: req.body.totalAmount,
     });
 
+    logger.info(
+      {
+        event: 'invoice_created',
+        invoiceId: invoice._id.toString(),
+        patientId: String(req.body.patientId),
+        totalAmount: req.body.totalAmount,
+        ...getRequestContext(req),
+      },
+      'Invoice created',
+    );
+
     res.status(201).json({ success: true, message: 'Invoice created', data: { invoice } });
   } catch (err) {
     next(err);
@@ -23,7 +35,10 @@ export const createInvoice = async (req: Request, res: Response, next: NextFunct
 /** GET /api/invoices/my-bills — Patient's own invoices */
 export const getMyBills = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   try {
-    const invoices = await Invoice.find({ patientId: req.user!.id })
+    const userId = req.user?.id;
+    if (!userId) return next(ApiError.unauthorized());
+
+    const invoices = await Invoice.find({ patientId: userId })
       .populate('appointmentId', 'appointmentDate status')
       .sort({ issuedDate: -1 });
 
@@ -56,8 +71,11 @@ export const uploadPaymentReceipt = async (req: Request, res: Response, next: Ne
   try {
     if (!req.file) return next(ApiError.badRequest('Payment receipt file is required'));
 
+    const userId = req.user?.id;
+    if (!userId) return next(ApiError.unauthorized());
+
     const invoice = await Invoice.findOneAndUpdate(
-      { _id: req.params.id, patientId: req.user!.id },
+      { _id: req.params.id, patientId: userId },
       {
         paymentReceiptUrl: `/uploads/${req.file.filename}`,
         paymentStatus: 'Pending Verification',
@@ -66,6 +84,17 @@ export const uploadPaymentReceipt = async (req: Request, res: Response, next: Ne
     );
 
     if (!invoice) return next(ApiError.notFound('Invoice not found or you do not have permission'));
+
+    logger.info(
+      {
+        event: 'invoice_receipt_uploaded',
+        invoiceId: invoice._id.toString(),
+        patientId: userId,
+        ...getRequestContext(req),
+      },
+      'Invoice payment receipt uploaded',
+    );
+
     res.json({ success: true, message: 'Receipt uploaded. Awaiting verification.', data: { invoice } });
   } catch (err) {
     next(err);
@@ -84,6 +113,16 @@ export const verifyPayment = async (req: Request, res: Response, next: NextFunct
     );
 
     if (!invoice) return next(ApiError.notFound('Invoice not found'));
+
+    logger.info(
+      {
+        event: 'invoice_payment_verified',
+        invoiceId: invoice._id.toString(),
+        ...getRequestContext(req),
+      },
+      'Invoice payment verified',
+    );
+
     res.json({ success: true, message: 'Payment verified', data: { invoice } });
   } catch (err) {
     next(err);

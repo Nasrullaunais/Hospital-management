@@ -1,5 +1,6 @@
 import mongoose from 'mongoose';
 import { env } from './env.js';
+import { logger } from '../shared/utils/logger.js';
 
 const MAX_RETRIES = 3;
 const RETRY_DELAY_MS = 5000;
@@ -12,16 +13,18 @@ const RETRY_DELAY_MS = 5000;
  * Call this once at app startup in index.ts.
  */
 export async function connectDB(): Promise<void> {
+  const dbLogger = logger.child({ component: 'database' });
+
   mongoose.connection.on('connected', () => {
-    console.info(`✅ MongoDB connected: ${mongoose.connection.host}`);
+    dbLogger.info({ event: 'mongo_connected', host: mongoose.connection.host }, 'MongoDB connected');
   });
 
   mongoose.connection.on('disconnected', () => {
-    console.warn('⚠️  MongoDB disconnected');
+    dbLogger.warn({ event: 'mongo_disconnected' }, 'MongoDB disconnected');
   });
 
   mongoose.connection.on('error', (err) => {
-    console.error('❌ MongoDB connection error:', err.message);
+    dbLogger.error({ event: 'mongo_connection_error', err }, 'MongoDB connection error');
   });
 
   for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
@@ -35,13 +38,26 @@ export async function connectDB(): Promise<void> {
     } catch (err) {
       const error = err as Error;
       if (attempt === MAX_RETRIES) {
-        console.error(
-          `❌ MongoDB connection failed after ${MAX_RETRIES} attempts: ${error.message}`,
+        dbLogger.fatal(
+          {
+            event: 'mongo_connect_failed',
+            attempt,
+            maxRetries: MAX_RETRIES,
+            err: error,
+          },
+          'MongoDB connection failed after max retries',
         );
         process.exit(1);
       }
-      console.warn(
-        `⚠️  MongoDB connection attempt ${attempt}/${MAX_RETRIES} failed. Retrying in ${RETRY_DELAY_MS / 1000}s...`,
+      dbLogger.warn(
+        {
+          event: 'mongo_retry',
+          attempt,
+          maxRetries: MAX_RETRIES,
+          retryDelayMs: RETRY_DELAY_MS,
+          error: error.message,
+        },
+        'MongoDB connection attempt failed, retrying',
       );
       await new Promise((resolve) => setTimeout(resolve, RETRY_DELAY_MS));
     }
@@ -54,5 +70,5 @@ export async function connectDB(): Promise<void> {
  */
 export async function disconnectDB(): Promise<void> {
   await mongoose.connection.close();
-  console.info('🔌 MongoDB connection closed.');
+  logger.info({ component: 'database', event: 'mongo_connection_closed' }, 'MongoDB connection closed');
 }

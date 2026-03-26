@@ -4,6 +4,7 @@ import jwt from 'jsonwebtoken';
 import { User } from './auth.model.js';
 import { ApiError } from '../../shared/utils/ApiError.js';
 import { env } from '../../config/env.js';
+import { getRequestContext, logger } from '../../shared/utils/logger.js';
 
 // ── Helper ─────────────────────────────────────────────────────────────────────
 
@@ -44,11 +45,29 @@ export const register = async (req: Request, res: Response, next: NextFunction):
 
     const existing = await User.findOne({ email });
     if (existing) {
+      logger.warn(
+        {
+          event: 'register_duplicate_email',
+          email,
+          ...getRequestContext(req),
+        },
+        'Registration blocked: email already exists',
+      );
       return next(ApiError.conflict('An account with this email already exists'));
     }
 
     const user = await User.create({ name, email, password });
     const token = signToken(user._id.toString(), user.email, user.role);
+
+    logger.info(
+      {
+        ...getRequestContext(req),
+        event: 'user_registered',
+        userId: user._id.toString(),
+        role: user.role,
+      },
+      'User registered successfully',
+    );
 
     res.status(201).json({
       success: true,
@@ -72,10 +91,28 @@ export const login = async (req: Request, res: Response, next: NextFunction): Pr
     // Explicitly select password (it has select: false on the schema)
     const user = await User.findOne({ email }).select('+password');
     if (!user || !(await user.comparePassword(password))) {
+      logger.warn(
+        {
+          event: 'login_failed',
+          email,
+          ...getRequestContext(req),
+        },
+        'Login failed due to invalid credentials',
+      );
       return next(ApiError.unauthorized('Invalid email or password'));
     }
 
     const token = signToken(user._id.toString(), user.email, user.role);
+
+    logger.info(
+      {
+        ...getRequestContext(req),
+        event: 'login_success',
+        userId: user._id.toString(),
+        role: user.role,
+      },
+      'User login successful',
+    );
 
     res.json({
       success: true,

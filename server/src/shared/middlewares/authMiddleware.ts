@@ -2,6 +2,8 @@ import type { Request, Response, NextFunction } from 'express';
 import jwt from 'jsonwebtoken';
 import { ApiError } from '../utils/ApiError.js';
 import { env } from '../../config/env.js';
+import { logger } from '../utils/logger.js';
+import { getRequestContext } from '../utils/logger.js';
 
 /**
  * Auth Middleware — JWT Verification
@@ -18,12 +20,26 @@ export const authMiddleware = (req: Request, res: Response, next: NextFunction):
   const authHeader = req.headers['authorization'];
 
   if (!authHeader || !authHeader.startsWith('Bearer ')) {
+    logger.warn(
+      {
+        event: 'auth_missing_token',
+        ...getRequestContext(req),
+      },
+      'Authentication failed: missing bearer token',
+    );
     return next(ApiError.unauthorized('No token provided. Please log in.'));
   }
 
   const token = authHeader.split(' ')[1];
 
   if (!token) {
+    logger.warn(
+      {
+        event: 'auth_malformed_header',
+        ...getRequestContext(req),
+      },
+      'Authentication failed: malformed authorization header',
+    );
     return next(ApiError.unauthorized('Malformed authorization header.'));
   }
 
@@ -32,8 +48,14 @@ export const authMiddleware = (req: Request, res: Response, next: NextFunction):
     req.user = decoded;
     next();
   } catch {
-    // Let the global error handler classify the JWT error (expired vs. invalid)
-    next(new Error('JsonWebTokenError'));
+    logger.warn(
+      {
+        event: 'auth_invalid_token',
+        ...getRequestContext(req),
+      },
+      'Authentication failed: invalid or expired token',
+    );
+    next(ApiError.unauthorized('Invalid or expired token. Please log in again.'));
   }
 };
 
@@ -47,9 +69,24 @@ export const authMiddleware = (req: Request, res: Response, next: NextFunction):
 export const requireRole = (...roles: string[]) => {
   return (req: Request, _res: Response, next: NextFunction): void => {
     if (!req.user) {
+      logger.warn(
+        {
+          event: 'auth_user_missing_after_auth',
+          ...getRequestContext(req),
+        },
+        'Authorization failed: authenticated user missing on request',
+      );
       return next(ApiError.unauthorized());
     }
     if (!roles.includes(req.user.role)) {
+      logger.warn(
+        {
+          event: 'authorization_denied',
+          allowedRoles: roles,
+          ...getRequestContext(req),
+        },
+        'Authorization denied due to role mismatch',
+      );
       return next(ApiError.forbidden(`Access restricted to: ${roles.join(', ')}`));
     }
     next();

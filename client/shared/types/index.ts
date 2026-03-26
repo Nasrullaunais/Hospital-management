@@ -19,7 +19,7 @@ export interface ApiErrorResponse {
 
 // ── User / Auth ────────────────────────────────────────────────────────────────
 
-export type UserRole = 'patient' | 'doctor' | 'admin';
+export type UserRole = 'patient' | 'doctor' | 'admin' | 'pharmacist';
 
 export interface User {
   _id: string;
@@ -78,6 +78,12 @@ export interface MedicalRecord {
   dateRecorded: string;
   labReportUrl?: string;
   createdAt: string;
+}
+
+/** Populated variant returned by GET /api/records/patient/:id and /api/records/doctor-logs */
+export interface PopulatedMedicalRecord extends Omit<MedicalRecord, 'patientId' | 'doctorId'> {
+  patientId: { _id: string; name: string; email: string };
+  doctorId: { _id: string; specialization: string; userId: { _id: string; name: string } };
 }
 
 // ── Medicine ───────────────────────────────────────────────────────────────────

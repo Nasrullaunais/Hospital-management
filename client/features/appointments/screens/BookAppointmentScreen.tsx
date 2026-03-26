@@ -11,47 +11,92 @@ import {
   Platform,
   Alert,
 } from 'react-native';
-import {
-  appointmentService,
-  type BookAppointmentPayload,
-} from '../services/appointment.service';
+import DateTimePicker, { type DateTimePickerEvent } from '@react-native-community/datetimepicker';
+import * as DocumentPicker from 'expo-document-picker';
+import { useLocalSearchParams, useRouter } from 'expo-router';
+import { appointmentService } from '../services/appointment.service';
 
-interface Props {
-  /** Pre-fill the doctor when navigating from DoctorDetailScreen. */
-  preselectedDoctorId?: string;
-  onSuccess?: () => void;
-}
+export default function BookAppointmentScreen() {
+  const { doctorId: paramDoctorId } = useLocalSearchParams<{ doctorId?: string }>();
+  const router = useRouter();
 
-/**
- * BookAppointmentScreen — Member 3
- * Form to book a new appointment with a doctor.
- * TODO: Replace doctorId TextInput with a doctor picker (list from DoctorListScreen).
- * TODO: Replace date TextInput with a proper DateTimePicker.
- * TODO: Add referral document upload via expo-document-picker.
- */
-export default function BookAppointmentScreen({ preselectedDoctorId, onSuccess }: Props) {
-  const [doctorId, setDoctorId] = useState(preselectedDoctorId ?? '');
-  const [date, setDate] = useState('');
+  const [doctorId] = useState(paramDoctorId ?? '');
+  const [date, setDate] = useState(new Date(Date.now() + 24 * 60 * 60 * 1000)); // tomorrow
+  const [showDatePicker, setShowDatePicker] = useState(false);
+  const [showTimePicker, setShowTimePicker] = useState(false);
   const [reason, setReason] = useState('');
+  const [selectedFile, setSelectedFile] = useState<DocumentPicker.DocumentPickerAsset | null>(null);
   const [loading, setLoading] = useState(false);
 
+  const onDateChange = (_event: DateTimePickerEvent, selectedDate?: Date) => {
+    setShowDatePicker(false);
+    if (selectedDate) {
+      // Preserve the current time when changing the date
+      const updated = new Date(selectedDate);
+      updated.setHours(date.getHours(), date.getMinutes());
+      setDate(updated);
+      // On Android, show time picker right after date picker
+      if (Platform.OS === 'android') {
+        setTimeout(() => setShowTimePicker(true), 300);
+      }
+    }
+  };
+
+  const onTimeChange = (_event: DateTimePickerEvent, selectedTime?: Date) => {
+    setShowTimePicker(false);
+    if (selectedTime) {
+      const updated = new Date(date);
+      updated.setHours(selectedTime.getHours(), selectedTime.getMinutes());
+      setDate(updated);
+    }
+  };
+
+  const pickDocument = async () => {
+    try {
+      const result = await DocumentPicker.getDocumentAsync({
+        type: ['image/*', 'application/pdf'],
+        copyToCacheDirectory: true,
+      });
+      if (!result.canceled && result.assets.length > 0) {
+        setSelectedFile(result.assets[0]);
+      }
+    } catch {
+      Alert.alert('Error', 'Failed to pick document.');
+    }
+  };
+
   const handleBook = async () => {
-    if (!doctorId.trim() || !date.trim()) {
-      Alert.alert('Validation', 'Doctor ID and appointment date are required.');
+    if (!doctorId.trim()) {
+      Alert.alert('Validation', 'Doctor is required.');
       return;
     }
 
-    const payload: BookAppointmentPayload = {
-      doctorId: doctorId.trim(),
-      appointmentDate: date.trim(),
-      reasonForVisit: reason.trim() || undefined,
-    };
+    if (date <= new Date()) {
+      Alert.alert('Validation', 'Appointment date must be in the future.');
+      return;
+    }
 
     try {
       setLoading(true);
-      await appointmentService.bookAppointment(payload);
+
+      const formData = new FormData();
+      formData.append('doctorId', doctorId.trim());
+      formData.append('appointmentDate', date.toISOString());
+      if (reason.trim()) {
+        formData.append('reasonForVisit', reason.trim());
+      }
+
+      if (selectedFile) {
+        formData.append('referralDocument', {
+          uri: selectedFile.uri,
+          name: selectedFile.name,
+          type: selectedFile.mimeType ?? 'application/octet-stream',
+        } as any);
+      }
+
+      await appointmentService.bookAppointment(formData);
       Alert.alert('Success', 'Appointment booked successfully!', [
-        { text: 'OK', onPress: onSuccess },
+        { text: 'OK', onPress: () => router.back() },
       ]);
     } catch (err) {
       const message =
@@ -62,6 +107,17 @@ export default function BookAppointmentScreen({ preselectedDoctorId, onSuccess }
     }
   };
 
+  const formattedDate = date.toLocaleDateString(undefined, {
+    weekday: 'short',
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric',
+  });
+  const formattedTime = date.toLocaleTimeString(undefined, {
+    hour: '2-digit',
+    minute: '2-digit',
+  });
+
   return (
     <KeyboardAvoidingView
       style={{ flex: 1 }}
@@ -70,25 +126,55 @@ export default function BookAppointmentScreen({ preselectedDoctorId, onSuccess }
       <ScrollView contentContainerStyle={styles.container} keyboardShouldPersistTaps="handled">
         <Text style={styles.title}>Book Appointment</Text>
 
-        <Text style={styles.label}>Doctor ID *</Text>
+        {/* Doctor ID (pre-filled, read-only when from navigation) */}
+        <Text style={styles.label}>Doctor ID</Text>
         <TextInput
-          style={styles.input}
+          style={[styles.input, paramDoctorId ? styles.inputDisabled : undefined]}
           placeholder="Enter doctor ID"
           value={doctorId}
-          onChangeText={setDoctorId}
-          editable={!preselectedDoctorId && !loading}
+          editable={false}
           autoCapitalize="none"
         />
 
-        <Text style={styles.label}>Appointment Date *</Text>
-        <TextInput
-          style={styles.input}
-          placeholder="YYYY-MM-DDTHH:MM (e.g. 2025-08-15T09:00)"
-          value={date}
-          onChangeText={setDate}
-          editable={!loading}
-        />
+        {/* Date Picker */}
+        <Text style={styles.label}>Appointment Date & Time *</Text>
+        <View style={styles.dateRow}>
+          <TouchableOpacity
+            style={[styles.dateButton, { flex: 1, marginRight: 8 }]}
+            onPress={() => setShowDatePicker(true)}
+            disabled={loading}
+          >
+            <Text style={styles.dateButtonText}>📅 {formattedDate}</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[styles.dateButton, { width: 110 }]}
+            onPress={() => setShowTimePicker(true)}
+            disabled={loading}
+          >
+            <Text style={styles.dateButtonText}>🕐 {formattedTime}</Text>
+          </TouchableOpacity>
+        </View>
 
+        {showDatePicker && (
+          <DateTimePicker
+            value={date}
+            mode="date"
+            display={Platform.OS === 'ios' ? 'inline' : 'default'}
+            minimumDate={new Date()}
+            onChange={onDateChange}
+          />
+        )}
+
+        {showTimePicker && (
+          <DateTimePicker
+            value={date}
+            mode="time"
+            display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+            onChange={onTimeChange}
+          />
+        )}
+
+        {/* Reason for Visit */}
         <Text style={styles.label}>Reason for Visit</Text>
         <TextInput
           style={[styles.input, styles.textArea]}
@@ -100,7 +186,27 @@ export default function BookAppointmentScreen({ preselectedDoctorId, onSuccess }
           editable={!loading}
         />
 
-        {/* TODO: Add referral document picker here */}
+        {/* Referral Document Picker */}
+        <Text style={styles.label}>Referral Document (optional)</Text>
+        <TouchableOpacity
+          style={styles.pickButton}
+          onPress={pickDocument}
+          disabled={loading}
+        >
+          <Text style={styles.pickButtonText}>
+            {selectedFile ? selectedFile.name : 'Select PDF or Image'}
+          </Text>
+        </TouchableOpacity>
+        {selectedFile && (
+          <View style={styles.fileInfo}>
+            <Text style={styles.fileHint}>
+              {selectedFile.mimeType} — {((selectedFile.size ?? 0) / 1024).toFixed(1)} KB
+            </Text>
+            <TouchableOpacity onPress={() => setSelectedFile(null)}>
+              <Text style={styles.removeFile}>Remove</Text>
+            </TouchableOpacity>
+          </View>
+        )}
 
         <TouchableOpacity
           style={[styles.button, loading && styles.buttonDisabled]}
@@ -136,13 +242,45 @@ const styles = StyleSheet.create({
     marginBottom: 16,
     backgroundColor: '#fafafa',
   },
+  inputDisabled: { backgroundColor: '#f0f0f0', color: '#888' },
   textArea: { height: 100, textAlignVertical: 'top' },
+  dateRow: { flexDirection: 'row', marginBottom: 16 },
+  dateButton: {
+    borderWidth: 1,
+    borderColor: '#ddd',
+    borderRadius: 8,
+    paddingVertical: 12,
+    paddingHorizontal: 12,
+    backgroundColor: '#fafafa',
+    alignItems: 'center',
+  },
+  dateButtonText: { fontSize: 14, color: '#1a1a2e' },
+  pickButton: {
+    borderWidth: 1,
+    borderColor: '#2563eb',
+    borderStyle: 'dashed',
+    borderRadius: 8,
+    paddingVertical: 14,
+    paddingHorizontal: 12,
+    alignItems: 'center',
+    backgroundColor: '#f0f7ff',
+    marginBottom: 8,
+  },
+  pickButtonText: { color: '#2563eb', fontSize: 14, fontWeight: '500' },
+  fileInfo: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  fileHint: { color: '#888', fontSize: 12 },
+  removeFile: { color: '#ef4444', fontSize: 12, fontWeight: '600' },
   button: {
     backgroundColor: '#2563eb',
     borderRadius: 8,
     paddingVertical: 14,
     alignItems: 'center',
-    marginTop: 8,
+    marginTop: 12,
   },
   buttonDisabled: { opacity: 0.6 },
   buttonText: { color: '#fff', fontSize: 16, fontWeight: '600' },

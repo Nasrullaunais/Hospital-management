@@ -1,4 +1,8 @@
-import 'dotenv/config';
+import dotenv from 'dotenv';
+import { resolve } from 'path';
+import { logger } from '../shared/utils/logger.js';
+
+dotenv.config({ path: resolve(import.meta.dirname, '../../.env') });
 
 /**
  * Environment Variable Configuration
@@ -27,18 +31,32 @@ function validateEnv(): EnvConfig {
   const missing = required.filter((key) => !process.env[key]);
 
   if (missing.length > 0) {
-    console.error(
-      `\n❌ Missing required environment variables:\n  ${missing.join('\n  ')}\n\nCopy server/.env.example to server/.env and fill in the values.\n`,
+    logger.fatal(
+      {
+        event: 'env_validation_failed',
+        missing,
+        expectedFile: 'server/.env',
+      },
+      'Missing required environment variables',
     );
+    process.exit(1);
+  }
+
+  const mongoUri = process.env['MONGO_URI'];
+  const jwtSecret = process.env['JWT_SECRET'];
+  const jwtExpiresIn = process.env['JWT_EXPIRES_IN'];
+
+  if (!mongoUri || !jwtSecret || !jwtExpiresIn) {
+    logger.fatal({ event: 'env_validation_failed' }, 'Environment validation failed unexpectedly');
     process.exit(1);
   }
 
   return {
     NODE_ENV: (process.env['NODE_ENV'] as EnvConfig['NODE_ENV']) ?? 'development',
     PORT: parseInt(process.env['PORT'] ?? '5000', 10),
-    MONGO_URI: process.env['MONGO_URI']!,
-    JWT_SECRET: process.env['JWT_SECRET']!,
-    JWT_EXPIRES_IN: process.env['JWT_EXPIRES_IN']!,
+    MONGO_URI: mongoUri,
+    JWT_SECRET: jwtSecret,
+    JWT_EXPIRES_IN: jwtExpiresIn,
     AWS_ACCESS_KEY_ID: process.env['AWS_ACCESS_KEY_ID'],
     AWS_SECRET_ACCESS_KEY: process.env['AWS_SECRET_ACCESS_KEY'],
     AWS_REGION: process.env['AWS_REGION'],

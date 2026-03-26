@@ -11,14 +11,6 @@ export interface DoctorFilters {
   availability?: DoctorAvailability;
 }
 
-export interface CreateDoctorPayload {
-  userId: string;
-  specialization: string;
-  experienceYears: number;
-  consultationFee: number;
-  availability?: DoctorAvailability;
-}
-
 export interface UpdateDoctorPayload {
   specialization?: string;
   experienceYears?: number;
@@ -32,10 +24,11 @@ export const doctorService = {
    * Public endpoint — no auth required.
    */
   getDoctors: async (filters?: DoctorFilters): Promise<Doctor[]> => {
-    const res = await apiClient.get<ApiSuccessResponse<Doctor[]>>(ENDPOINTS.DOCTORS.BASE, {
-      params: filters,
-    });
-    return res.data.data;
+    const res = await apiClient.get<ApiSuccessResponse<{ doctors: Doctor[]; count: number }>>(
+      ENDPOINTS.DOCTORS.BASE,
+      { params: filters },
+    );
+    return res.data.data.doctors;
   },
 
   /**
@@ -43,16 +36,23 @@ export const doctorService = {
    * Public endpoint — no auth required.
    */
   getDoctorById: async (id: string): Promise<Doctor> => {
-    const res = await apiClient.get<ApiSuccessResponse<Doctor>>(ENDPOINTS.DOCTORS.BY_ID(id));
-    return res.data.data;
+    const res = await apiClient.get<ApiSuccessResponse<{ doctor: Doctor }>>(
+      ENDPOINTS.DOCTORS.BY_ID(id),
+    );
+    return res.data.data.doctor;
   },
 
   /**
    * Create a new doctor profile. Admin only.
+   * Accepts FormData with fields + licenseDocument file.
    */
-  createDoctor: async (payload: CreateDoctorPayload): Promise<Doctor> => {
-    const res = await apiClient.post<ApiSuccessResponse<Doctor>>(ENDPOINTS.DOCTORS.BASE, payload);
-    return res.data.data;
+  createDoctor: async (payload: FormData): Promise<Doctor> => {
+    const res = await apiClient.post<ApiSuccessResponse<{ doctor: Doctor }>>(
+      ENDPOINTS.DOCTORS.BASE,
+      payload,
+      { headers: { 'Content-Type': 'multipart/form-data' } },
+    );
+    return res.data.data.doctor;
   },
 
   /**
@@ -61,12 +61,12 @@ export const doctorService = {
    */
   updateDoctor: async (id: string, payload: UpdateDoctorPayload | FormData): Promise<Doctor> => {
     const isFormData = payload instanceof FormData;
-    const res = await apiClient.put<ApiSuccessResponse<Doctor>>(
+    const res = await apiClient.put<ApiSuccessResponse<{ doctor: Doctor }>>(
       ENDPOINTS.DOCTORS.BY_ID(id),
       payload,
       isFormData ? { headers: { 'Content-Type': 'multipart/form-data' } } : undefined,
     );
-    return res.data.data;
+    return res.data.data.doctor;
   },
 
   /**

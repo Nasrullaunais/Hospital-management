@@ -1,6 +1,7 @@
 import type { Request, Response, NextFunction } from 'express';
 import { validationResult } from 'express-validator';
 import { MedicalRecord } from './record.model.js';
+import { Doctor } from '../doctors/doctor.model.js';
 import { ApiError } from '../../shared/utils/ApiError.js';
 
 /** POST /api/records — Create a medical record (Doctor only) */
@@ -8,9 +9,13 @@ export const createRecord = async (req: Request, res: Response, next: NextFuncti
   const errors = validationResult(req);
   if (!errors.isEmpty()) return next(new ApiError(422, 'Validation failed'));
   try {
+    // Resolve the Doctor document from the authenticated user — never trust doctorId from body
+    const doctor = await Doctor.findOne({ userId: req.user!.id });
+    if (!doctor) return next(ApiError.notFound('Doctor profile not found for this account'));
+
     const record = await MedicalRecord.create({
       patientId: req.body.patientId,
-      doctorId: req.user!.id,
+      doctorId: doctor._id,
       diagnosis: req.body.diagnosis,
       prescription: req.body.prescription,
       labReportUrl: req.file ? `/uploads/${req.file.filename}` : undefined,
@@ -33,7 +38,27 @@ export const getPatientRecords = async (req: Request, res: Response, next: NextF
     }
 
     const records = await MedicalRecord.find({ patientId: targetId })
-      .populate('doctorId', 'specialization')
+      .populate({
+        path: 'doctorId',
+        select: 'specialization userId',
+        populate: { path: 'userId', select: 'name' },
+      })
+      .sort({ dateRecorded: -1 });
+
+    res.json({ success: true, data: { records, count: records.length } });
+  } catch (err) {
+    next(err);
+  }
+};
+
+/** GET /api/records/doctor-logs — Get all records created by the authenticated doctor */
+export const getDoctorRecords = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+  try {
+    const doctor = await Doctor.findOne({ userId: req.user!.id });
+    if (!doctor) return next(ApiError.notFound('Doctor profile not found for this account'));
+
+    const records = await MedicalRecord.find({ doctorId: doctor._id })
+      .populate('patientId', 'name email')
       .sort({ dateRecorded: -1 });
 
     res.json({ success: true, data: { records, count: records.length } });

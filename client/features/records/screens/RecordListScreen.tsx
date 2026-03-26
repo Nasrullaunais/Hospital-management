@@ -10,7 +10,7 @@ import {
 } from 'react-native';
 import { recordService } from '../services/record.service';
 import { useAuth } from '@/shared/context/AuthContext';
-import type { MedicalRecord } from '@/shared/types';
+import type { MedicalRecord, PopulatedMedicalRecord } from '@/shared/types';
 
 interface Props {
   /**
@@ -18,7 +18,7 @@ interface Props {
    * Defaults to the authenticated user's own ID.
    */
   patientId?: string;
-  onPressRecord?: (record: MedicalRecord) => void;
+  onPressRecord?: (record: PopulatedMedicalRecord) => void;
 }
 
 /**
@@ -32,7 +32,7 @@ export default function RecordListScreen({ patientId, onPressRecord }: Props) {
   const { user } = useAuth();
   const targetPatientId = patientId ?? user?._id;
 
-  const [records, setRecords] = useState<MedicalRecord[]>([]);
+  const [records, setRecords] = useState<PopulatedMedicalRecord[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -41,7 +41,7 @@ export default function RecordListScreen({ patientId, onPressRecord }: Props) {
     if (!targetPatientId) return;
     try {
       setError(null);
-      const data = await recordService.getPatientRecords(targetPatientId);
+      const data = await recordService.getPatientHistory(targetPatientId);
       setRecords(data);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to load records.');
@@ -59,7 +59,7 @@ export default function RecordListScreen({ patientId, onPressRecord }: Props) {
     setRefreshing(false);
   };
 
-  const renderRecord = ({ item }: { item: MedicalRecord }) => (
+  const renderRecord = ({ item }: { item: PopulatedMedicalRecord }) => (
     <TouchableOpacity style={styles.card} onPress={() => onPressRecord?.(item)}>
       <Text style={styles.diagnosis} numberOfLines={2}>
         {item.diagnosis}

@@ -1,14 +1,17 @@
 import React from 'react';
 import { SymbolView } from 'expo-symbols';
 import { Link, Tabs } from 'expo-router';
-import { Platform, Pressable } from 'react-native';
+import { Pressable } from 'react-native';
 
 import Colors from '@/constants/Colors';
 import { useColorScheme } from '@/components/useColorScheme';
 import { useClientOnlyValue } from '@/components/useClientOnlyValue';
+import { useAuth } from '@/shared/context/AuthContext';
 
 export default function TabLayout() {
   const colorScheme = useColorScheme();
+  const { user } = useAuth();
+  const isStaff = user?.role === 'admin' || user?.role === 'doctor' || user?.role === 'pharmacist';
 
   return (
     <Tabs
@@ -21,14 +24,10 @@ export default function TabLayout() {
       <Tabs.Screen
         name="index"
         options={{
-          title: 'Tab One',
+          title: 'Home',
           tabBarIcon: ({ color }) => (
             <SymbolView
-              name={{
-                ios: 'chevron.left.forwardslash.chevron.right',
-                android: 'code',
-                web: 'code',
-              }}
+              name={{ ios: 'house', android: 'home', web: 'home' }}
               tintColor={color}
               size={28}
             />
@@ -50,16 +49,65 @@ export default function TabLayout() {
         }}
       />
       <Tabs.Screen
-        name="two"
+        name="doctors"
         options={{
-          title: 'Tab Two',
+          title: 'Doctors',
           tabBarIcon: ({ color }) => (
             <SymbolView
-              name={{
-                ios: 'chevron.left.forwardslash.chevron.right',
-                android: 'code',
-                web: 'code',
-              }}
+              name={{ ios: 'stethoscope', android: 'medical_services', web: 'medical_services' }}
+              tintColor={color}
+              size={28}
+            />
+          ),
+        }}
+      />
+      <Tabs.Screen
+        name="appointments"
+        options={{
+          title: 'Appointments',
+          tabBarIcon: ({ color }) => (
+            <SymbolView
+              name={{ ios: 'calendar', android: 'event', web: 'event' }}
+              tintColor={color}
+              size={28}
+            />
+          ),
+        }}
+      />
+      <Tabs.Screen
+        name="records"
+        options={{
+          title: 'Records',
+          tabBarIcon: ({ color }) => (
+            <SymbolView
+              name={{ ios: 'doc.text', android: 'description', web: 'description' }}
+              tintColor={color}
+              size={28}
+            />
+          ),
+        }}
+      />
+      <Tabs.Screen
+        name="pharmacy"
+        options={{
+          title: 'Pharmacy',
+          href: isStaff ? '/(tabs)/pharmacy' : null,
+          tabBarIcon: ({ color }) => (
+            <SymbolView
+              name={{ ios: 'pills', android: 'medication', web: 'medication' }}
+              tintColor={color}
+              size={28}
+            />
+          ),
+        }}
+      />
+      <Tabs.Screen
+        name="profile"
+        options={{
+          title: 'Profile',
+          tabBarIcon: ({ color }) => (
+            <SymbolView
+              name={{ ios: 'person.circle', android: 'person', web: 'person' }}
               tintColor={color}
               size={28}
             />

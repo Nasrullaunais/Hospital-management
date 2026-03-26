@@ -4,19 +4,11 @@
  */
 import { apiClient } from '@/shared/api/client';
 import { ENDPOINTS } from '@/shared/api/endpoints';
-import type { MedicalRecord, ApiSuccessResponse } from '@/shared/types';
-
-export interface CreateRecordPayload {
-  patientId: string;
-  diagnosis: string;
-  prescription?: string;
-  dateRecorded?: string; // ISO 8601 — defaults to now on backend
-}
+import type { MedicalRecord, PopulatedMedicalRecord, ApiSuccessResponse } from '@/shared/types';
 
 export interface UpdateRecordPayload {
   diagnosis?: string;
   prescription?: string;
-  dateRecorded?: string;
 }
 
 export const recordService = {
@@ -24,25 +16,34 @@ export const recordService = {
    * Create a new medical record for a patient. Doctor only.
    * Pass FormData to include a lab report PDF/image.
    */
-  createRecord: async (payload: CreateRecordPayload | FormData): Promise<MedicalRecord> => {
-    const isFormData = payload instanceof FormData;
-    const res = await apiClient.post<ApiSuccessResponse<MedicalRecord>>(
+  createRecord: async (payload: FormData): Promise<MedicalRecord> => {
+    const res = await apiClient.post<ApiSuccessResponse<{ record: MedicalRecord }>>(
       ENDPOINTS.RECORDS.BASE,
       payload,
-      isFormData ? { headers: { 'Content-Type': 'multipart/form-data' } } : undefined,
+      { headers: { 'Content-Type': 'multipart/form-data' } },
     );
-    return res.data.data;
+    return res.data.data.record;
   },
 
   /**
-   * Fetch all medical records for a patient.
+   * Fetch all medical records for a patient (populated with doctor name).
    * Patients can only access their own records; doctors/admins can access any.
    */
-  getPatientRecords: async (patientId: string): Promise<MedicalRecord[]> => {
-    const res = await apiClient.get<ApiSuccessResponse<MedicalRecord[]>>(
+  getPatientHistory: async (patientId: string): Promise<PopulatedMedicalRecord[]> => {
+    const res = await apiClient.get<ApiSuccessResponse<{ records: PopulatedMedicalRecord[]; count: number }>>(
       ENDPOINTS.RECORDS.BY_PATIENT(patientId),
     );
-    return res.data.data;
+    return res.data.data.records;
+  },
+
+  /**
+   * Fetch all records created by the currently authenticated doctor.
+   */
+  getDoctorLogs: async (): Promise<PopulatedMedicalRecord[]> => {
+    const res = await apiClient.get<ApiSuccessResponse<{ records: PopulatedMedicalRecord[]; count: number }>>(
+      ENDPOINTS.RECORDS.DOCTOR_LOGS,
+    );
+    return res.data.data.records;
   },
 
   /**
@@ -50,27 +51,24 @@ export const recordService = {
    * Ownership enforced on backend — patients can only see own records.
    */
   getRecordById: async (id: string): Promise<MedicalRecord> => {
-    const res = await apiClient.get<ApiSuccessResponse<MedicalRecord>>(
+    const res = await apiClient.get<ApiSuccessResponse<{ record: MedicalRecord }>>(
       ENDPOINTS.RECORDS.BY_ID(id),
     );
-    return res.data.data;
+    return res.data.data.record;
   },
 
   /**
    * Update a medical record. Doctor only.
-   * Pass FormData to replace/add a lab report file.
    */
   updateRecord: async (
     id: string,
-    payload: UpdateRecordPayload | FormData,
+    payload: UpdateRecordPayload,
   ): Promise<MedicalRecord> => {
-    const isFormData = payload instanceof FormData;
-    const res = await apiClient.put<ApiSuccessResponse<MedicalRecord>>(
+    const res = await apiClient.put<ApiSuccessResponse<{ record: MedicalRecord }>>(
       ENDPOINTS.RECORDS.BY_ID(id),
       payload,
-      isFormData ? { headers: { 'Content-Type': 'multipart/form-data' } } : undefined,
     );
-    return res.data.data;
+    return res.data.data.record;
   },
 
   /**

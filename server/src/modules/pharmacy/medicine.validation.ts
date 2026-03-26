@@ -6,7 +6,7 @@ export const createMedicineValidation = [
   body('price').isFloat({ min: 0 }).withMessage('Price must be a non-negative number'),
   body('stockQuantity').isInt({ min: 0 }).withMessage('Stock quantity must be a non-negative integer'),
   body('expiryDate')
-    .isISO8601()
+    .custom((value: string) => !Number.isNaN(new Date(value).getTime()))
     .withMessage('Expiry date must be a valid date')
     .custom((value: string) => {
       if (new Date(value) <= new Date()) {
@@ -17,7 +17,19 @@ export const createMedicineValidation = [
 ];
 
 export const updateMedicineValidation = [
-  body('stockQuantity').optional().isInt({ min: 0 }).withMessage('Stock must be a non-negative integer'),
+  body('name').optional().trim().notEmpty().withMessage('Medicine name cannot be empty'),
+  body('category').optional().trim().notEmpty().withMessage('Category cannot be empty'),
   body('price').optional().isFloat({ min: 0 }).withMessage('Price must be a non-negative number'),
-  body('expiryDate').optional().isISO8601().withMessage('Expiry date must be a valid date'),
+  body('expiryDate')
+    .optional()
+    .custom((value: string) => !Number.isNaN(new Date(value).getTime()))
+    .withMessage('Expiry date must be a valid date'),
+];
+
+export const adjustStockValidation = [
+  body('quantityChange')
+    .isInt({ min: -1000000, max: 1000000 })
+    .withMessage('quantityChange must be a valid integer')
+    .custom((value: string | number) => Number(value) !== 0)
+    .withMessage('quantityChange must not be zero'),
 ];

@@ -9,8 +9,10 @@ import {
   TextInput,
   RefreshControl,
 } from 'react-native';
+import { useRouter } from 'expo-router';
 import { doctorService, type DoctorFilters } from '../services/doctor.service';
 import type { Doctor } from '@/shared/types';
+import { useAuth } from '@/shared/context/AuthContext';
 
 /**
  * DoctorListScreen — Member 2
@@ -20,6 +22,8 @@ import type { Doctor } from '@/shared/types';
  * TODO: Replace simple dropdown with a proper picker component.
  */
 export default function DoctorListScreen() {
+  const router = useRouter();
+  const { user } = useAuth();
   const [doctors, setDoctors] = useState<Doctor[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -51,7 +55,9 @@ export default function DoctorListScreen() {
   };
 
   const renderDoctor = ({ item }: { item: Doctor }) => (
-    <TouchableOpacity style={styles.card}>
+    <TouchableOpacity
+      style={styles.card}
+      onPress={() => router.push({ pathname: '/(tabs)/doctors/[id]', params: { id: item._id } })}>
       <Text style={styles.doctorName}>
         {typeof item.userId === 'object' ? item.userId.name : 'Dr. Unknown'}
       </Text>
@@ -73,6 +79,14 @@ export default function DoctorListScreen() {
 
   return (
     <View style={styles.container}>
+      {user?.role === 'admin' && (
+        <TouchableOpacity
+          style={styles.addButton}
+          onPress={() => router.push('/admin/add-doctor')}
+        >
+          <Text style={styles.addButtonText}>+ Add Doctor</Text>
+        </TouchableOpacity>
+      )}
       <TextInput
         style={styles.searchInput}
         placeholder="Search by specialization..."
@@ -140,4 +154,13 @@ const styles = StyleSheet.create({
   retryText: { color: '#2563eb', fontWeight: '600', fontSize: 15 },
   emptyContainer: { flex: 1, justifyContent: 'center', alignItems: 'center' },
   emptyText: { color: '#888', fontSize: 15, textAlign: 'center', marginTop: 60 },
+  addButton: {
+    backgroundColor: '#2563eb',
+    marginHorizontal: 12,
+    marginTop: 12,
+    borderRadius: 10,
+    paddingVertical: 12,
+    alignItems: 'center',
+  },
+  addButtonText: { color: '#fff', fontSize: 15, fontWeight: '600' },
 });

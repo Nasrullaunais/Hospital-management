@@ -8,7 +8,7 @@ export interface IUser extends Document {
   name: string;
   email: string;
   password: string;
-  role: 'patient' | 'doctor' | 'admin';
+  role: 'patient' | 'doctor' | 'admin' | 'pharmacist';
   phone?: string;
   dateOfBirth?: Date;
   idDocumentUrl?: string;
@@ -50,8 +50,8 @@ const userSchema = new Schema<IUser>(
     role: {
       type: String,
       enum: {
-        values: ['patient', 'doctor', 'admin'],
-        message: 'Role must be patient, doctor, or admin',
+        values: ['patient', 'doctor', 'admin', 'pharmacist'],
+        message: 'Role must be patient, doctor, admin, or pharmacist',
       },
       default: 'patient',
     },
@@ -71,8 +71,9 @@ const userSchema = new Schema<IUser>(
     toJSON: {
       transform: (_doc, ret) => {
         // Never expose password in JSON serialization
-        delete ret.password;
-        return ret;
+        const sanitized = ret as { password?: string };
+        delete sanitized.password;
+        return sanitized;
       },
     },
   },
@@ -82,13 +83,12 @@ const userSchema = new Schema<IUser>(
 userSchema.index({ role: 1 });
 
 // ── Pre-save Hook: Hash password ───────────────────────────────────────────────
-userSchema.pre('save', async function (next) {
+userSchema.pre('save', async function () {
   // Only hash if password has been modified (or is new)
-  if (!this.isModified('password')) return next();
+  if (!this.isModified('password')) return;
 
   const saltRounds = 12;
   this.password = await bcrypt.hash(this.password, saltRounds);
-  next();
 });
 
 // ── Instance Method: Compare password ─────────────────────────────────────────

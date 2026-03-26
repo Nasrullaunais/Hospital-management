@@ -1,8 +1,10 @@
-import React, { createContext, useContext, useEffect, useState, useCallback } from 'react';
+import React, { createContext, useContext, useEffect, useRef, useState, useCallback } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { apiClient, AUTH_TOKEN_KEY } from '../api/client';
+import { apiClient, AUTH_TOKEN_KEY, registerClearSession } from '../api/client';
 import { ENDPOINTS } from '../api/endpoints';
 import type { User, AuthResponse } from '../types';
+import type { RegisterPayload } from '@/features/auth/services/auth.service';
+import { authService } from '@/features/auth/services/auth.service';
 
 // ── Context types ──────────────────────────────────────────────────────────────
 
@@ -12,6 +14,7 @@ interface AuthContextValue {
   isLoading: boolean;
   isAuthenticated: boolean;
   login: (email: string, password: string) => Promise<void>;
+  register: (payload: RegisterPayload) => Promise<void>;
   logout: () => Promise<void>;
   /** Call after profile updates to refresh the stored user object */
   refreshUser: () => Promise<void>;
@@ -27,6 +30,19 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [token, setToken] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true); // true until we check AsyncStorage
+
+  // Stable ref used by the Axios 401 interceptor (avoids stale closure)
+  const clearSessionRef = useRef<() => void>(() => {});
+
+  // ── Wire clearSession into Axios interceptor on mount ──────────────────────
+  useEffect(() => {
+    clearSessionRef.current = () => {
+      setToken(null);
+      setUser(null);
+    };
+    registerClearSession(() => clearSessionRef.current());
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // ── On mount: restore session from AsyncStorage ──────────────────────────────
   useEffect(() => {
@@ -70,6 +86,19 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setUser(newUser);
   }, []);
 
+  // ── Register ─────────────────────────────────────────────────────────────────
+  const register = useCallback(async (payload: RegisterPayload) => {
+    const { token: newToken, user: newUser } = await authService.register(payload);
+
+    await AsyncStorage.multiSet([
+      [AUTH_TOKEN_KEY, newToken],
+      ['@hospital_user', JSON.stringify(newUser)],
+    ]);
+
+    setToken(newToken);
+    setUser(newUser);
+  }, []);
+
   // ── Logout ───────────────────────────────────────────────────────────────────
   const logout = useCallback(async () => {
     await AsyncStorage.multiRemove([AUTH_TOKEN_KEY, '@hospital_user']);
@@ -99,6 +128,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         isLoading,
         isAuthenticated: !!token && !!user,
         login,
+        register,
         logout,
         refreshUser,
       }}

@@ -29,6 +29,7 @@ export const ENDPOINTS = {
     DOCTOR_SCHEDULE: (doctorId: string) => `/appointments/doctor/${doctorId}`,
     UPDATE_STATUS: (id: string) => `/appointments/${id}/status`,
     CANCEL: (id: string) => `/appointments/${id}`,
+    MY_DOCTOR_SCHEDULE: '/appointments/doctor-schedule',
   },
 
   // Member 4 — Medical Records
@@ -36,12 +37,14 @@ export const ENDPOINTS = {
     BASE: '/records',
     BY_PATIENT: (patientId: string) => `/records/patient/${patientId}`,
     BY_ID: (id: string) => `/records/${id}`,
+    DOCTOR_LOGS: '/records/doctor-logs',
   },
 
   // Member 5 — Pharmacy
   MEDICINES: {
     BASE: '/medicines',
     BY_ID: (id: string) => `/medicines/${id}`,
+    ADJUST_STOCK: (id: string) => `/medicines/${id}/stock`,
   },
 
   // Member 6 — Billing

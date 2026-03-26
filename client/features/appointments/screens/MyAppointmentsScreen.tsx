@@ -9,6 +9,7 @@ import {
   RefreshControl,
   Alert,
 } from 'react-native';
+import { useRouter, type Href } from 'expo-router';
 import { appointmentService } from '../services/appointment.service';
 import type { Appointment, Doctor, User } from '@/shared/types';
 
@@ -27,6 +28,7 @@ const STATUS_COLORS: Record<string, { bg: string; text: string }> = {
  * TODO: Add appointment detail modal or navigate to a detail screen.
  */
 export default function MyAppointmentsScreen() {
+  const router = useRouter();
   const [appointments, setAppointments] = useState<Appointment[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -62,7 +64,9 @@ export default function MyAppointmentsScreen() {
         onPress: async () => {
           try {
             await appointmentService.cancelAppointment(id);
-            setAppointments((prev) => prev.filter((a) => a._id !== id));
+            setAppointments((prev) =>
+              prev.map((a) => (a._id === id ? { ...a, status: 'Cancelled' } : a)),
+            );
           } catch (err) {
             Alert.alert('Error', err instanceof Error ? err.message : 'Could not cancel.');
           }
@@ -73,10 +77,14 @@ export default function MyAppointmentsScreen() {
 
   const renderAppointment = ({ item }: { item: Appointment }) => {
     const colors = STATUS_COLORS[item.status] ?? { bg: '#f3f4f6', text: '#374151' };
-    const doctorName =
-      typeof item.doctorId === 'object'
-        ? (item.doctorId as unknown as { userId: User }).userId?.name ?? 'Unknown Doctor'
-        : 'Unknown Doctor';
+    // Nested populate: doctorId → Doctor { userId → User { name } }
+    let doctorName = 'Unknown Doctor';
+    if (typeof item.doctorId === 'object') {
+      const doctor = item.doctorId as Doctor;
+      if (typeof doctor.userId === 'object') {
+        doctorName = doctor.userId.name;
+      }
+    }
 
     return (
       <View style={styles.card}>
@@ -137,7 +145,17 @@ export default function MyAppointmentsScreen() {
       contentContainerStyle={
         appointments.length === 0 ? styles.emptyContainer : styles.listContainer
       }
-      ListHeaderComponent={<Text style={styles.header}>My Appointments</Text>}
+      ListHeaderComponent={
+        <View>
+          <Text style={styles.header}>My Appointments</Text>
+          <TouchableOpacity
+            style={styles.bookButton}
+            onPress={() => router.push('/(tabs)/appointments/book' as Href)}
+          >
+            <Text style={styles.bookButtonText}>+ Book New Appointment</Text>
+          </TouchableOpacity>
+        </View>
+      }
       ListEmptyComponent={
         <Text style={styles.emptyText}>
           No appointments found.{'\n'}Book your first appointment!
@@ -180,4 +198,12 @@ const styles = StyleSheet.create({
   errorText: { color: '#ef4444', fontSize: 15, marginBottom: 12 },
   retryText: { color: '#2563eb', fontWeight: '600', fontSize: 15 },
   emptyText: { color: '#888', fontSize: 15, textAlign: 'center', lineHeight: 22 },
+  bookButton: {
+    backgroundColor: '#2563eb',
+    borderRadius: 10,
+    paddingVertical: 12,
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  bookButtonText: { color: '#fff', fontSize: 15, fontWeight: '600' },
 });

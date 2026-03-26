@@ -4,6 +4,12 @@ import { Config } from '../constants/Config';
 
 export const AUTH_TOKEN_KEY = '@hospital_auth_token';
 
+// Registered by AuthProvider at mount — clears React state on 401
+let _clearSession: (() => void) | null = null;
+export function registerClearSession(fn: () => void) {
+  _clearSession = fn;
+}
+
 /**
  * Axios API Client
  *
@@ -45,10 +51,10 @@ apiClient.interceptors.response.use(
       return Promise.reject(new Error('Network error. Please check your connection.'));
     }
 
-    // 401 Unauthorized — token expired or invalid, clear stored token
+    // 401 Unauthorized — token expired or invalid, clear stored token and React state
     if (error.response.status === 401) {
       await AsyncStorage.removeItem(AUTH_TOKEN_KEY);
-      // AuthContext listener will detect the cleared token and redirect to Login
+      _clearSession?.();
     }
 
     // Extract backend message or fall back to a generic error

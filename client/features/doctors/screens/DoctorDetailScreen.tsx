@@ -8,13 +8,10 @@ import {
   TouchableOpacity,
   Alert,
 } from 'react-native';
+import { useLocalSearchParams, useRouter, type Href } from 'expo-router';
 import { doctorService } from '../services/doctor.service';
 import type { Doctor } from '@/shared/types';
 import { useAuth } from '@/shared/context/AuthContext';
-
-interface Props {
-  doctorId: string;
-}
 
 /**
  * DoctorDetailScreen — Member 2
@@ -23,8 +20,10 @@ interface Props {
  * TODO: Add "Book Appointment" button that navigates to BookAppointmentScreen with doctorId pre-filled.
  * TODO: Admin: add Edit/Delete actions via admin role check.
  */
-export default function DoctorDetailScreen({ doctorId }: Props) {
+export default function DoctorDetailScreen() {
+  const { id: doctorId } = useLocalSearchParams<{ id: string }>();
   const { user } = useAuth();
+  const router = useRouter();
 
   const [doctor, setDoctor] = useState<Doctor | null>(null);
   const [loading, setLoading] = useState(true);
@@ -83,8 +82,7 @@ export default function DoctorDetailScreen({ doctorId }: Props) {
       <TouchableOpacity
         style={styles.bookButton}
         onPress={() => {
-          /* TODO: Navigate to BookAppointmentScreen with doctorId */
-          Alert.alert('Book Appointment', `Booking with Dr. ${doctorName} — TODO: wire navigation.`);
+          router.push({ pathname: '/(tabs)/appointments/book', params: { doctorId: doctor._id } } as Href);
         }}
       >
         <Text style={styles.bookButtonText}>Book Appointment</Text>
@@ -94,8 +92,37 @@ export default function DoctorDetailScreen({ doctorId }: Props) {
       {isAdmin && (
         <View style={styles.adminSection}>
           <Text style={styles.adminLabel}>Admin Actions</Text>
-          <TouchableOpacity style={styles.editButton}>
+          <TouchableOpacity
+            style={styles.editButton}
+            onPress={() => Alert.alert(
+              'Edit Doctor',
+              'Edit functionality will be available in a future update.',
+            )}
+          >
             <Text style={styles.editButtonText}>Edit Doctor</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[styles.editButton, { marginTop: 8, borderColor: '#ef4444' }]}
+            onPress={() => {
+              Alert.alert('Delete Doctor', `Are you sure you want to delete Dr. ${doctorName}?`, [
+                { text: 'Cancel', style: 'cancel' },
+                {
+                  text: 'Delete',
+                  style: 'destructive',
+                  onPress: async () => {
+                    try {
+                      await doctorService.deleteDoctor(doctor._id);
+                      Alert.alert('Deleted', 'Doctor has been removed.');
+                      router.back();
+                    } catch (err) {
+                      Alert.alert('Error', err instanceof Error ? err.message : 'Failed to delete doctor.');
+                    }
+                  },
+                },
+              ]);
+            }}
+          >
+            <Text style={[styles.editButtonText, { color: '#ef4444' }]}>Delete Doctor</Text>
           </TouchableOpacity>
         </View>
       )}

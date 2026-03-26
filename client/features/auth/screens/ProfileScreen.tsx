@@ -8,21 +8,24 @@ import {
   StyleSheet,
   ScrollView,
   Alert,
+  Image,
 } from 'react-native';
+import * as DocumentPicker from 'expo-document-picker';
 import { useAuth } from '@/shared/context/AuthContext';
 import { authService, type UpdateProfilePayload } from '../services/auth.service';
+import { Config } from '@/shared/constants/Config';
 
 /**
  * ProfileScreen — Member 1
  * Displays the current user's profile and allows editing name/phone/dateOfBirth.
- * TODO: Add ID document image picker (use expo-image-picker, upload as FormData).
- * TODO: Add avatar display from idDocumentUrl or a placeholder image.
+ * Supports uploading an ID document (image or PDF) via expo-document-picker.
  */
 export default function ProfileScreen() {
   const { user, logout, refreshUser } = useAuth();
 
   const [editing, setEditing] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [selectedFile, setSelectedFile] = useState<DocumentPicker.DocumentPickerAsset | null>(null);
   const [form, setForm] = useState<UpdateProfilePayload>({
     name: user?.name ?? '',
     phone: user?.phone ?? '',
@@ -32,12 +35,47 @@ export default function ProfileScreen() {
   const update = (field: keyof UpdateProfilePayload) => (value: string) =>
     setForm((prev) => ({ ...prev, [field]: value }));
 
+  const pickDocument = async () => {
+    try {
+      const result = await DocumentPicker.getDocumentAsync({
+        type: ['image/*', 'application/pdf'],
+        copyToCacheDirectory: true,
+      });
+
+      if (!result.canceled && result.assets.length > 0) {
+        setSelectedFile(result.assets[0]);
+      }
+    } catch {
+      Alert.alert('Error', 'Failed to pick document.');
+    }
+  };
+
   const handleSave = async () => {
     try {
       setLoading(true);
-      await authService.updateProfile(form);
+
+      if (selectedFile) {
+        // Use FormData for file upload
+        const formData = new FormData();
+        if (form.name) formData.append('name', form.name);
+        if (form.phone) formData.append('phone', form.phone);
+        if (form.dateOfBirth) formData.append('dateOfBirth', form.dateOfBirth);
+
+        // React Native FormData expects { uri, name, type } cast to any
+        formData.append('idDocument', {
+          uri: selectedFile.uri,
+          name: selectedFile.name,
+          type: selectedFile.mimeType ?? 'application/octet-stream',
+        } as any);
+
+        await authService.updateProfile(formData);
+      } else {
+        await authService.updateProfile(form);
+      }
+
       await refreshUser();
       setEditing(false);
+      setSelectedFile(null);
       Alert.alert('Success', 'Profile updated successfully.');
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Update failed. Please try again.';
@@ -55,6 +93,8 @@ export default function ProfileScreen() {
   };
 
   if (!user) return null;
+
+  const isImageUrl = user.idDocumentUrl && /\.(jpe?g|png|gif|webp)$/i.test(user.idDocumentUrl);
 
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
@@ -106,11 +146,44 @@ export default function ProfileScreen() {
         )}
       </View>
 
+      {/* ID Document Section */}
+      <View style={styles.field}>
+        <Text style={styles.label}>ID Document</Text>
+        {editing ? (
+          <View>
+            <TouchableOpacity style={styles.pickButton} onPress={pickDocument}>
+              <Text style={styles.pickButtonText}>
+                {selectedFile ? selectedFile.name : 'Select ID Document'}
+              </Text>
+            </TouchableOpacity>
+            {selectedFile && (
+              <Text style={styles.fileHint}>
+                {selectedFile.mimeType} — {((selectedFile.size ?? 0) / 1024).toFixed(1)} KB
+              </Text>
+            )}
+          </View>
+        ) : user.idDocumentUrl ? (
+          isImageUrl ? (
+            <Image
+              source={{ uri: `${Config.BASE_URL}${user.idDocumentUrl}` }}
+              style={styles.documentImage}
+              resizeMode="contain"
+            />
+          ) : (
+            <Text style={styles.documentLink}>
+              📄 Document uploaded ({user.idDocumentUrl.split('/').pop()})
+            </Text>
+          )
+        ) : (
+          <Text style={styles.value}>No document uploaded</Text>
+        )}
+      </View>
+
       {editing ? (
         <View style={styles.row}>
           <TouchableOpacity
             style={[styles.button, styles.outline, { flex: 1, marginRight: 8 }]}
-            onPress={() => setEditing(false)}
+            onPress={() => { setEditing(false); setSelectedFile(null); }}
             disabled={loading}
           >
             <Text style={[styles.buttonText, { color: '#2563eb' }]}>Cancel</Text>
@@ -177,4 +250,18 @@ const styles = StyleSheet.create({
   danger: { backgroundColor: '#ef4444' },
   buttonDisabled: { opacity: 0.6 },
   buttonText: { color: '#fff', fontSize: 15, fontWeight: '600' },
+  pickButton: {
+    borderWidth: 1,
+    borderColor: '#2563eb',
+    borderStyle: 'dashed',
+    borderRadius: 8,
+    paddingVertical: 14,
+    paddingHorizontal: 12,
+    alignItems: 'center',
+    backgroundColor: '#f0f7ff',
+  },
+  pickButtonText: { color: '#2563eb', fontSize: 14, fontWeight: '500' },
+  fileHint: { color: '#888', fontSize: 12, marginTop: 4 },
+  documentImage: { width: '100%', height: 200, borderRadius: 8, backgroundColor: '#f5f5f5' },
+  documentLink: { fontSize: 14, color: '#2563eb' },
 });
