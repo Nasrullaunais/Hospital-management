@@ -2,7 +2,7 @@ import React, { useEffect, useState, useCallback } from 'react';
 import { View, Text, FlatList, StyleSheet, ActivityIndicator, TouchableOpacity, RefreshControl } from 'react-native';
 import { useRouter } from 'expo-router';
 import { prescriptionService, type Prescription } from '../services/prescription.service';
-import { useAuthStore } from '@/features/auth/hooks/useAuthStore';
+import { useAuth } from '@/shared/context/AuthContext';
 
 export default function PrescriptionListScreen() {
   const [prescriptions, setPrescriptions] = useState<Prescription[]>([]);
@@ -10,7 +10,7 @@ export default function PrescriptionListScreen() {
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const router = useRouter();
-  const { user } = useAuthStore();
+  const { user } = useAuth();
 
   const loadPrescriptions = useCallback(async () => {
     try {
