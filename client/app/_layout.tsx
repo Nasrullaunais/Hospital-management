@@ -1,13 +1,12 @@
 import { DarkTheme, DefaultTheme, ThemeProvider } from '@react-navigation/native';
 import { useFonts } from 'expo-font';
-import { Redirect, Stack } from 'expo-router';
+import { Stack } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { useEffect } from 'react';
-import { ActivityIndicator, View } from 'react-native';
 import 'react-native-reanimated';
 
 import { useColorScheme } from '@/components/useColorScheme';
-import { AuthProvider, useAuth } from '@/shared/context/AuthContext';
+import { AuthProvider } from '@/shared/context/AuthContext';
 
 export {
   // Catch any errors thrown by the Layout component.
@@ -16,7 +15,7 @@ export {
 
 export const unstable_settings = {
   // Ensure that reloading on `/modal` keeps a back button present.
-  initialRouteName: '(tabs)',
+  initialRouteName: 'index',
 };
 
 // Prevent the splash screen from auto-hiding before asset loading is complete.
@@ -51,26 +50,19 @@ export default function RootLayout() {
 
 function RootLayoutNav() {
   const colorScheme = useColorScheme();
-  const { isAuthenticated, isLoading } = useAuth();
-
-  if (isLoading) {
-    return (
-      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
-        <ActivityIndicator size="large" color="#2563eb" />
-      </View>
-    );
-  }
 
   return (
     <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
       <Stack screenOptions={{ headerShown: false }}>
-        <Stack.Screen name="(tabs)" />
-        <Stack.Screen name="admin" />
+        <Stack.Screen name="index" />
+        <Stack.Screen name="(patient)" />
+        <Stack.Screen name="(doctor)" />
+        <Stack.Screen name="(pharmacist)" />
+        <Stack.Screen name="(admin)" />
         <Stack.Screen name="login" />
         <Stack.Screen name="register" />
         <Stack.Screen name="modal" options={{ presentation: 'modal', headerShown: true }} />
       </Stack>
-      {!isAuthenticated && <Redirect href="/login" />}
     </ThemeProvider>
   );
 }

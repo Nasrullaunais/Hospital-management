@@ -9,7 +9,8 @@ import {
   RefreshControl,
   Alert,
 } from 'react-native';
-import { invoiceService } from '../services/invoice.service';
+import * as DocumentPicker from 'expo-document-picker';
+import { invoiceService } from '@/features/billing/services/invoice.service';
 import { useAuth } from '@/shared/context/AuthContext';
 import type { Invoice, PaymentStatus } from '@/shared/types';
 
@@ -19,14 +20,7 @@ const STATUS_STYLES: Record<PaymentStatus, { bg: string; text: string }> = {
   Paid: { bg: '#dcfce7', text: '#166534' },
 };
 
-/**
- * InvoiceListScreen — Member 6
- * Lists all invoices for the authenticated patient (or all invoices for admins).
- * TODO: Navigate to PaymentScreen on pressing an Unpaid invoice.
- * TODO: Admin: filter by paymentStatus or patientId.
- * TODO: Admin: add verify-payment button directly on each card.
- */
-export default function InvoiceListScreen() {
+export default function BillingScreen() {
   const { user } = useAuth();
   const isAdmin = user?.role === 'admin';
 
@@ -75,6 +69,48 @@ export default function InvoiceListScreen() {
     ]);
   };
 
+  const handleUploadReceipt = async (id: string) => {
+    try {
+      const result = await DocumentPicker.getDocumentAsync({
+        type: ['image/*', 'application/pdf'],
+        copyToCacheDirectory: true,
+      });
+
+      if (result.canceled) return;
+
+      const file = result.assets[0];
+      
+      Alert.alert('Upload Confirmation', `Upload ${file.name}?`, [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Upload',
+          onPress: async () => {
+            try {
+              setLoading(true);
+              const formData = new FormData();
+              
+              formData.append('paymentReceipt', {
+                uri: file.uri,
+                name: file.name,
+                type: file.mimeType || 'application/octet-stream',
+              } as any);
+
+              const updated = await invoiceService.uploadPaymentReceipt(id, formData);
+              setInvoices((prev) => prev.map((i) => (i._id === id ? updated : i)));
+              Alert.alert('Success', 'Receipt uploaded successfully. Awaiting verification.');
+            } catch (err) {
+              Alert.alert('Error', err instanceof Error ? err.message : 'Upload failed.');
+            } finally {
+              setLoading(false);
+            }
+          },
+        },
+      ]);
+    } catch (err) {
+      Alert.alert('Error', 'Failed to pick document.');
+    }
+  };
+
   const renderInvoice = ({ item }: { item: Invoice }) => {
     const colors = STATUS_STYLES[item.paymentStatus];
     return (
@@ -97,15 +133,12 @@ export default function InvoiceListScreen() {
         )}
 
         <View style={styles.actions}>
-          {/* Patient: pay unpaid invoices */}
           {!isAdmin && item.paymentStatus === 'Unpaid' && (
-            <TouchableOpacity style={styles.payButton}>
-              {/* TODO: Navigate to PaymentScreen with invoiceId */}
+            <TouchableOpacity style={styles.payButton} onPress={() => handleUploadReceipt(item._id)}>
               <Text style={styles.payButtonText}>Upload Receipt</Text>
             </TouchableOpacity>
           )}
 
-          {/* Admin: verify pending invoices */}
           {isAdmin && item.paymentStatus === 'Pending Verification' && (
             <TouchableOpacity
               style={styles.verifyButton}
@@ -119,7 +152,7 @@ export default function InvoiceListScreen() {
     );
   };
 
-  if (loading) {
+  if (loading && invoices.length === 0) {
     return (
       <View style={styles.center}>
         <ActivityIndicator size="large" color="#2563eb" />
@@ -127,7 +160,7 @@ export default function InvoiceListScreen() {
     );
   }
 
-  if (error) {
+  if (error && invoices.length === 0) {
     return (
       <View style={styles.center}>
         <Text style={styles.errorText}>{error}</Text>
@@ -139,26 +172,44 @@ export default function InvoiceListScreen() {
   }
 
   return (
-    <FlatList
-      data={invoices}
-      keyExtractor={(item) => item._id}
-      renderItem={renderInvoice}
-      refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
-      contentContainerStyle={
-        invoices.length === 0 ? styles.emptyContainer : styles.listContainer
-      }
-      ListHeaderComponent={
-        <Text style={styles.header}>{isAdmin ? 'All Invoices' : 'My Bills'}</Text>
-      }
-      ListEmptyComponent={
-        <Text style={styles.emptyText}>No invoices found.</Text>
-      }
-    />
+    <View style={styles.container}>
+      {loading && invoices.length > 0 && (
+        <View style={styles.loadingOverlay}>
+          <ActivityIndicator size="large" color="#2563eb" />
+        </View>
+      )}
+      <FlatList
+        data={invoices}
+        keyExtractor={(item) => item._id}
+        renderItem={renderInvoice}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
+        contentContainerStyle={
+          invoices.length === 0 ? styles.emptyContainer : styles.listContainer
+        }
+        ListHeaderComponent={
+          <Text style={styles.header}>{isAdmin ? 'All Invoices' : 'My Bills'}</Text>
+        }
+        ListEmptyComponent={
+          <Text style={styles.emptyText}>No invoices found.</Text>
+        }
+      />
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
+  container: { flex: 1, backgroundColor: '#f9fafb' },
   center: { flex: 1, justifyContent: 'center', alignItems: 'center' },
+  loadingOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    zIndex: 10,
+    backgroundColor: 'rgba(255, 255, 255, 0.7)',
+    alignItems: 'center',
+    padding: 10,
+  },
   listContainer: { padding: 12 },
   emptyContainer: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: 24 },
   header: { fontSize: 22, fontWeight: '700', color: '#1a1a2e', marginBottom: 12, paddingTop: 4 },

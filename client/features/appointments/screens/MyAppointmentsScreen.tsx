@@ -150,7 +150,7 @@ export default function MyAppointmentsScreen() {
           <Text style={styles.header}>My Appointments</Text>
           <TouchableOpacity
             style={styles.bookButton}
-            onPress={() => router.push('/(tabs)/appointments/book' as Href)}
+            onPress={() => router.push('/(patient)/appointments/book' as Href)}
           >
             <Text style={styles.bookButtonText}>+ Book New Appointment</Text>
           </TouchableOpacity>

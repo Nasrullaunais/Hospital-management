@@ -51,7 +51,7 @@ export const ENDPOINTS = {
   INVOICES: {
     BASE: '/invoices',
     MY_BILLS: '/invoices/my-bills',
-    PAY: (id: string) => `/invoices/${id}/pay`,
+    PAY: (id: string) => `/invoices/${id}/upload-receipt`,
     VERIFY: (id: string) => `/invoices/${id}/verify`,
   },
 } as const;

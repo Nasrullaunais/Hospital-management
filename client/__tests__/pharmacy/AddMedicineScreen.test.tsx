@@ -1,7 +1,7 @@
 import React from 'react';
 import { Alert } from 'react-native';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react-native';
-import AddMedicineScreen from '@/app/(tabs)/pharmacy/add-medicine';
+import AddMedicineScreen from '@/app/(pharmacist)/pharmacy/add-medicine';
 import { useAuth } from '@/shared/context/AuthContext';
 import { medicineService } from '@/features/pharmacy/services/medicine.service';
 import * as ImagePicker from 'expo-image-picker';

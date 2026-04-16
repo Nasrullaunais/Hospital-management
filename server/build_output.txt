@@ -1,0 +1,29 @@
+$ tsc
+src/scripts/phase4-records-e2e.ts(202,9): error TS6133: 'adminUserId' is declared but its value is never read.
+src/shared/middlewares/authMiddleware.ts(19,46): error TS6133: 'res' is declared but its value is never read.
+src/tests/doctor.integration.test.ts(156,22): error TS2339: Property 'code' does not exist on type 'Error'.
+src/tests/doctor.integration.test.ts(170,12): error TS18046: 'res.body' is of type 'unknown'.
+src/tests/doctor.integration.test.ts(171,26): error TS18046: 'res.body' is of type 'unknown'.
+src/tests/doctor.integration.test.ts(172,12): error TS18046: 'res.body' is of type 'unknown'.
+src/tests/doctor.integration.test.ts(173,12): error TS18046: 'res.body' is of type 'unknown'.
+src/tests/doctor.integration.test.ts(183,12): error TS18046: 'res.body' is of type 'unknown'.
+src/tests/doctor.integration.test.ts(199,12): error TS18046: 'res.body' is of type 'unknown'.
+src/tests/doctor.integration.test.ts(220,12): error TS18046: 'res.body' is of type 'unknown'.
+src/tests/doctor.integration.test.ts(235,12): error TS18046: 'res.body' is of type 'unknown'.
+src/tests/doctor.integration.test.ts(251,12): error TS18046: 'res.body' is of type 'unknown'.
+src/tests/doctor.integration.test.ts(267,12): error TS18046: 'res.body' is of type 'unknown'.
+src/tests/doctor.integration.test.ts(268,12): error TS18046: 'res.body' is of type 'unknown'.
+src/tests/doctor.integration.test.ts(269,12): error TS18046: 'res.body' is of type 'unknown'.
+src/tests/doctor.integration.test.ts(290,12): error TS18046: 'second.body' is of type 'unknown'.
+src/tests/doctor.integration.test.ts(298,11): error TS6133: 'created' is declared but its value is never read.
+src/tests/doctor.integration.test.ts(306,12): error TS18046: 'listRes.body' is of type 'unknown'.
+src/tests/doctor.integration.test.ts(307,12): error TS18046: 'listRes.body' is of type 'unknown'.
+src/tests/doctor.integration.test.ts(308,12): error TS18046: 'listRes.body' is of type 'unknown'.
+src/tests/doctor.integration.test.ts(315,12): error TS18046: 'res.body' is of type 'unknown'.
+src/tests/doctor.integration.test.ts(339,22): error TS18046: 'created.body' is of type 'unknown'.
+src/tests/doctor.integration.test.ts(376,23): error TS18046: 'created.body' is of type 'unknown'.
+src/tests/doctor.integration.test.ts(388,12): error TS18046: 'res.body' is of type 'unknown'.
+src/tests/doctor.integration.test.ts(401,22): error TS18046: 'created.body' is of type 'unknown'.
+src/tests/doctor.integration.test.ts(413,12): error TS18046: 'updated.body' is of type 'unknown'.
+src/tests/doctor.integration.test.ts(414,12): error TS18046: 'updated.body' is of type 'unknown'.
+src/tests/doctor.integration.test.ts(430,22): error TS18046: 'created.body' is of type 'unknown'.

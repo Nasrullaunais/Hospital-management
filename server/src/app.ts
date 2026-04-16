@@ -79,8 +79,7 @@ app.use((req, res, next) => {
 });
 
 // Static files
-const uploadsPath = path.resolve(process.env['UPLOADS_DIR'] ?? path.resolve(__dirname, '../../uploads'));
-app.use('/uploads', express.static(uploadsPath));
+app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
 
 // Routes + error handler
 app.use(router);

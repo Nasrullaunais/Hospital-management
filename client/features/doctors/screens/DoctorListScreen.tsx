@@ -54,10 +54,12 @@ export default function DoctorListScreen() {
     setRefreshing(false);
   };
 
+  const doctorDetailPath = user?.role === 'admin' ? '/(admin)/doctors/[id]' : '/(patient)/doctors/[id]';
+
   const renderDoctor = ({ item }: { item: Doctor }) => (
     <TouchableOpacity
       style={styles.card}
-      onPress={() => router.push({ pathname: '/(tabs)/doctors/[id]', params: { id: item._id } })}>
+      onPress={() => router.push({ pathname: doctorDetailPath, params: { id: item._id } })}>
       <Text style={styles.doctorName}>
         {typeof item.userId === 'object' ? item.userId.name : 'Dr. Unknown'}
       </Text>
@@ -82,7 +84,7 @@ export default function DoctorListScreen() {
       {user?.role === 'admin' && (
         <TouchableOpacity
           style={styles.addButton}
-          onPress={() => router.push('/admin/add-doctor')}
+          onPress={() => router.push('/(admin)/doctors/add')}
         >
           <Text style={styles.addButtonText}>+ Add Doctor</Text>
         </TouchableOpacity>

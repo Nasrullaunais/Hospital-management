@@ -143,7 +143,7 @@ export default function RegisterScreen() {
       setLoading(true);
       setErrors({});
       await register(payload);
-      router.replace('/(tabs)');
+      router.replace('/');
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Registration failed. Please try again.';
       setErrors((prev) => ({ ...prev, server: message }));

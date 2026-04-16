@@ -1,6 +1,6 @@
 import React from 'react';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react-native';
-import PharmacyInventoryScreen from '@/app/(tabs)/pharmacy/index';
+import PharmacyInventoryScreen from '@/app/(pharmacist)/pharmacy/index';
 import { useAuth } from '@/shared/context/AuthContext';
 import { medicineService } from '@/features/pharmacy/services/medicine.service';
 
@@ -30,8 +30,8 @@ describe('PharmacyInventoryScreen', () => {
     jest.clearAllMocks();
   });
 
-  it('renders low-stock badge and allows admin navigation to add medicine', async () => {
-    mockedUseAuth.mockReturnValue({ user: { role: 'admin' } });
+  it('renders low-stock badge and allows pharmacist navigation to add medicine', async () => {
+    mockedUseAuth.mockReturnValue({ user: { role: 'pharmacist' } });
     mockedGetMedicines.mockResolvedValue([
       {
         _id: 'm1',
@@ -61,7 +61,7 @@ describe('PharmacyInventoryScreen', () => {
     expect(screen.getByText('Add Medication')).toBeTruthy();
 
     fireEvent.press(screen.getByText('Add Medication'));
-    expect(mockPush).toHaveBeenCalledWith('/(tabs)/pharmacy/add-medicine');
+    expect(mockPush).toHaveBeenCalledWith('/(pharmacist)/pharmacy/add-medicine');
   });
 
   it('hides add button for doctor role', async () => {

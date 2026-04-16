@@ -66,7 +66,7 @@ export const getAllInvoices = async (req: Request, res: Response, next: NextFunc
   }
 };
 
-/** PUT /api/invoices/:id/pay — Patient uploads payment receipt */
+/** PUT /api/invoices/:id/upload-receipt — Patient uploads payment receipt */
 export const uploadPaymentReceipt = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   try {
     if (!req.file) return next(ApiError.badRequest('Payment receipt file is required'));
@@ -101,7 +101,7 @@ export const uploadPaymentReceipt = async (req: Request, res: Response, next: Ne
   }
 };
 
-/** PUT /api/invoices/:id/verify — Staff verifies payment, marks as Paid */
+/** PATCH /api/invoices/:id/verify — Staff verifies payment, marks as Paid */
 export const verifyPayment = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   const errors = validationResult(req);
   if (!errors.isEmpty()) return next(new ApiError(422, 'Validation failed'));

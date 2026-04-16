@@ -62,7 +62,7 @@ export default function LoginScreen() {
       setLoading(true);
       setErrors({});
       await login(email.trim().toLowerCase(), password);
-      router.replace('/(tabs)');
+      router.replace('/');
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Login failed. Please try again.';
       setErrors({ server: message });

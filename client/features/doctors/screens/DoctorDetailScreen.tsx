@@ -55,6 +55,7 @@ export default function DoctorDetailScreen() {
 
   const doctorName = typeof doctor.userId === 'object' ? doctor.userId.name : 'Unknown';
   const isAdmin = user?.role === 'admin';
+  const canBookAppointment = user?.role === 'patient';
 
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
@@ -79,14 +80,16 @@ export default function DoctorDetailScreen() {
         )}
       </View>
 
-      <TouchableOpacity
-        style={styles.bookButton}
-        onPress={() => {
-          router.push({ pathname: '/(tabs)/appointments/book', params: { doctorId: doctor._id } } as Href);
-        }}
-      >
-        <Text style={styles.bookButtonText}>Book Appointment</Text>
-      </TouchableOpacity>
+      {canBookAppointment && (
+        <TouchableOpacity
+          style={styles.bookButton}
+          onPress={() => {
+            router.push({ pathname: '/(patient)/appointments/book', params: { doctorId: doctor._id } } as Href);
+          }}
+        >
+          <Text style={styles.bookButtonText}>Book Appointment</Text>
+        </TouchableOpacity>
+      )}
 
       {/* Admin actions */}
       {isAdmin && (

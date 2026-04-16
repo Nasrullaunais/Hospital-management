@@ -1,6 +1,6 @@
 import React from 'react';
 import { render, screen } from '@testing-library/react-native';
-import PharmacyLayout from '@/app/(tabs)/pharmacy/_layout';
+import PharmacyLayout from '@/app/(pharmacist)/pharmacy/_layout';
 import { useAuth } from '@/shared/context/AuthContext';
 
 jest.mock('@/shared/context/AuthContext', () => ({
@@ -38,7 +38,7 @@ describe('PharmacyLayout', () => {
 
     render(<PharmacyLayout />);
 
-    expect(screen.getByText('redirect:/(tabs)')).toBeTruthy();
+    expect(screen.getByText('redirect:/(patient)')).toBeTruthy();
   });
 
   it('renders stack screens for staff users', () => {

@@ -16,7 +16,7 @@ import { getRequestContext } from '../utils/logger.js';
  * Role-based access:
  *   - Use requireRole('admin') after authMiddleware to restrict by role.
  */
-export const authMiddleware = (req: Request, res: Response, next: NextFunction): void => {
+export const authMiddleware = (req: Request, _res: Response, next: NextFunction): void => {
   const authHeader = req.headers['authorization'];
 
   if (!authHeader || !authHeader.startsWith('Bearer ')) {

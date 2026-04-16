@@ -53,13 +53,34 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           '@hospital_user',
         ]);
 
-        if (storedToken[1] && storedUser[1]) {
-          setToken(storedToken[1]);
-          setUser(JSON.parse(storedUser[1]) as User);
+        const tokenFromStorage = storedToken[1];
+
+        if (!tokenFromStorage) {
+          if (storedUser[1]) {
+            await AsyncStorage.removeItem('@hospital_user');
+          }
+          return;
+        }
+
+        setToken(tokenFromStorage);
+
+        try {
+          const response = await apiClient.get<{ success: boolean; data: { user: User } }>(
+            ENDPOINTS.PATIENTS.ME,
+          );
+          const validatedUser = response.data.data.user;
+          await AsyncStorage.setItem('@hospital_user', JSON.stringify(validatedUser));
+          setUser(validatedUser);
+        } catch {
+          await AsyncStorage.multiRemove([AUTH_TOKEN_KEY, '@hospital_user']);
+          setToken(null);
+          setUser(null);
         }
       } catch {
         // Corrupted storage — clear and start fresh
         await AsyncStorage.multiRemove([AUTH_TOKEN_KEY, '@hospital_user']);
+        setToken(null);
+        setUser(null);
       } finally {
         setIsLoading(false);
       }
