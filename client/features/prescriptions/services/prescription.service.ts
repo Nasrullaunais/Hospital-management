@@ -38,4 +38,17 @@ export const prescriptionService = {
     );
     return res.data.data;
   },
+
+  createPrescription: async (data: {
+    patientId: string;
+    medicalRecordId?: string;
+    items: PrescriptionItem[];
+    notes?: string;
+  }): Promise<Prescription> => {
+    const res = await apiClient.post<ApiSuccessResponse<Prescription>>(
+      ENDPOINTS.PRESCRIPTIONS.BASE,
+      data,
+    );
+    return res.data.data;
+  },
 };
