@@ -1,18 +1,43 @@
 import { type Request, type Response } from 'express';
 import { Prescription } from './prescription.model.js';
+import { Doctor } from '../doctors/doctor.model.js';
 import { ApiError } from '../../shared/utils/ApiError.js';
 
 export const createPrescription = async (req: Request, res: Response) => {
-  const { patientId, doctorId, medicalRecordId, items, notes } = req.body;
-  if (!patientId || !doctorId || !items?.length) {
-    throw new ApiError(400, 'patientId, doctorId and items are required');
+  const { patientId, medicalRecordId, items, notes } = req.body;
+
+  if (!patientId || !items?.length) {
+    throw new ApiError(400, 'patientId and items are required');
   }
+
+  // Use req.user.id from JWT as the actual doctorId - prevents prescription forgery
+  // doctorId in Prescription model references Doctor document (_id), not User id
+  const doctorProfile = await Doctor.findOne({ userId: req.user.id });
+  if (!doctorProfile) {
+    throw new ApiError(403, 'Doctor profile not found for current user');
+  }
+  const doctorId = doctorProfile._id;
+
+  // Validate each item has required fields
+  for (const item of items) {
+    if (!item.medicineId || !item.dosage || !item.quantity || item.quantity <= 0) {
+      throw new ApiError(400, 'Each item must have medicineId, dosage, and quantity > 0');
+    }
+  }
+
   const prescription = await Prescription.create({ patientId, doctorId, medicalRecordId, items, notes });
   res.status(201).json({ success: true, data: prescription });
 };
 
 export const getPrescriptionsByPatient = async (req: Request, res: Response) => {
   const { patientId } = req.params;
+
+  // Authorization: user must be the patient themselves, or a doctor/admin
+  const isOwner = req.user.id === patientId || req.user.role === 'admin' || req.user.role === 'doctor';
+  if (!isOwner) {
+    throw new ApiError(403, 'You are not authorized to view this patient\'s prescriptions');
+  }
+
   const prescriptions = await Prescription.find({ patientId })
     .populate('doctorId', 'specialization')
     .populate('items.medicineId', 'name price stockQuantity')
@@ -26,6 +51,22 @@ export const getPrescriptionById = async (req: Request, res: Response) => {
     .populate('patientId', 'name email')
     .populate('items.medicineId');
   if (!prescription) throw new ApiError(404, 'Prescription not found');
+
+  // Authorization: user must be the patient, the prescribing doctor, or an admin
+  const patientIdStr = typeof prescription.patientId === 'object' && prescription.patientId._id
+    ? prescription.patientId._id.toString()
+    : prescription.patientId.toString();
+  const doctorIdStr = typeof prescription.doctorId === 'object' && prescription.doctorId._id
+    ? prescription.doctorId._id.toString()
+    : prescription.doctorId.toString();
+  const isAuthorized =
+    req.user.id === patientIdStr ||
+    req.user.id === doctorIdStr ||
+    req.user.role === 'admin';
+  if (!isAuthorized) {
+    throw new ApiError(403, 'You are not authorized to view this prescription');
+  }
+
   res.json({ success: true, data: prescription });
 };
 
@@ -39,9 +80,24 @@ export const getPendingPrescriptions = async (req: Request, res: Response) => {
 };
 
 export const cancelPrescription = async (req: Request, res: Response) => {
-  const prescription = await Prescription.findByIdAndUpdate(
-    req.params.id, { status: 'cancelled' }, { new: true }
-  );
+  const prescription = await Prescription.findById(req.params.id);
   if (!prescription) throw new ApiError(404, 'Prescription not found');
+
+  // Status guard: can only cancel active prescriptions
+  if (prescription.status !== 'active') {
+    throw new ApiError(400, `Cannot cancel a prescription with status '${prescription.status}'`);
+  }
+
+  // Ownership check: only admin or the prescribing doctor can cancel
+  const isAdmin = req.user.role === 'admin';
+  const doctorProfile = await Doctor.findOne({ userId: req.user.id });
+  const isPrescribingDoctor = doctorProfile && prescription.doctorId.toString() === doctorProfile._id.toString();
+  if (!isAdmin && !isPrescribingDoctor) {
+    throw new ApiError(403, 'You are not authorized to cancel this prescription');
+  }
+
+  prescription.status = 'cancelled';
+  await prescription.save();
+
   res.json({ success: true, data: prescription });
 };

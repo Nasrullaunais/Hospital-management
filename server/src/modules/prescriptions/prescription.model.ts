@@ -17,4 +17,8 @@ const prescriptionSchema = new mongoose.Schema({
   status: { type: String, enum: ['active', 'fulfilled', 'cancelled'], default: 'active' }
 }, { timestamps: true });
 
+prescriptionSchema.index({ patientId: 1, createdAt: -1 });
+prescriptionSchema.index({ doctorId: 1, createdAt: -1 });
+prescriptionSchema.index({ status: 1 });
+
 export const Prescription = mongoose.model('Prescription', prescriptionSchema);
