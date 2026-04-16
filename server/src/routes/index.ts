@@ -6,6 +6,7 @@ import recordRoutes from '../modules/records/record.routes.js';
 import medicineRoutes from '../modules/pharmacy/medicine.routes.js';
 import invoiceRoutes from '../modules/billing/invoice.routes.js';
 import prescriptionRoutes from '../modules/prescriptions/prescription.routes.js';
+import dispenseRoutes from '../modules/dispensing/dispense.routes.js';
 
 const router = Router();
 
@@ -49,6 +50,7 @@ router.use('/api/invoices', invoiceRoutes);
 
 // Member 7: Prescriptions
 router.use('/api/prescriptions', prescriptionRoutes);
+router.use('/api/dispense', dispenseRoutes);
 
 // ── 404 Handler ───────────────────────────────────────────────────────────────
 router.use((_req: Request, res: Response) => {
