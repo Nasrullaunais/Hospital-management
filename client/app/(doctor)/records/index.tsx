@@ -43,8 +43,8 @@ export default function RecordsScreen() {
   }, [user]);
 
   useEffect(() => {
-    void fetchRecords();
-  }, [fetchRecords]);
+    if (user?._id) void fetchRecords();
+  }, [user?._id]);
 
   const handleRefresh = () => {
     setRefreshing(true);
