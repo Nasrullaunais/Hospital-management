@@ -68,4 +68,16 @@ export const ENDPOINTS = {
     BASE: '/dispense',
     BY_PATIENT: (patientId: string) => `/dispense/patient/${patientId}`,
   },
+
+  // Departments & Wards
+  DEPARTMENTS: {
+    BASE: '/departments',
+    BY_ID: (id: string) => `/departments/${id}`,
+  },
+
+  WARDS: {
+    BASE: '/wards',
+    BY_ID: (id: string) => `/wards/${id}`,
+    UPDATE_BEDS: (id: string) => `/wards/${id}/beds`,
+  },
 } as const;

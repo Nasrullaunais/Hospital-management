@@ -49,10 +49,16 @@ describe('Prescription API', () => {
         patientId: testPatient._id.toString(),
         medicalRecordId: null,
         items: [
-          { medicineId: testMedicine._id.toString(), medicineName: testMedicine.name, dosage: '500mg', quantity: 2, instructions: 'Take twice daily' }
+          {
+            medicineId: testMedicine._id.toString(),
+            medicineName: testMedicine.name,
+            dosage: '500mg',
+            quantity: 2,
+            instructions: 'Take twice daily',
+          },
         ],
-        notes: 'Regular follow-up'
-      }
+        notes: 'Regular follow-up',
+      },
     });
     expect(res.statusCode).toBe(201);
     const body = res.body;
@@ -69,10 +75,8 @@ describe('Prescription API', () => {
       headers: { Authorization: `Bearer ${global.testHelper.getToken(testDoctor)}` },
       payload: {
         patientId: testPatient._id.toString(),
-        items: [
-          { medicineId: testMedicine._id.toString(), dosage: '500mg', quantity: 0 }
-        ]
-      }
+        items: [{ medicineId: testMedicine._id.toString(), dosage: '500mg', quantity: 0 }],
+      },
     });
     expect(res.statusCode).toBe(400);
   });
@@ -84,10 +88,8 @@ describe('Prescription API', () => {
       headers: { Authorization: `Bearer ${global.testHelper.getToken(testDoctor)}` },
       payload: {
         patientId: testPatient._id.toString(),
-        items: [
-          { dosage: '500mg', quantity: 2 }
-        ]
-      }
+        items: [{ dosage: '500mg', quantity: 2 }],
+      },
     });
     expect(res.statusCode).toBe(400);
   });
@@ -96,7 +98,7 @@ describe('Prescription API', () => {
     const res = await server.inject({
       method: 'GET',
       url: `/api/prescriptions/patient/${testPatient._id}`,
-      headers: { Authorization: `Bearer ${global.testHelper.getToken(testPatient)}` }
+      headers: { Authorization: `Bearer ${global.testHelper.getToken(testPatient)}` },
     });
     expect(res.statusCode).toBe(200);
     const body = res.body;
@@ -108,7 +110,7 @@ describe('Prescription API', () => {
     const res = await server.inject({
       method: 'GET',
       url: `/api/prescriptions/patient/${testPatient._id}`,
-      headers: { Authorization: `Bearer ${global.testHelper.getToken(testAdminUser)}` }
+      headers: { Authorization: `Bearer ${global.testHelper.getToken(testAdminUser)}` },
     });
     expect(res.statusCode).toBe(200);
     expect(res.body.success).toBe(true);
@@ -119,7 +121,7 @@ describe('Prescription API', () => {
     const res = await server.inject({
       method: 'GET',
       url: `/api/prescriptions/patient/${testPatient._id}`,
-      headers: { Authorization: `Bearer ${global.testHelper.getToken(otherPatient)}` }
+      headers: { Authorization: `Bearer ${global.testHelper.getToken(otherPatient)}` },
     });
     expect(res.statusCode).toBe(403);
   });
@@ -129,7 +131,7 @@ describe('Prescription API', () => {
     const res = await server.inject({
       method: 'GET',
       url: '/api/prescriptions/pending',
-      headers: { Authorization: `Bearer ${global.testHelper.getToken(pharmacistUser)}` }
+      headers: { Authorization: `Bearer ${global.testHelper.getToken(pharmacistUser)}` },
     });
     expect(res.statusCode).toBe(200);
     expect(res.body.success).toBe(true);
@@ -139,7 +141,7 @@ describe('Prescription API', () => {
     const res = await server.inject({
       method: 'GET',
       url: '/api/prescriptions/pending',
-      headers: { Authorization: `Bearer ${global.testHelper.getToken(testPatient)}` }
+      headers: { Authorization: `Bearer ${global.testHelper.getToken(testPatient)}` },
     });
     expect(res.statusCode).toBe(403);
   });
@@ -152,9 +154,14 @@ describe('Prescription API', () => {
       payload: {
         patientId: testPatient._id.toString(),
         items: [
-          { medicineId: testMedicine._id.toString(), medicineName: testMedicine.name, dosage: '250mg', quantity: 1 }
-        ]
-      }
+          {
+            medicineId: testMedicine._id.toString(),
+            medicineName: testMedicine.name,
+            dosage: '250mg',
+            quantity: 1,
+          },
+        ],
+      },
     });
     expect(createRes.statusCode).toBe(201);
     const prescriptionId = createRes.body.data._id;
@@ -162,7 +169,7 @@ describe('Prescription API', () => {
     const res = await server.inject({
       method: 'GET',
       url: `/api/prescriptions/${prescriptionId}`,
-      headers: { Authorization: `Bearer ${global.testHelper.getToken(testPatient)}` }
+      headers: { Authorization: `Bearer ${global.testHelper.getToken(testPatient)}` },
     });
     expect(res.statusCode).toBe(200);
     expect(res.body.success).toBe(true);
@@ -176,9 +183,14 @@ describe('Prescription API', () => {
       payload: {
         patientId: testPatient._id.toString(),
         items: [
-          { medicineId: testMedicine._id.toString(), medicineName: testMedicine.name, dosage: '250mg', quantity: 1 }
-        ]
-      }
+          {
+            medicineId: testMedicine._id.toString(),
+            medicineName: testMedicine.name,
+            dosage: '250mg',
+            quantity: 1,
+          },
+        ],
+      },
     });
     const prescriptionId = createRes.body.data._id;
 
@@ -186,7 +198,7 @@ describe('Prescription API', () => {
     const res = await server.inject({
       method: 'GET',
       url: `/api/prescriptions/${prescriptionId}`,
-      headers: { Authorization: `Bearer ${global.testHelper.getToken(otherPatient)}` }
+      headers: { Authorization: `Bearer ${global.testHelper.getToken(otherPatient)}` },
     });
     expect(res.statusCode).toBe(403);
   });
@@ -199,16 +211,21 @@ describe('Prescription API', () => {
       payload: {
         patientId: testPatient._id.toString(),
         items: [
-          { medicineId: testMedicine._id.toString(), medicineName: testMedicine.name, dosage: '100mg', quantity: 1 }
-        ]
-      }
+          {
+            medicineId: testMedicine._id.toString(),
+            medicineName: testMedicine.name,
+            dosage: '100mg',
+            quantity: 1,
+          },
+        ],
+      },
     });
     const prescriptionId = createRes.body.data._id;
 
     const res = await server.inject({
       method: 'PUT',
       url: `/api/prescriptions/${prescriptionId}/cancel`,
-      headers: { Authorization: `Bearer ${global.testHelper.getToken(testDoctor)}` }
+      headers: { Authorization: `Bearer ${global.testHelper.getToken(testDoctor)}` },
     });
     expect(res.statusCode).toBe(200);
     expect(res.body.data.status).toBe('cancelled');
@@ -222,16 +239,21 @@ describe('Prescription API', () => {
       payload: {
         patientId: testPatient._id.toString(),
         items: [
-          { medicineId: testMedicine._id.toString(), medicineName: testMedicine.name, dosage: '100mg', quantity: 1 }
-        ]
-      }
+          {
+            medicineId: testMedicine._id.toString(),
+            medicineName: testMedicine.name,
+            dosage: '100mg',
+            quantity: 1,
+          },
+        ],
+      },
     });
     const prescriptionId = createRes.body.data._id;
 
     const res = await server.inject({
       method: 'PUT',
       url: `/api/prescriptions/${prescriptionId}/cancel`,
-      headers: { Authorization: `Bearer ${global.testHelper.getToken(testAdminUser)}` }
+      headers: { Authorization: `Bearer ${global.testHelper.getToken(testAdminUser)}` },
     });
     expect(res.statusCode).toBe(200);
     expect(res.body.data.status).toBe('cancelled');
@@ -245,22 +267,27 @@ describe('Prescription API', () => {
       payload: {
         patientId: testPatient._id.toString(),
         items: [
-          { medicineId: testMedicine._id.toString(), medicineName: testMedicine.name, dosage: '100mg', quantity: 1 }
-        ]
-      }
+          {
+            medicineId: testMedicine._id.toString(),
+            medicineName: testMedicine.name,
+            dosage: '100mg',
+            quantity: 1,
+          },
+        ],
+      },
     });
     const prescriptionId = createRes.body.data._id;
 
     await server.inject({
       method: 'PUT',
       url: `/api/prescriptions/${prescriptionId}/cancel`,
-      headers: { Authorization: `Bearer ${global.testHelper.getToken(testDoctor)}` }
+      headers: { Authorization: `Bearer ${global.testHelper.getToken(testDoctor)}` },
     });
 
     const res = await server.inject({
       method: 'PUT',
       url: `/api/prescriptions/${prescriptionId}/cancel`,
-      headers: { Authorization: `Bearer ${global.testHelper.getToken(testDoctor)}` }
+      headers: { Authorization: `Bearer ${global.testHelper.getToken(testDoctor)}` },
     });
     expect(res.statusCode).toBe(400);
   });
@@ -273,9 +300,14 @@ describe('Prescription API', () => {
       payload: {
         patientId: testPatient._id.toString(),
         items: [
-          { medicineId: testMedicine._id.toString(), medicineName: testMedicine.name, dosage: '100mg', quantity: 1 }
-        ]
-      }
+          {
+            medicineId: testMedicine._id.toString(),
+            medicineName: testMedicine.name,
+            dosage: '100mg',
+            quantity: 1,
+          },
+        ],
+      },
     });
     const prescriptionId = createRes.body.data._id;
 
@@ -285,7 +317,7 @@ describe('Prescription API', () => {
     const res = await server.inject({
       method: 'PUT',
       url: `/api/prescriptions/${prescriptionId}/cancel`,
-      headers: { Authorization: `Bearer ${global.testHelper.getToken(otherDoctor)}` }
+      headers: { Authorization: `Bearer ${global.testHelper.getToken(otherDoctor)}` },
     });
     expect(res.statusCode).toBe(403);
   });

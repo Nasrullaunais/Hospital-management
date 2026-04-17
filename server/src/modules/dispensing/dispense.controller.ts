@@ -21,7 +21,11 @@ export const dispensePrescription = async (req: Request, res: Response) => {
 
   // Validate each dispensed item and deduct stock
   for (const item of dispensedItems) {
-    if (!item.medicineId || typeof item.quantityDispensed !== 'number' || item.quantityDispensed <= 0) {
+    if (
+      !item.medicineId ||
+      typeof item.quantityDispensed !== 'number' ||
+      item.quantityDispensed <= 0
+    ) {
       throw new ApiError(400, 'Each dispensed item must have medicineId and quantityDispensed > 0');
     }
 
@@ -31,20 +35,20 @@ export const dispensePrescription = async (req: Request, res: Response) => {
     if (medicine.stockQuantity < item.quantityDispensed) {
       throw new ApiError(
         400,
-        `Insufficient stock for ${medicine.name}: available ${medicine.stockQuantity}, requested ${item.quantityDispensed}`
+        `Insufficient stock for ${medicine.name}: available ${medicine.stockQuantity}, requested ${item.quantityDispensed}`,
       );
     }
 
     // Atomic stock deduction
     await Medicine.findByIdAndUpdate(item.medicineId, {
-      $inc: { stockQuantity: -item.quantityDispensed }
+      $inc: { stockQuantity: -item.quantityDispensed },
     });
   }
 
   // Build dispensedItems with full details from prescription
   const fullDispensedItems = dispensedItems.map((item: any) => {
     const rxItem = prescription.items.find(
-      (pi: any) => pi.medicineId.toString() === item.medicineId
+      (pi: any) => pi.medicineId.toString() === item.medicineId,
     );
     return {
       medicineId: item.medicineId,
@@ -52,7 +56,7 @@ export const dispensePrescription = async (req: Request, res: Response) => {
       dosage: rxItem?.dosage || '',
       quantityPrescribed: rxItem?.quantity || 0,
       quantityDispensed: item.quantityDispensed,
-      instructions: rxItem?.instructions || ''
+      instructions: rxItem?.instructions || '',
     };
   });
 
@@ -62,7 +66,7 @@ export const dispensePrescription = async (req: Request, res: Response) => {
     patientId: prescription.patientId,
     pharmacistId,
     dispensedItems: fullDispensedItems,
-    status: 'fulfilled'
+    status: 'fulfilled',
   });
 
   // Mark prescription as fulfilled

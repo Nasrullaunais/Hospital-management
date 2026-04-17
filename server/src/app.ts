@@ -4,6 +4,7 @@ import helmet from 'helmet';
 import { randomUUID } from 'crypto';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import request from 'supertest';
 import { env } from './config/env.js';
 import router from './routes/index.js';
 import { errorHandler } from './shared/middlewares/errorHandler.js';
@@ -84,3 +85,37 @@ app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
 // Routes + error handler
 app.use(router);
 app.use(errorHandler);
+
+// createServer wrapper for testing with inject() interface
+export function createServer() {
+  const agent = request.agent(app);
+
+  return {
+    inject: async (options: {
+      method: string;
+      url: string;
+      headers?: Record<string, string>;
+      payload?: unknown;
+    }) => {
+      const { method, url, headers, payload } = options;
+      let req = agent[method.toLowerCase() as keyof typeof agent](url);
+
+      if (headers) {
+        for (const [key, value] of Object.entries(headers)) {
+          req = req.set(key, value);
+        }
+      }
+
+      if (payload !== undefined) {
+        req = req.send(payload);
+      }
+
+      const res = await req;
+      return {
+        statusCode: res.status,
+        body: res.body,
+        headers: res.headers,
+      };
+    },
+  };
+}
