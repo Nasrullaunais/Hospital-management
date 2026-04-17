@@ -111,3 +111,34 @@ export interface Invoice {
   issuedDate: string;
   paymentReceiptUrl?: string;
 }
+
+// ── Department ─────────────────────────────────────────────────────────────────
+
+export interface Department {
+  _id: string;
+  name: string;
+  description: string;
+  headDoctorId?: string | { _id: string; userId: string };
+  location: string;
+  phone: string;
+  status: 'active' | 'inactive';
+  createdAt: string;
+  updatedAt: string;
+}
+
+// ── Ward ────────────────────────────────────────────────────────────────────────
+
+export type WardType = 'general' | 'private' | 'icu' | 'emergency';
+export type WardStatus = 'available' | 'full' | 'maintenance';
+
+export interface Ward {
+  _id: string;
+  departmentId: string | { _id: string; name: string; location: string };
+  name: string;
+  type: WardType;
+  totalBeds: number;
+  currentOccupancy: number;
+  status: WardStatus;
+  createdAt: string;
+  updatedAt: string;
+}

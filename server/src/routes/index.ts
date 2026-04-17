@@ -5,11 +5,14 @@ import appointmentRoutes from '../modules/appointments/appointment.routes.js';
 import recordRoutes from '../modules/records/record.routes.js';
 import medicineRoutes from '../modules/pharmacy/medicine.routes.js';
 import invoiceRoutes from '../modules/billing/invoice.routes.js';
+import prescriptionRoutes from '../modules/prescriptions/prescription.routes.js';
 import dispenseRoutes from '../modules/dispensing/dispense.routes.js';
+import departmentRoutes from '../modules/departments/department.routes.js';
+import wardRoutes from '../modules/wards/ward.routes.js';
 
 const router = Router();
 
-// ── Health Check ───────────────────────────────────────────────────────────────
+// ── Health Check ────────────────────────────────────────────────────────────────
 router.get('/health', (_req: Request, res: Response) => {
   res.json({
     success: true,
@@ -47,10 +50,15 @@ router.use('/api/medicines', medicineRoutes);
 // Member 6: Billing
 router.use('/api/invoices', invoiceRoutes);
 
-// Member 7: Dispensing
+// Member 7: Prescriptions
+router.use('/api/prescriptions', prescriptionRoutes);
 router.use('/api/dispense', dispenseRoutes);
 
-// ── 404 Handler ────────────────────────────────────────────────────────────────
+// Departments & Wards
+router.use('/api/departments', departmentRoutes);
+router.use('/api/wards', wardRoutes);
+
+// ── 404 Handler ───────────────────────────────────────────────────────────────
 router.use((_req: Request, res: Response) => {
   res.status(404).json({
     success: false,

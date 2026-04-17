@@ -48,9 +48,8 @@ export default function PharmacyInventoryScreen() {
   }, []);
 
   useEffect(() => {
-    setLoading(true);
-    fetchMedicines().finally(() => setLoading(false));
-  }, [fetchMedicines]);
+    if (user?._id) void fetchMedicines();
+  }, [user?._id]);
 
   const onRefresh = async () => {
     setRefreshing(true);

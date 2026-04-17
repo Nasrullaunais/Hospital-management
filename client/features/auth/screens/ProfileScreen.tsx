@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -10,6 +10,7 @@ import {
   Alert,
   Image,
 } from 'react-native';
+import { useRouter } from 'expo-router';
 import * as DocumentPicker from 'expo-document-picker';
 import { useAuth } from '@/shared/context/AuthContext';
 import { authService, type UpdateProfilePayload } from '../services/auth.service';
@@ -22,6 +23,13 @@ import { Config } from '@/shared/constants/Config';
  */
 export default function ProfileScreen() {
   const { user, logout, refreshUser } = useAuth();
+  const router = useRouter();
+
+  useEffect(() => {
+    if (!user) {
+      router.replace('/login');
+    }
+  }, [user, router]);
 
   const [editing, setEditing] = useState(false);
   const [loading, setLoading] = useState(false);

@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import { dispensePrescription, getDispensesByPatient } from './dispense.controller.js';
-import { authMiddleware, requireRole } from '../../shared/middlewares/authMiddleware.js';
+import { authMiddleware } from '../../shared/middlewares/authMiddleware.js';
+import { requireRole } from '../../shared/middlewares/authMiddleware.js';
 
 const router = Router();
 

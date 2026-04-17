@@ -54,4 +54,30 @@ export const ENDPOINTS = {
     PAY: (id: string) => `/invoices/${id}/upload-receipt`,
     VERIFY: (id: string) => `/invoices/${id}/verify`,
   },
+
+  // Member 7 — Prescriptions
+  PRESCRIPTIONS: {
+    BASE: '/prescriptions',
+    PENDING: '/prescriptions/pending',
+    BY_PATIENT: (patientId: string) => `/prescriptions/patient/${patientId}`,
+    BY_ID: (id: string) => `/prescriptions/${id}`,
+  },
+
+  // Member 8 — Dispensing
+  DISPENSE: {
+    BASE: '/dispense',
+    BY_PATIENT: (patientId: string) => `/dispense/patient/${patientId}`,
+  },
+
+  // Departments & Wards
+  DEPARTMENTS: {
+    BASE: '/departments',
+    BY_ID: (id: string) => `/departments/${id}`,
+  },
+
+  WARDS: {
+    BASE: '/wards',
+    BY_ID: (id: string) => `/wards/${id}`,
+    UPDATE_BEDS: (id: string) => `/wards/${id}/beds`,
+  },
 } as const;

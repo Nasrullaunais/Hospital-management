@@ -4,6 +4,7 @@ import helmet from 'helmet';
 import { randomUUID } from 'crypto';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import request from 'supertest';
 import { env } from './config/env.js';
 import router from './routes/index.js';
 import { errorHandler } from './shared/middlewares/errorHandler.js';
@@ -27,7 +28,7 @@ app.use(
     origin:
       env.NODE_ENV === 'production'
         ? (process.env['CORS_ORIGINS'] ?? '').split(',').filter(Boolean)
-        : true,
+        : ['http://localhost:8082', 'http://localhost:8081'],
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization'],
@@ -86,7 +87,6 @@ app.use(router);
 app.use(errorHandler);
 
 // createServer wrapper for testing with inject() interface
-import request from 'supertest';
 export function createServer() {
   const agent = request.agent(app);
 

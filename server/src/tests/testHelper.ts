@@ -4,6 +4,7 @@ import { User } from '../modules/auth/auth.model.js';
 import { Doctor } from '../modules/doctors/doctor.model.js';
 import { Medicine } from '../modules/pharmacy/medicine.model.js';
 import { Prescription } from '../modules/prescriptions/prescription.model.js';
+import { Dispense } from '../modules/dispensing/dispense.model.js';
 import { env } from '../config/env.js';
 
 interface TestUser {
@@ -25,6 +26,14 @@ interface TestMedicine {
   category: string;
   price: number;
   stockQuantity: number;
+}
+
+interface TestPrescription {
+  _id: mongoose.Types.ObjectId;
+  patientId: mongoose.Types.ObjectId;
+  doctorId: mongoose.Types.ObjectId;
+  items: Array<{ medicineId: mongoose.Types.ObjectId; medicineName: string; dosage: string; quantity: number; instructions?: string }>;
+  status: string;
 }
 
 function getToken(user: { _id: { toString: () => string }; email: string; role: string }): string {
@@ -73,25 +82,16 @@ async function createMedicine(params?: { name?: string; category?: string; stock
 async function createPrescription(params: {
   patientId: mongoose.Types.ObjectId;
   doctorId: mongoose.Types.ObjectId;
-  medicalRecordId?: mongoose.Types.ObjectId;
-  items: Array<{
-    medicineId: mongoose.Types.ObjectId;
-    medicineName: string;
-    dosage: string;
-    quantity: number;
-    instructions?: string;
-  }>;
-  notes?: string;
-  status?: 'active' | 'fulfilled' | 'cancelled';
-}): Promise<any> {
+  items: Array<{ medicineId: mongoose.Types.ObjectId; medicineName: string; dosage: string; quantity: number; instructions?: string }>;
+  status?: string;
+}): Promise<TestPrescription> {
   return Prescription.create({
     patientId: params.patientId,
     doctorId: params.doctorId,
-    medicalRecordId: params.medicalRecordId,
     items: params.items,
-    notes: params.notes,
+    notes: 'Test prescription',
     status: params.status ?? 'active',
-  });
+  }) as Promise<TestPrescription>;
 }
 
 interface TestHelper {
@@ -101,17 +101,9 @@ interface TestHelper {
   createPrescription: (params: {
     patientId: mongoose.Types.ObjectId;
     doctorId: mongoose.Types.ObjectId;
-    medicalRecordId?: mongoose.Types.ObjectId;
-    items: Array<{
-      medicineId: mongoose.Types.ObjectId;
-      medicineName: string;
-      dosage: string;
-      quantity: number;
-      instructions?: string;
-    }>;
-    notes?: string;
-    status?: 'active' | 'fulfilled' | 'cancelled';
-  }) => Promise<any>;
+    items: Array<{ medicineId: mongoose.Types.ObjectId; medicineName: string; dosage: string; quantity: number; instructions?: string }>;
+    status?: string;
+  }) => Promise<TestPrescription>;
   getToken: (user: { _id: { toString: () => string }; email: string; role: string }) => string;
 }
 
@@ -123,6 +115,6 @@ const testHelper: TestHelper = {
   getToken,
 };
 
-export type { TestUser, TestDoctor, TestMedicine, TestHelper };
+export type { TestUser, TestDoctor, TestMedicine, TestPrescription, TestHelper };
 
 (global as typeof global & { testHelper: TestHelper }).testHelper = testHelper;
