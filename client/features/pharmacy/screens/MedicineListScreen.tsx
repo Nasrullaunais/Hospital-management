@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState, useMemo } from 'react';
 import {
   View,
   Text,
@@ -10,23 +10,21 @@ import {
   RefreshControl,
   Image,
 } from 'react-native';
+import { Feather } from '@expo/vector-icons';
 import { medicineService } from '../services/medicine.service';
 import type { Medicine } from '@/shared/types';
+import Colors from '@/constants/Colors';
+import { useColorScheme } from '@/components/useColorScheme';
+import { spacing, radius, shadows } from '@/constants/ThemeTokens';
 
-/**
- * MedicineListScreen — Member 5
- * Browsable pharmacy catalog with filtering by category.
- * TODO: Replace text input filter with a category chip/picker.
- * TODO: Navigate to MedicineDetailScreen on card press.
- * TODO: Admin: add "Add Medicine" FAB button.
- * TODO: Show low-stock warning when stockQuantity < 10.
- */
 export default function MedicineListScreen() {
   const [medicines, setMedicines] = useState<Medicine[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [categoryFilter, setCategoryFilter] = useState('');
+  const colorScheme = useColorScheme() ?? 'light';
+  const theme = Colors[colorScheme];
 
   const fetchMedicines = useCallback(async () => {
     try {
@@ -45,119 +43,169 @@ export default function MedicineListScreen() {
     fetchMedicines().finally(() => setLoading(false));
   }, [fetchMedicines]);
 
-  const onRefresh = async () => {
+  const onRefresh = useCallback(async () => {
     setRefreshing(true);
     await fetchMedicines();
     setRefreshing(false);
-  };
+  }, [fetchMedicines]);
 
-  const isExpiringSoon = (dateStr: string) => {
-    const daysUntilExpiry =
-      (new Date(dateStr).getTime() - Date.now()) / (1000 * 60 * 60 * 24);
-    return daysUntilExpiry <= 30;
-  };
+  const isExpiringSoon = useCallback((dateStr: string) => {
+    const daysUntilExpiry = (new Date(dateStr).getTime() - Date.now()) / (1000 * 60 * 60 * 24);
+    return daysUntilExpiry <= 60;
+  }, []);
 
-  const renderMedicine = ({ item }: { item: Medicine }) => (
-    <TouchableOpacity style={styles.card}>
-      {item.packagingImageUrl ? (
-        <Image source={{ uri: item.packagingImageUrl }} style={styles.image} resizeMode="cover" />
-      ) : (
-        <View style={[styles.image, styles.imagePlaceholder]}>
-          <Text style={styles.imagePlaceholderText}>💊</Text>
-        </View>
-      )}
-      <View style={styles.cardBody}>
-        <Text style={styles.name}>{item.name}</Text>
-        <Text style={styles.category}>{item.category}</Text>
-        <View style={styles.row}>
-          <Text style={styles.price}>${item.price.toFixed(2)}</Text>
-          <Text
-            style={[styles.stock, item.stockQuantity < 10 ? styles.stockLow : undefined]}
-          >
-            {item.stockQuantity < 10 ? '⚠️ ' : ''}Stock: {item.stockQuantity}
-          </Text>
-        </View>
-        {isExpiringSoon(item.expiryDate) && (
-          <Text style={styles.expiry}>⏳ Expires {new Date(item.expiryDate).toLocaleDateString()}</Text>
+  const isLowStock = useCallback((qty: number) => qty < 10, []);
+
+  const getStockBadgeStyle = useCallback((item: Medicine) => {
+    const lowStock = isLowStock(item.stockQuantity);
+    const expiringSoon = isExpiringSoon(item.expiryDate);
+
+    if (lowStock) return { bg: theme.errorBg, border: theme.error, text: theme.error };
+    if (expiringSoon) return { bg: theme.warningBg, border: theme.warning, text: theme.warning };
+    return { bg: theme.successBg, border: theme.success, text: theme.success };
+  }, [theme, isLowStock, isExpiringSoon]);
+
+  const renderMedicine = useCallback(({ item }: { item: Medicine }) => {
+    const lowStock = isLowStock(item.stockQuantity);
+    const expiringSoon = isExpiringSoon(item.expiryDate);
+    const badgeStyle = getStockBadgeStyle(item);
+
+    return (
+      <View style={[styles.card, { backgroundColor: theme.surface, borderColor: theme.border }]}>
+        {item.packagingImageUrl ? (
+          <Image source={{ uri: item.packagingImageUrl }} style={styles.image} resizeMode="cover" />
+        ) : (
+          <View style={[styles.image, { backgroundColor: theme.surfaceTertiary }]}>
+            <Text style={[styles.imagePlaceholderText, { color: theme.textTertiary }]}>Pill</Text>
+          </View>
         )}
+        <View style={styles.cardBody}>
+          <View style={styles.rowBetween}>
+            <Text style={[styles.name, { color: theme.text }]} numberOfLines={1}>{item.name}</Text>
+            <View style={[styles.stockBadge, { backgroundColor: badgeStyle.bg, borderColor: badgeStyle.border }]}>
+              <Text style={[styles.stockBadgeText, { color: badgeStyle.text }]}>
+                {lowStock ? 'Low Stock' : expiringSoon ? 'Expiring' : 'In Stock'}
+              </Text>
+            </View>
+          </View>
+
+          <Text style={[styles.category, { color: theme.textSecondary }]}>{item.category}</Text>
+
+          <View style={styles.row}>
+            <Text style={[styles.price, { color: theme.success }]}>${item.price.toFixed(2)}</Text>
+            <Text style={[styles.stock, { color: lowStock ? theme.error : theme.textSecondary }]}>
+              Stock: {item.stockQuantity}
+            </Text>
+          </View>
+
+          {expiringSoon && (
+            <View style={[styles.expiryRow, { marginTop: spacing.xs }]}>
+              <View style={[styles.expiryPill, { backgroundColor: theme.warningBg, borderColor: theme.warning }]}>
+                <Text style={[styles.expiryPillText, { color: theme.warning }]}>
+                  Expires {new Date(item.expiryDate).toLocaleDateString()}
+                </Text>
+              </View>
+            </View>
+          )}
+        </View>
       </View>
-    </TouchableOpacity>
-  );
+    );
+  }, [theme, isLowStock, isExpiringSoon, getStockBadgeStyle]);
+
+  const keyExtractor = useCallback((item: Medicine) => item._id, []);
+
+  const ListEmptyComponent = useMemo(() => (
+    <View style={styles.emptyContainer}>
+      <Feather name="package" size={48} color={theme.textTertiary} />
+      <Text style={[styles.emptyText, { color: theme.textSecondary }]}>No medicines found.</Text>
+      <Text style={[styles.emptySub, { color: theme.textTertiary }]}>Try a different category.</Text>
+    </View>
+  ), [theme]);
+
+  if (loading) {
+    return (
+      <View style={[styles.center, { backgroundColor: theme.background }]}>
+        <ActivityIndicator size="large" color={theme.primary} />
+      </View>
+    );
+  }
+
+  if (error) {
+    return (
+      <View style={[styles.center, { backgroundColor: theme.background }]}>
+        <Feather name="alert-circle" size={48} color={theme.error} />
+        <Text style={[styles.errorText, { color: theme.error }]}>{error}</Text>
+        <TouchableOpacity onPress={fetchMedicines}>
+          <Text style={[styles.retryText, { color: theme.primary }]}>Retry</Text>
+        </TouchableOpacity>
+      </View>
+    );
+  }
 
   return (
-    <View style={styles.container}>
-      <TextInput
-        style={styles.searchInput}
-        placeholder="Filter by category..."
-        value={categoryFilter}
-        onChangeText={setCategoryFilter}
-      />
-
-      {loading ? (
-        <ActivityIndicator size="large" color="#2563eb" style={{ marginTop: 40 }} />
-      ) : error ? (
-        <View style={styles.center}>
-          <Text style={styles.errorText}>{error}</Text>
-          <TouchableOpacity onPress={fetchMedicines}>
-            <Text style={styles.retryText}>Retry</Text>
-          </TouchableOpacity>
-        </View>
-      ) : (
-        <FlatList
-          data={medicines}
-          keyExtractor={(item) => item._id}
-          renderItem={renderMedicine}
-          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
-          ListEmptyComponent={
-            <Text style={styles.emptyText}>
-              No medicines found. Try a different category.
-            </Text>
-          }
-          contentContainerStyle={medicines.length === 0 ? styles.emptyContainer : undefined}
+    <View style={[styles.container, { backgroundColor: theme.background }]}>
+      <View style={[styles.filterRow, { backgroundColor: theme.surface }]}>
+        <TextInput
+          style={[styles.searchInput, { backgroundColor: theme.inputBackground, borderColor: theme.inputBorder, color: theme.text }]}
+          placeholder="Filter by category..."
+          placeholderTextColor={theme.inputPlaceholder}
+          value={categoryFilter}
+          onChangeText={setCategoryFilter}
         />
-      )}
+      </View>
+
+      <FlatList
+        data={medicines}
+        keyExtractor={keyExtractor}
+        renderItem={renderMedicine}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={theme.primary} />}
+        ListEmptyComponent={ListEmptyComponent}
+        contentContainerStyle={medicines.length === 0 ? styles.emptyList : styles.list}
+        showsVerticalScrollIndicator={false}
+      />
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#f5f5f5' },
+  container: { flex: 1 },
+  center: { flex: 1, justifyContent: 'center', alignItems: 'center' },
+  filterRow: { paddingHorizontal: spacing.md, paddingVertical: spacing.sm },
   searchInput: {
-    margin: 12,
     borderWidth: 1,
-    borderColor: '#ddd',
-    borderRadius: 8,
-    paddingHorizontal: 14,
-    paddingVertical: 10,
-    backgroundColor: '#fff',
+    borderRadius: radius.md,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
     fontSize: 15,
   },
+  list: { padding: spacing.md },
+  emptyList: { flex: 1 },
+  emptyContainer: { flexGrow: 1, justifyContent: 'center', alignItems: 'center', paddingTop: spacing.xxl },
+  emptyText: { fontSize: 16, fontWeight: '600', marginTop: spacing.md },
+  emptySub: { fontSize: 14, marginTop: spacing.xs },
   card: {
     flexDirection: 'row',
-    backgroundColor: '#fff',
-    marginHorizontal: 12,
-    marginBottom: 10,
-    borderRadius: 10,
+    marginBottom: spacing.md,
+    borderRadius: radius.lg,
     overflow: 'hidden',
-    shadowColor: '#000',
-    shadowOpacity: 0.06,
-    shadowRadius: 4,
-    elevation: 2,
+    borderWidth: 1,
+    ...shadows.card,
   },
   image: { width: 80, height: 80 },
-  imagePlaceholder: { backgroundColor: '#f3f4f6', justifyContent: 'center', alignItems: 'center' },
-  imagePlaceholderText: { fontSize: 28 },
-  cardBody: { flex: 1, padding: 12 },
-  name: { fontSize: 15, fontWeight: '700', color: '#1a1a2e', marginBottom: 2 },
-  category: { fontSize: 12, color: '#6b7280', marginBottom: 6 },
-  row: { flexDirection: 'row', gap: 12 },
-  price: { fontSize: 14, fontWeight: '600', color: '#059669' },
-  stock: { fontSize: 13, color: '#555' },
-  stockLow: { color: '#d97706' },
-  expiry: { fontSize: 12, color: '#ef4444', marginTop: 4 },
-  center: { flex: 1, justifyContent: 'center', alignItems: 'center', marginTop: 60 },
-  errorText: { color: '#ef4444', fontSize: 15, marginBottom: 12 },
-  retryText: { color: '#2563eb', fontWeight: '600', fontSize: 15 },
-  emptyContainer: { flex: 1, justifyContent: 'center', alignItems: 'center' },
-  emptyText: { color: '#888', fontSize: 15, textAlign: 'center', marginTop: 60 },
+  imagePlaceholder: { justifyContent: 'center', alignItems: 'center' },
+  imagePlaceholderText: { fontSize: 12, fontWeight: '600' },
+  cardBody: { flex: 1, padding: spacing.md, gap: spacing.xs },
+  rowBetween: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+  name: { fontSize: 15, fontWeight: '700', flex: 1, paddingRight: spacing.sm },
+  category: { fontSize: 12 },
+  row: { flexDirection: 'row', gap: spacing.md, alignItems: 'center' },
+  price: { fontSize: 14, fontWeight: '600' },
+  stock: { fontSize: 13 },
+  stockBadge: { borderWidth: 1, borderRadius: radius.full, paddingHorizontal: spacing.sm, paddingVertical: spacing.xs },
+  stockBadgeText: { fontSize: 11, fontWeight: '700' },
+  expiryRow: { flexDirection: 'row' },
+  expiryPill: { borderWidth: 1, borderRadius: radius.full, paddingHorizontal: spacing.sm, paddingVertical: spacing.xs },
+  expiryPillText: { fontSize: 11, fontWeight: '600' },
+  errorText: { fontSize: 15, marginTop: spacing.md },
+  retryText: { fontWeight: '600', fontSize: 15, marginTop: spacing.sm },
 });

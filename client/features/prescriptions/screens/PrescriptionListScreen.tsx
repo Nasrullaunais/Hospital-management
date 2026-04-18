@@ -1,8 +1,15 @@
-import React, { useEffect, useState, useCallback } from 'react';
+import React, { useEffect, useState, useCallback, useMemo } from 'react';
 import { View, Text, FlatList, StyleSheet, ActivityIndicator, TouchableOpacity, RefreshControl } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { Feather } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { prescriptionService, type Prescription } from '../services/prescription.service';
 import { useAuth } from '@/shared/context/AuthContext';
+import Colors from '@/constants/Colors';
+import { useColorScheme } from '@/components/useColorScheme';
+import { spacing, radius, shadows } from '@/constants/ThemeTokens';
+
+const TAB_BAR_HEIGHT = 70;
 
 export default function PrescriptionListScreen() {
   const [prescriptions, setPrescriptions] = useState<Prescription[]>([]);
@@ -11,6 +18,8 @@ export default function PrescriptionListScreen() {
   const [error, setError] = useState<string | null>(null);
   const router = useRouter();
   const { user } = useAuth();
+  const colorScheme = useColorScheme() ?? 'light';
+  const theme = Colors[colorScheme];
 
   const loadPrescriptions = useCallback(async () => {
     try {
@@ -28,53 +37,117 @@ export default function PrescriptionListScreen() {
 
   useEffect(() => { loadPrescriptions(); }, [loadPrescriptions]);
 
-  const onRefresh = () => { setRefreshing(true); loadPrescriptions(); };
+  const onRefresh = useCallback(() => {
+    setRefreshing(true);
+    loadPrescriptions();
+  }, [loadPrescriptions]);
 
-  if (loading) return <View style={styles.center}><ActivityIndicator size="large" color="#2196F3" /></View>;
-  if (error) return <View style={styles.center}><Text style={styles.error}>{error}</Text></View>;
+  const getStatusStyle = useCallback((status: string) => {
+    switch (status) {
+      case 'active':
+      case 'Active':
+        return { bg: theme.infoBg, text: theme.info };
+      case 'fulfilled':
+      case 'Fulfilled':
+        return { bg: theme.successBg, text: theme.success };
+      case 'cancelled':
+      case 'Cancelled':
+        return { bg: theme.errorBg, text: theme.error };
+      default:
+        return { bg: theme.surfaceTertiary, text: theme.textSecondary };
+    }
+  }, [theme]);
+
+  const renderPrescription = useCallback(({ item }: { item: Prescription }) => {
+    const doctorName = typeof item.doctorId === 'object' ? item.doctorId?.userId?.name : 'Doctor';
+    const statusStyle = getStatusStyle(item.status);
+
+    return (
+      <TouchableOpacity
+        style={[styles.card, { backgroundColor: theme.surface, borderColor: theme.border }]}
+        onPress={() => router.push(`/prescriptions/${item._id}`)}
+        activeOpacity={0.7}
+      >
+        <View style={styles.cardHeader}>
+          <Text style={[styles.date, { color: theme.textSecondary }]}>{new Date(item.createdAt).toLocaleDateString()}</Text>
+          <View style={[styles.statusBadge, { backgroundColor: statusStyle.bg }]}>
+            <Text style={[styles.statusText, { color: statusStyle.text }]}>{item.status}</Text>
+          </View>
+        </View>
+        <View style={styles.doctorRow}>
+          <Feather name="user" size={16} color={theme.textSecondary} style={{ marginRight: spacing.xs }} />
+          <Text style={[styles.doctor, { color: theme.text }]}>Dr. {doctorName}</Text>
+        </View>
+        <View style={styles.itemsRow}>
+          <Feather name="package" size={14} color={theme.textTertiary} style={{ marginRight: spacing.xs }} />
+          <Text style={[styles.items, { color: theme.textSecondary }]}>{item.items.length} medicine(s) prescribed</Text>
+        </View>
+      </TouchableOpacity>
+    );
+  }, [theme, router, getStatusStyle]);
+
+  const keyExtractor = useCallback((item: Prescription) => item._id, []);
+
+  const ListEmptyComponent = useMemo(() => (
+    <View style={styles.emptyContainer}>
+      <Feather name="clipboard" size={64} color={theme.textTertiary} />
+      <Text style={[styles.empty, { color: theme.textSecondary }]}>No prescriptions found</Text>
+    </View>
+  ), [theme]);
+
+  if (loading) return (
+    <SafeAreaView edges={['top', 'bottom']} style={[styles.container, { backgroundColor: theme.background }]}>
+      <View style={styles.center}>
+        <ActivityIndicator size="large" color={theme.primary} />
+      </View>
+    </SafeAreaView>
+  );
+
+  if (error) return (
+    <SafeAreaView edges={['top', 'bottom']} style={[styles.container, { backgroundColor: theme.background }]}>
+      <View style={styles.center}>
+        <Feather name="alert-circle" size={48} color={theme.error} />
+        <Text style={[styles.error, { color: theme.error }]}>{error}</Text>
+      </View>
+    </SafeAreaView>
+  );
 
   return (
-    <View style={styles.container}>
+    <SafeAreaView edges={['top', 'bottom']} style={[styles.container, { backgroundColor: theme.background }]}>
       <FlatList
         data={prescriptions}
-        keyExtractor={(item) => item._id}
-        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
-        renderItem={({ item }) => {
-          const doctorName = typeof item.doctorId === 'object' ? item.doctorId?.userId?.name : 'Doctor';
-          return (
-            <TouchableOpacity style={styles.card} onPress={() => router.push(`/prescriptions/${item._id}`)}>
-              <View style={styles.cardHeader}>
-                <Text style={styles.date}>{new Date(item.createdAt).toLocaleDateString()}</Text>
-                <View style={[styles.statusBadge, item.status === 'active' && styles.statusActive, item.status === 'fulfilled' && styles.statusFulfilled, item.status === 'cancelled' && styles.statusCancelled]}>
-                  <Text style={styles.statusText}>{item.status}</Text>
-                </View>
-              </View>
-              <Text style={styles.doctor}>Dr. {doctorName}</Text>
-              <Text style={styles.items}>{item.items.length} medicine(s) prescribed</Text>
-            </TouchableOpacity>
-          );
-        }}
-        ListEmptyComponent={<Text style={styles.empty}>No prescriptions found</Text>}
-        contentContainerStyle={prescriptions.length === 0 && styles.emptyContainer}
+        keyExtractor={keyExtractor}
+        renderItem={renderPrescription}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={theme.primary} />}
+        ListEmptyComponent={ListEmptyComponent}
+        contentContainerStyle={prescriptions.length === 0 ? styles.emptyListContainer : styles.list}
+        showsVerticalScrollIndicator={false}
       />
-    </View>
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#f5f5f5' },
+  container: { flex: 1 },
   center: { flex: 1, justifyContent: 'center', alignItems: 'center' },
-  card: { backgroundColor: '#fff', padding: 16, borderRadius: 12, marginBottom: 12, elevation: 2, shadowColor: '#000', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.1, shadowRadius: 2 },
-  cardHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 },
-  date: { fontSize: 13, color: '#666' },
-  doctor: { fontSize: 17, fontWeight: '600', color: '#333', marginBottom: 4 },
-  items: { fontSize: 14, color: '#888' },
-  empty: { textAlign: 'center', marginTop: 60, color: '#999', fontSize: 16 },
-  emptyContainer: { flexGrow: 1, justifyContent: 'center' },
-  error: { color: '#e53935', fontSize: 15 },
-  statusBadge: { paddingHorizontal: 8, paddingVertical: 3, borderRadius: 12 },
-  statusActive: { backgroundColor: '#e3f2fd' },
-  statusFulfilled: { backgroundColor: '#e8f5e9' },
-  statusCancelled: { backgroundColor: '#fce4ec' },
-  statusText: { fontSize: 12, fontWeight: '600', color: '#555' },
+  list: { padding: spacing.md, paddingBottom: TAB_BAR_HEIGHT + spacing.md },
+  emptyListContainer: { flexGrow: 1 },
+  emptyContainer: { flexGrow: 1, justifyContent: 'center', alignItems: 'center' },
+  card: {
+    padding: spacing.md,
+    borderRadius: radius.lg,
+    marginBottom: spacing.md,
+    borderWidth: 1,
+    ...shadows.card,
+  },
+  cardHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: spacing.sm },
+  date: { fontSize: 13 },
+  doctorRow: { flexDirection: 'row', alignItems: 'center', marginBottom: spacing.xs },
+  doctor: { fontSize: 17, fontWeight: '600' },
+  itemsRow: { flexDirection: 'row', alignItems: 'center' },
+  items: { fontSize: 14 },
+  empty: { textAlign: 'center', marginTop: spacing.md, fontSize: 16 },
+  error: { fontSize: 15, marginTop: spacing.sm, textAlign: 'center', paddingHorizontal: spacing.lg },
+  statusBadge: { paddingHorizontal: spacing.sm, paddingVertical: spacing.xs, borderRadius: radius.full },
+  statusText: { fontSize: 12, fontWeight: '600' },
 });

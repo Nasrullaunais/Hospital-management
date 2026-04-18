@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useMemo } from 'react';
 import {
   View,
   Text,
@@ -9,6 +9,8 @@ import {
   Alert,
 } from 'react-native';
 import { useLocalSearchParams, useRouter, type Href } from 'expo-router';
+import Colors, { gray } from '@/constants/Colors';
+import { useColorScheme } from '@/components/useColorScheme';
 import { doctorService } from '../services/doctor.service';
 import type { Doctor } from '@/shared/types';
 import { useAuth } from '@/shared/context/AuthContext';
@@ -24,6 +26,8 @@ export default function DoctorDetailScreen() {
   const { id: doctorId } = useLocalSearchParams<{ id: string }>();
   const { user } = useAuth();
   const router = useRouter();
+  const colorScheme = useColorScheme();
+  const c = useMemo(() => Colors[colorScheme ?? 'light'], [colorScheme]);
 
   const [doctor, setDoctor] = useState<Doctor | null>(null);
   const [loading, setLoading] = useState(true);
@@ -40,7 +44,7 @@ export default function DoctorDetailScreen() {
   if (loading) {
     return (
       <View style={styles.center}>
-        <ActivityIndicator size="large" color="#2563eb" />
+        <ActivityIndicator size="large" color={c.primary} />
       </View>
     );
   }
@@ -48,7 +52,7 @@ export default function DoctorDetailScreen() {
   if (error || !doctor) {
     return (
       <View style={styles.center}>
-        <Text style={styles.errorText}>{error ?? 'Doctor not found.'}</Text>
+        <Text style={[styles.errorText, { color: c.error }]}>{error ?? 'Doctor not found.'}</Text>
       </View>
     );
   }
@@ -143,36 +147,36 @@ function Detail({ label, value }: { label: string; value: string }) {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#fff' },
+  container: { flex: 1, backgroundColor: Colors.light.surface },
   content: { padding: 20 },
   center: { flex: 1, justifyContent: 'center', alignItems: 'center' },
-  errorText: { color: '#ef4444', fontSize: 15 },
+  errorText: { fontSize: 15 },
   header: { marginBottom: 24 },
-  name: { fontSize: 26, fontWeight: '700', color: '#1a1a2e', marginBottom: 4 },
-  specialization: { fontSize: 16, color: '#2563eb', marginBottom: 10 },
+  name: { fontSize: 26, fontWeight: '700', color: gray[900], marginBottom: 4 },
+  specialization: { fontSize: 16, color: Colors.light.primary, marginBottom: 10 },
   badge: { alignSelf: 'flex-start', borderRadius: 12, paddingHorizontal: 10, paddingVertical: 3 },
-  badgeGreen: { backgroundColor: '#dcfce7' },
-  badgeGray: { backgroundColor: '#f3f4f6' },
-  badgeText: { fontSize: 12, fontWeight: '600', color: '#374151' },
-  section: { borderTopWidth: 1, borderColor: '#f0f0f0', paddingTop: 16, marginBottom: 24 },
+  badgeGreen: { backgroundColor: Colors.light.successBg },
+  badgeGray: { backgroundColor: gray[100] },
+  badgeText: { fontSize: 12, fontWeight: '600', color: gray[700] },
+  section: { borderTopWidth: 1, borderColor: gray[100], paddingTop: 16, marginBottom: 24 },
   detail: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 12 },
-  detailLabel: { fontSize: 14, color: '#888' },
-  detailValue: { fontSize: 14, fontWeight: '600', color: '#1a1a2e' },
+  detailLabel: { fontSize: 14, color: gray[400] },
+  detailValue: { fontSize: 14, fontWeight: '600', color: gray[900] },
   bookButton: {
-    backgroundColor: '#2563eb',
+    backgroundColor: Colors.light.primary,
     borderRadius: 10,
     paddingVertical: 14,
     alignItems: 'center',
   },
   bookButtonText: { color: '#fff', fontSize: 16, fontWeight: '600' },
-  adminSection: { marginTop: 24, borderTopWidth: 1, borderColor: '#f0f0f0', paddingTop: 16 },
-  adminLabel: { fontSize: 12, fontWeight: '700', color: '#888', marginBottom: 10, textTransform: 'uppercase' },
+  adminSection: { marginTop: 24, borderTopWidth: 1, borderColor: gray[100], paddingTop: 16 },
+  adminLabel: { fontSize: 12, fontWeight: '700', color: gray[400], marginBottom: 10, textTransform: 'uppercase' },
   editButton: {
     borderWidth: 1,
-    borderColor: '#e5e7eb',
+    borderColor: gray[300],
     borderRadius: 8,
     paddingVertical: 10,
     alignItems: 'center',
   },
-  editButtonText: { color: '#374151', fontWeight: '600' },
+  editButtonText: { color: gray[700], fontWeight: '600' },
 });

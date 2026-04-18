@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState, useMemo } from 'react';
 import {
   View,
   Text,
@@ -8,28 +8,23 @@ import {
   StyleSheet,
   RefreshControl,
 } from 'react-native';
+import { Feather } from '@expo/vector-icons';
 import { recordService } from '../services/record.service';
 import { useAuth } from '@/shared/context/AuthContext';
-import type { MedicalRecord, PopulatedMedicalRecord } from '@/shared/types';
+import type { PopulatedMedicalRecord } from '@/shared/types';
+import Colors from '@/constants/Colors';
+import { useColorScheme } from '@/components/useColorScheme';
+import { spacing, radius, shadows } from '@/constants/ThemeTokens';
 
 interface Props {
-  /**
-   * Patient ID whose records to display.
-   * Defaults to the authenticated user's own ID.
-   */
   patientId?: string;
   onPressRecord?: (record: PopulatedMedicalRecord) => void;
 }
 
-/**
- * RecordListScreen — Member 4
- * Lists all medical records belonging to the patient.
- * TODO: Wire onPressRecord to navigate to RecordDetailScreen.
- * TODO: Doctors: Add "Create Record" button (visible for doctor role).
- * TODO: Add search/filter by diagnosis or date.
- */
 export default function RecordListScreen({ patientId, onPressRecord }: Props) {
   const { user } = useAuth();
+  const colorScheme = useColorScheme() ?? 'light';
+  const theme = Colors[colorScheme];
   const targetPatientId = patientId ?? user?._id;
 
   const [records, setRecords] = useState<PopulatedMedicalRecord[]>([]);
@@ -53,47 +48,74 @@ export default function RecordListScreen({ patientId, onPressRecord }: Props) {
     fetchRecords().finally(() => setLoading(false));
   }, [fetchRecords]);
 
-  const onRefresh = async () => {
+  const onRefresh = useCallback(async () => {
     setRefreshing(true);
     await fetchRecords();
     setRefreshing(false);
-  };
+  }, [fetchRecords]);
 
-  const renderRecord = ({ item }: { item: PopulatedMedicalRecord }) => (
-    <TouchableOpacity style={styles.card} onPress={() => onPressRecord?.(item)}>
-      <Text style={styles.diagnosis} numberOfLines={2}>
-        {item.diagnosis}
-      </Text>
-      <Text style={styles.date}>
-        📅 {new Date(item.dateRecorded).toLocaleDateString()}
-      </Text>
-      {item.prescription && (
-        <Text style={styles.prescription} numberOfLines={2}>
-          Rx: {item.prescription}
+  const renderRecord = useCallback(({ item }: { item: PopulatedMedicalRecord }) => {
+    const dateStr = new Date(item.dateRecorded).toLocaleDateString(undefined, {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric',
+    });
+
+    return (
+      <TouchableOpacity
+        style={[styles.card, { backgroundColor: theme.surface, borderColor: theme.border }]}
+        onPress={() => onPressRecord?.(item)}
+        activeOpacity={0.7}
+      >
+        <Text style={[styles.diagnosis, { color: theme.text }]} numberOfLines={2}>
+          {item.diagnosis}
         </Text>
-      )}
-      {item.labReportUrl && (
-        <View style={styles.attachmentTag}>
-          <Text style={styles.attachmentText}>📎 Lab report attached</Text>
+        <View style={styles.dateRow}>
+          <Feather name="calendar" size={13} color={theme.textTertiary} />
+          <Text style={[styles.dateText, { color: theme.textSecondary }]}>{dateStr}</Text>
         </View>
-      )}
-    </TouchableOpacity>
-  );
+        {item.prescription && (
+          <Text style={[styles.prescription, { color: theme.textSecondary }]} numberOfLines={2}>
+            Rx: {item.prescription}
+          </Text>
+        )}
+        {item.labReportUrl && (
+          <View style={[styles.attachmentTag, { backgroundColor: theme.infoBg }]}>
+            <Feather name="paperclip" size={13} color={theme.info} />
+            <Text style={[styles.attachmentText, { color: theme.info }]}>Lab Report</Text>
+          </View>
+        )}
+      </TouchableOpacity>
+    );
+  }, [theme, onPressRecord]);
+
+  const keyExtractor = useCallback((item: PopulatedMedicalRecord) => item._id, []);
+
+  const ListHeaderComponent = useMemo(() => (
+    <Text style={[styles.header, { color: theme.text }]}>Medical Records</Text>
+  ), [theme]);
+
+  const ListEmptyComponent = useMemo(() => (
+    <View style={styles.emptyContent}>
+      <Feather name="file-text" size={48} color={theme.textTertiary} />
+      <Text style={[styles.emptyText, { color: theme.textSecondary }]}>No medical records found.</Text>
+    </View>
+  ), [theme]);
 
   if (loading) {
     return (
-      <View style={styles.center}>
-        <ActivityIndicator size="large" color="#2563eb" />
+      <View style={[styles.center, { backgroundColor: theme.background }]}>
+        <ActivityIndicator size="large" color={theme.primary} />
       </View>
     );
   }
 
   if (error) {
     return (
-      <View style={styles.center}>
-        <Text style={styles.errorText}>{error}</Text>
+      <View style={[styles.center, { backgroundColor: theme.background }]}>
+        <Text style={[styles.errorText, { color: theme.error }]}>{error}</Text>
         <TouchableOpacity onPress={fetchRecords}>
-          <Text style={styles.retryText}>Retry</Text>
+          <Text style={[styles.retryText, { color: theme.primary }]}>Retry</Text>
         </TouchableOpacity>
       </View>
     );
@@ -102,48 +124,46 @@ export default function RecordListScreen({ patientId, onPressRecord }: Props) {
   return (
     <FlatList
       data={records}
-      keyExtractor={(item) => item._id}
+      keyExtractor={keyExtractor}
       renderItem={renderRecord}
-      refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
-      contentContainerStyle={
-        records.length === 0 ? styles.emptyContainer : styles.listContainer
-      }
-      ListHeaderComponent={<Text style={styles.header}>Medical Records</Text>}
-      ListEmptyComponent={
-        <Text style={styles.emptyText}>No medical records found.</Text>
-      }
+      refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={theme.primary} />}
+      contentContainerStyle={records.length === 0 ? styles.emptyContainer : styles.listContainer}
+      ListHeaderComponent={ListHeaderComponent}
+      ListEmptyComponent={ListEmptyComponent}
+      showsVerticalScrollIndicator={false}
     />
   );
 }
 
 const styles = StyleSheet.create({
   center: { flex: 1, justifyContent: 'center', alignItems: 'center' },
-  listContainer: { padding: 12 },
-  emptyContainer: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: 24 },
-  header: { fontSize: 22, fontWeight: '700', color: '#1a1a2e', marginBottom: 12, paddingTop: 4 },
+  listContainer: { padding: spacing.md },
+  emptyContainer: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: spacing.lg },
+  header: { fontSize: 22, fontWeight: '700', marginBottom: spacing.md, paddingHorizontal: spacing.xs },
   card: {
-    backgroundColor: '#fff',
-    borderRadius: 10,
-    padding: 16,
-    marginBottom: 10,
-    shadowColor: '#000',
-    shadowOpacity: 0.06,
-    shadowRadius: 4,
-    elevation: 2,
+    borderRadius: radius.lg,
+    padding: spacing.md,
+    marginBottom: spacing.md,
+    borderWidth: 1,
+    ...shadows.card,
   },
-  diagnosis: { fontSize: 16, fontWeight: '600', color: '#1a1a2e', marginBottom: 6 },
-  date: { fontSize: 12, color: '#888', marginBottom: 4 },
-  prescription: { fontSize: 13, color: '#555', marginTop: 4 },
+  diagnosis: { fontSize: 16, fontWeight: '600', marginBottom: spacing.xs },
+  dateRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs, marginBottom: spacing.xs },
+  dateText: { fontSize: 13 },
+  prescription: { fontSize: 14, marginTop: spacing.xs },
   attachmentTag: {
-    marginTop: 8,
-    backgroundColor: '#eff6ff',
-    borderRadius: 6,
-    paddingHorizontal: 10,
-    paddingVertical: 4,
+    marginTop: spacing.sm,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
+    borderRadius: radius.sm,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: spacing.xs,
     alignSelf: 'flex-start',
   },
-  attachmentText: { fontSize: 12, color: '#3b82f6' },
-  errorText: { color: '#ef4444', fontSize: 15, marginBottom: 12 },
-  retryText: { color: '#2563eb', fontWeight: '600', fontSize: 15 },
-  emptyText: { color: '#888', fontSize: 15, textAlign: 'center' },
+  attachmentText: { fontSize: 12, fontWeight: '600' },
+  errorText: { fontSize: 15, marginBottom: spacing.sm },
+  retryText: { fontWeight: '600', fontSize: 15 },
+  emptyContent: { justifyContent: 'center', alignItems: 'center', gap: spacing.sm },
+  emptyText: { fontSize: 16 },
 });

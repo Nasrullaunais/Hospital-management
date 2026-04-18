@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState, useMemo } from 'react';
 import {
   View,
   Text,
@@ -9,13 +9,17 @@ import {
   TextInput,
   RefreshControl,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { Feather } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { wardService, type WardFilters } from '../services/ward.service';
 import type { Ward } from '@/shared/types';
 import { useAuth } from '@/shared/context/AuthContext';
+import Colors from '@/constants/Colors';
+import { useColorScheme } from '@/components/useColorScheme';
+import { spacing, radius, shadows } from '@/constants/ThemeTokens';
 
-const WARD_TYPES = ['general', 'private', 'icu', 'emergency'] as const;
-const WARD_STATUSES = ['available', 'full', 'maintenance'] as const;
+const TAB_BAR_HEIGHT = 70;
 
 export default function WardListScreen() {
   const router = useRouter();
@@ -26,6 +30,8 @@ export default function WardListScreen() {
   const [error, setError] = useState<string | null>(null);
   const [filters, setFilters] = useState<WardFilters>({});
   const [search, setSearch] = useState('');
+  const colorScheme = useColorScheme() ?? 'light';
+  const theme = Colors[colorScheme];
 
   const fetchWards = useCallback(async () => {
     try {
@@ -42,175 +48,203 @@ export default function WardListScreen() {
     fetchWards().finally(() => setLoading(false));
   }, [fetchWards]);
 
-  const onRefresh = async () => {
+  const onRefresh = useCallback(async () => {
     setRefreshing(true);
     await fetchWards();
     setRefreshing(false);
-  };
+  }, [fetchWards]);
 
-  const filteredWards = wards.filter((ward) =>
-    ward.name.toLowerCase().includes(search.toLowerCase()),
+  const filteredWards = useMemo(() =>
+    wards.filter((ward) => ward.name.toLowerCase().includes(search.toLowerCase())),
+    [wards, search]
   );
 
   const wardDetailPath = user?.role === 'admin' ? '/(admin)/wards/[id]' : '/(patient)/wards/[id]';
 
-  const getStatusColor = (status: string) => {
+  const getStatusStyle = useCallback((status: string) => {
     switch (status) {
-      case 'available': return styles.badgeGreen;
-      case 'full': return styles.badgeRed;
-      case 'maintenance': return styles.badgeYellow;
-      default: return styles.badgeGray;
+      case 'available':
+        return { bg: theme.successBg, border: theme.success, text: theme.success };
+      case 'full':
+        return { bg: theme.errorBg, border: theme.error, text: theme.error };
+      case 'maintenance':
+        return { bg: theme.warningBg, border: theme.warning, text: theme.warning };
+      default:
+        return { bg: theme.surfaceTertiary, border: theme.border, text: theme.textSecondary };
     }
-  };
+  }, [theme]);
 
-  const getStatusTextColor = (status: string) => {
-    switch (status) {
-      case 'available': return styles.badgeTextGreen;
-      case 'full': return styles.badgeTextRed;
-      case 'maintenance': return styles.badgeTextYellow;
-      default: return styles.badgeTextGray;
-    }
-  };
-
-  const renderWard = ({ item }: { item: Ward }) => {
+  const renderWard = useCallback(({ item }: { item: Ward }) => {
     const departmentName = typeof item.departmentId === 'object' ? item.departmentId.name : 'Unknown';
     const occupancyPercent = Math.round((item.currentOccupancy / item.totalBeds) * 100);
+    const statusStyle = getStatusStyle(item.status);
 
     return (
       <TouchableOpacity
-        style={styles.card}
+        style={[styles.card, { backgroundColor: theme.surface, borderColor: theme.border }]}
         onPress={() => router.push({ pathname: wardDetailPath, params: { id: item._id } })}
+        activeOpacity={0.7}
       >
         <View style={styles.header}>
-          <View>
-            <Text style={styles.wardName}>{item.name}</Text>
-            <Text style={styles.departmentName}>{departmentName}</Text>
+          <View style={styles.headerInfo}>
+            <Text style={[styles.wardName, { color: theme.text }]}>{item.name}</Text>
+            <Text style={[styles.departmentName, { color: theme.textSecondary }]}>{departmentName}</Text>
           </View>
-          <View style={[styles.badge, getStatusColor(item.status)]}>
-            <Text style={[styles.badgeText, getStatusTextColor(item.status)]}>
-              {item.status}
-            </Text>
+          <View style={[styles.badge, { backgroundColor: statusStyle.bg, borderColor: statusStyle.border }]}>
+            <Text style={[styles.badgeText, { color: statusStyle.text }]}>{item.status}</Text>
           </View>
         </View>
 
         <View style={styles.typeContainer}>
-          <Text style={styles.typeLabel}>Type: </Text>
-          <Text style={styles.typeValue}>{item.type.toUpperCase()}</Text>
+          <Text style={[styles.typeLabel, { color: theme.textTertiary }]}>Type: </Text>
+          <Text style={[styles.typeValue, { color: theme.primary }]}>{item.type.toUpperCase()}</Text>
         </View>
 
         <View style={styles.bedsContainer}>
           <View style={styles.bedsInfo}>
-            <Text style={styles.bedsLabel}>Beds</Text>
-            <Text style={styles.bedsValue}>{item.currentOccupancy} / {item.totalBeds}</Text>
+            <Text style={[styles.bedsLabel, { color: theme.textTertiary }]}>Beds</Text>
+            <Text style={[styles.bedsValue, { color: theme.text }]}>{item.currentOccupancy} / {item.totalBeds}</Text>
           </View>
-          <View style={styles.progressBar}>
-            <View style={[styles.progressFill, { width: `${occupancyPercent}%`, backgroundColor: occupancyPercent >= 100 ? '#ef4444' : '#22c55e' }]} />
+          <View style={[styles.progressBar, { backgroundColor: theme.surfaceTertiary }]}>
+            <View
+              style={[
+                styles.progressFill,
+                {
+                  width: `${occupancyPercent}%`,
+                  backgroundColor: occupancyPercent >= 100 ? theme.error : theme.success
+                }
+              ]}
+            />
           </View>
         </View>
       </TouchableOpacity>
     );
-  };
+  }, [theme, router, wardDetailPath, getStatusStyle]);
+
+  const keyExtractor = useCallback((item: Ward) => item._id, []);
+
+  const ListEmptyComponent = useMemo(() => (
+    <View style={styles.emptyContainer}>
+      <Feather name="home" size={48} color={theme.textTertiary} />
+      <Text style={[styles.emptyText, { color: theme.textSecondary }]}>No wards found.</Text>
+    </View>
+  ), [theme]);
+
+  if (loading) {
+    return (
+      <SafeAreaView edges={['top', 'bottom']} style={[styles.container, { backgroundColor: theme.background }]}>
+        <View style={styles.center}>
+          <ActivityIndicator size="large" color={theme.primary} />
+        </View>
+      </SafeAreaView>
+    );
+  }
+
+  if (error) {
+    return (
+      <SafeAreaView edges={['top', 'bottom']} style={[styles.container, { backgroundColor: theme.background }]}>
+        <View style={styles.center}>
+          <Feather name="alert-circle" size={48} color={theme.error} />
+          <Text style={[styles.errorText, { color: theme.error }]}>{error}</Text>
+          <TouchableOpacity onPress={fetchWards}>
+            <Text style={[styles.retryText, { color: theme.primary }]}>Retry</Text>
+          </TouchableOpacity>
+        </View>
+      </SafeAreaView>
+    );
+  }
 
   return (
-    <View style={styles.container}>
+    <SafeAreaView edges={['top', 'bottom']} style={[styles.container, { backgroundColor: theme.background }]}>
       {user?.role === 'admin' && (
         <TouchableOpacity
-          style={styles.addButton}
+          style={[styles.addButton, { backgroundColor: theme.primary }]}
           onPress={() => router.push('/(admin)/wards/add')}
+          activeOpacity={0.8}
         >
-          <Text style={styles.addButtonText}>+ Add Ward</Text>
+          <Feather name="plus" size={18} color="#fff" style={{ marginRight: spacing.xs }} />
+          <Text style={styles.addButtonText}>Add Ward</Text>
         </TouchableOpacity>
       )}
 
-      <TextInput
-        style={styles.searchInput}
-        placeholder="Search wards..."
-        value={search}
-        onChangeText={setSearch}
-      />
-
-      {loading ? (
-        <ActivityIndicator size="large" color="#2563eb" style={{ marginTop: 40 }} />
-      ) : error ? (
-        <View style={styles.center}>
-          <Text style={styles.errorText}>{error}</Text>
-          <TouchableOpacity onPress={fetchWards}>
-            <Text style={styles.retryText}>Retry</Text>
-          </TouchableOpacity>
-        </View>
-      ) : (
-        <FlatList
-          data={filteredWards}
-          keyExtractor={(item) => item._id}
-          renderItem={renderWard}
-          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
-          ListEmptyComponent={
-            <Text style={styles.emptyText}>No wards found.</Text>
-          }
-          contentContainerStyle={filteredWards.length === 0 ? styles.emptyContainer : undefined}
+      <View style={[styles.searchContainer, { backgroundColor: theme.surface, borderColor: theme.border }]}>
+        <Feather name="search" size={18} color={theme.textTertiary} />
+        <TextInput
+          style={[styles.searchInput, { color: theme.text }]}
+          placeholder="Search wards..."
+          placeholderTextColor={theme.inputPlaceholder}
+          value={search}
+          onChangeText={setSearch}
         />
-      )}
-    </View>
+      </View>
+
+      <FlatList
+        data={filteredWards}
+        keyExtractor={keyExtractor}
+        renderItem={renderWard}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={theme.primary} />}
+        ListEmptyComponent={ListEmptyComponent}
+        contentContainerStyle={filteredWards.length === 0 ? styles.emptyList : styles.list}
+        showsVerticalScrollIndicator={false}
+      />
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#f5f5f5' },
-  searchInput: {
-    margin: 12,
+  container: { flex: 1 },
+  center: { flex: 1, justifyContent: 'center', alignItems: 'center' },
+  list: { padding: spacing.md },
+  emptyList: { flex: 1 },
+  emptyContainer: { flexGrow: 1, justifyContent: 'center', alignItems: 'center' },
+  emptyText: { fontSize: 16, marginTop: spacing.md },
+  searchContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    margin: spacing.md,
+    marginBottom: spacing.xs,
+    paddingHorizontal: spacing.md,
+    borderRadius: radius.md,
     borderWidth: 1,
-    borderColor: '#ddd',
-    borderRadius: 8,
-    paddingHorizontal: 14,
-    paddingVertical: 10,
-    backgroundColor: '#fff',
+    gap: spacing.sm,
+  },
+  searchInput: {
+    flex: 1,
+    paddingVertical: spacing.md,
     fontSize: 15,
   },
   card: {
-    backgroundColor: '#fff',
-    marginHorizontal: 12,
-    marginBottom: 10,
-    borderRadius: 10,
-    padding: 16,
-    shadowColor: '#000',
-    shadowOpacity: 0.06,
-    shadowRadius: 4,
-    elevation: 2,
+    marginBottom: spacing.md,
+    borderRadius: radius.lg,
+    padding: spacing.md,
+    borderWidth: 1,
+    ...shadows.card,
   },
-  header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 10 },
-  wardName: { fontSize: 17, fontWeight: '700', color: '#1a1a2e' },
-  departmentName: { fontSize: 13, color: '#666', marginTop: 2 },
-  typeContainer: { flexDirection: 'row', marginBottom: 10 },
-  typeLabel: { fontSize: 13, color: '#888' },
-  typeValue: { fontSize: 13, fontWeight: '600', color: '#2563eb' },
-  badge: { borderRadius: 10, paddingHorizontal: 8, paddingVertical: 2 },
-  badgeGreen: { backgroundColor: '#dcfed6' },
-  badgeRed: { backgroundColor: '#fee2e2' },
-  badgeYellow: { backgroundColor: '#fef3c7' },
-  badgeGray: { backgroundColor: '#f3f4f6' },
+  header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: spacing.sm },
+  headerInfo: { flex: 1 },
+  wardName: { fontSize: 17, fontWeight: '700' },
+  departmentName: { fontSize: 13, marginTop: 2 },
+  badge: { borderRadius: radius.md, paddingHorizontal: spacing.sm, paddingVertical: spacing.xs, borderWidth: 1 },
   badgeText: { fontSize: 11, fontWeight: '600' },
-  badgeTextGreen: { color: '#166534' },
-  badgeTextRed: { color: '#991b1b' },
-  badgeTextYellow: { color: '#92400e' },
-  badgeTextGray: { color: '#6b7280' },
-  bedsContainer: { marginTop: 4 },
-  bedsInfo: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 4 },
-  bedsLabel: { fontSize: 12, color: '#888' },
-  bedsValue: { fontSize: 12, fontWeight: '600', color: '#1a1a2e' },
-  progressBar: { height: 6, backgroundColor: '#e5e7eb', borderRadius: 3, overflow: 'hidden' },
+  typeContainer: { flexDirection: 'row', marginBottom: spacing.sm },
+  typeLabel: { fontSize: 13 },
+  typeValue: { fontSize: 13, fontWeight: '600' },
+  bedsContainer: { marginTop: spacing.xs },
+  bedsInfo: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: spacing.xs },
+  bedsLabel: { fontSize: 12 },
+  bedsValue: { fontSize: 12, fontWeight: '600' },
+  progressBar: { height: 6, borderRadius: 3, overflow: 'hidden' },
   progressFill: { height: '100%', borderRadius: 3 },
-  center: { flex: 1, justifyContent: 'center', alignItems: 'center', marginTop: 60 },
-  errorText: { color: '#ef4444', fontSize: 15, marginBottom: 12 },
-  retryText: { color: '#2563eb', fontWeight: '600', fontSize: 15 },
-  emptyContainer: { flex: 1, justifyContent: 'center', alignItems: 'center' },
-  emptyText: { color: '#888', fontSize: 15, textAlign: 'center', marginTop: 60 },
   addButton: {
-    backgroundColor: '#2563eb',
-    marginHorizontal: 12,
-    marginTop: 12,
-    borderRadius: 10,
-    paddingVertical: 12,
+    flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'center',
+    marginHorizontal: spacing.md,
+    marginTop: spacing.md,
+    borderRadius: radius.md,
+    paddingVertical: spacing.md,
   },
   addButtonText: { color: '#fff', fontSize: 15, fontWeight: '600' },
+  errorText: { fontSize: 15, marginTop: spacing.md },
+  retryText: { fontWeight: '600', fontSize: 15, marginTop: spacing.sm },
 });

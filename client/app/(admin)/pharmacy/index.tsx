@@ -10,6 +10,8 @@ import {
   View,
 } from 'react-native';
 import { useRouter } from 'expo-router';
+import Colors from '@/constants/Colors';
+import { useColorScheme } from '@/components/useColorScheme';
 import { useAuth } from '@/shared/context/AuthContext';
 import { Config } from '@/shared/constants/Config';
 import type { Medicine } from '@/shared/types';
@@ -23,9 +25,127 @@ function getImageUrl(url: string): string {
   return `${base}${path}`;
 }
 
+const makeStyles = (colorScheme: 'light' | 'dark') => StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: Colors[colorScheme].surfaceTertiary,
+  },
+  list: {
+    padding: 12,
+    paddingTop: 8,
+  },
+  emptyList: {
+    flexGrow: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 16,
+  },
+  card: {
+    flexDirection: 'row',
+    borderRadius: 12,
+    backgroundColor: Colors[colorScheme].surface,
+    marginBottom: 10,
+    overflow: 'hidden',
+    shadowColor: '#000',
+    shadowOpacity: 0.06,
+    shadowRadius: 6,
+    elevation: 2,
+  },
+  image: {
+    width: 86,
+    height: 86,
+    backgroundColor: Colors[colorScheme].border,
+  },
+  cardBody: {
+    flex: 1,
+    padding: 10,
+    gap: 2,
+  },
+  rowBetween: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 2,
+  },
+  name: {
+    fontSize: 15,
+    fontWeight: '700',
+    color: Colors[colorScheme].text,
+    flex: 1,
+    paddingRight: 8,
+  },
+  meta: {
+    fontSize: 12,
+    color: Colors[colorScheme].textSecondary,
+  },
+  stockText: {
+    marginTop: 4,
+    fontSize: 13,
+    fontWeight: '700',
+    color: Colors[colorScheme].text,
+  },
+  stockTextLow: {
+    color: Colors[colorScheme].error,
+  },
+  lowStockBadge: {
+    backgroundColor: Colors[colorScheme].errorBg,
+    borderColor: Colors[colorScheme].error,
+    borderWidth: 1,
+    borderRadius: 999,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+  },
+  lowStockBadgeText: {
+    color: Colors[colorScheme].error,
+    fontSize: 11,
+    fontWeight: '700',
+  },
+  addButton: {
+    marginHorizontal: 12,
+    marginTop: 12,
+    marginBottom: 5,
+    backgroundColor: Colors[colorScheme].primary,
+    borderRadius: 10,
+    paddingVertical: 12,
+    alignItems: 'center',
+  },
+  addButtonText: {
+    color: '#ffffff',
+    fontWeight: '700',
+    fontSize: 14,
+  },
+  center: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
+  },
+  errorText: {
+    marginBottom: 12,
+    textAlign: 'center',
+  },
+  retryButton: {
+    backgroundColor: Colors[colorScheme].surface,
+    borderRadius: 8,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    borderWidth: 1,
+    borderColor: Colors[colorScheme].primary,
+  },
+  retryButtonText: {
+    fontWeight: '600',
+  },
+  emptyText: {
+    color: Colors[colorScheme].textTertiary,
+    fontSize: 14,
+  },
+});
+
 export default function PharmacyInventoryScreen() {
   const { user } = useAuth();
   const router = useRouter();
+  const colorScheme = useColorScheme() ?? 'light';
+  const styles = useMemo(() => makeStyles(colorScheme), [colorScheme]);
 
   const [medicines, setMedicines] = useState<Medicine[]>([]);
   const [loading, setLoading] = useState(true);
@@ -94,7 +214,7 @@ export default function PharmacyInventoryScreen() {
   if (loading) {
     return (
       <View style={styles.center}>
-        <ActivityIndicator size="large" color="#1f6feb" />
+        <ActivityIndicator size="large" color={Colors[colorScheme].primary} />
       </View>
     );
   }
@@ -102,9 +222,9 @@ export default function PharmacyInventoryScreen() {
   if (error) {
     return (
       <View style={styles.center}>
-        <Text style={styles.errorText}>{error}</Text>
+        <Text style={[styles.errorText, { color: Colors[colorScheme].error }]}>{error}</Text>
         <TouchableOpacity onPress={fetchMedicines} style={styles.retryButton}>
-          <Text style={styles.retryButtonText}>Retry</Text>
+          <Text style={[styles.retryButtonText, { color: Colors[colorScheme].primary }]}>Retry</Text>
         </TouchableOpacity>
       </View>
     );
@@ -132,119 +252,3 @@ export default function PharmacyInventoryScreen() {
     </View>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#f4f6f8',
-  },
-  list: {
-    padding: 12,
-    paddingTop: 8,
-  },
-  emptyList: {
-    flexGrow: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: 16,
-  },
-  card: {
-    flexDirection: 'row',
-    borderRadius: 12,
-    backgroundColor: '#ffffff',
-    marginBottom: 10,
-    overflow: 'hidden',
-    shadowColor: '#000',
-    shadowOpacity: 0.06,
-    shadowRadius: 6,
-    elevation: 2,
-  },
-  image: {
-    width: 86,
-    height: 86,
-    backgroundColor: '#e5e7eb',
-  },
-  cardBody: {
-    flex: 1,
-    padding: 10,
-    gap: 2,
-  },
-  rowBetween: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 2,
-  },
-  name: {
-    fontSize: 15,
-    fontWeight: '700',
-    color: '#1f2937',
-    flex: 1,
-    paddingRight: 8,
-  },
-  meta: {
-    fontSize: 12,
-    color: '#4b5563',
-  },
-  stockText: {
-    marginTop: 4,
-    fontSize: 13,
-    fontWeight: '700',
-    color: '#1f2937',
-  },
-  stockTextLow: {
-    color: '#dc2626',
-  },
-  lowStockBadge: {
-    backgroundColor: '#fee2e2',
-    borderColor: '#ef4444',
-    borderWidth: 1,
-    borderRadius: 999,
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-  },
-  lowStockBadgeText: {
-    color: '#b91c1c',
-    fontSize: 11,
-    fontWeight: '700',
-  },
-  addButton: {
-    marginHorizontal: 12,
-    marginTop: 12,
-    marginBottom: 6,
-    backgroundColor: '#1f6feb',
-    borderRadius: 10,
-    paddingVertical: 12,
-    alignItems: 'center',
-  },
-  addButtonText: {
-    color: '#ffffff',
-    fontWeight: '700',
-    fontSize: 14,
-  },
-  center: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: 20,
-  },
-  errorText: {
-    color: '#dc2626',
-    marginBottom: 12,
-    textAlign: 'center',
-  },
-  retryButton: {
-    backgroundColor: '#1f6feb',
-    borderRadius: 8,
-    paddingHorizontal: 14,
-    paddingVertical: 10,
-  },
-  retryButtonText: {
-    color: '#ffffff',
-    fontWeight: '600',
-  },
-  emptyText: {
-    color: '#6b7280',
-    fontSize: 14,
-  },
-});

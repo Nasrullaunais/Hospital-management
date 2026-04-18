@@ -2,7 +2,6 @@ import React, { useState } from 'react';
 import {
   View,
   Text,
-  TextInput,
   TouchableOpacity,
   ActivityIndicator,
   StyleSheet,
@@ -11,11 +10,14 @@ import {
   ScrollView,
 } from 'react-native';
 import { Link, useRouter } from 'expo-router';
+import { Feather } from '@expo/vector-icons';
 import DateTimePicker, { type DateTimePickerEvent } from '@react-native-community/datetimepicker';
 import { useAuth } from '@/shared/context/AuthContext';
+import { useColorScheme } from '@/components/useColorScheme';
+import { Colors } from '@/constants/Colors';
+import { Input, Button } from '@/components/ui';
+import { spacing } from '@/constants/ThemeTokens';
 import type { RegisterPayload } from '../services/auth.service';
-
-// ── Validation helpers ─────────────────────────────────────────────────────────
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const PHONE_RE = /^\+?[0-9\s\-().]{7,20}$/;
@@ -47,8 +49,6 @@ function formatDate(d: Date): string {
   return `${y}-${m}-${day}`;
 }
 
-// ── Component ──────────────────────────────────────────────────────────────────
-
 interface FormErrors {
   name?: string;
   email?: string;
@@ -61,8 +61,9 @@ interface FormErrors {
 export default function RegisterScreen() {
   const { register } = useAuth();
   const router = useRouter();
+  const colorScheme = useColorScheme() ?? 'light';
+  const colors = Colors[colorScheme];
 
-  // Form values
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -70,17 +71,13 @@ export default function RegisterScreen() {
   const [phone, setPhone] = useState('');
   const [dob, setDob] = useState<Date | null>(null);
 
-  // UI state
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
-  const [focusedField, setFocusedField] = useState<string | null>(null);
   const [errors, setErrors] = useState<FormErrors>({});
   const [loading, setLoading] = useState(false);
 
   const pwdStrength = checkPassword(password);
-
-  // ── Field-level validation ─────────────────────────────────────────────────
 
   const clearError = (field: keyof FormErrors) =>
     setErrors((prev) => ({ ...prev, [field]: undefined }));
@@ -126,8 +123,6 @@ export default function RegisterScreen() {
     return !Object.values(next).some(Boolean);
   };
 
-  // ── Submit ─────────────────────────────────────────────────────────────────
-
   const handleRegister = async () => {
     if (!validateAll()) return;
 
@@ -152,27 +147,15 @@ export default function RegisterScreen() {
     }
   };
 
-  // ── Date picker handler ────────────────────────────────────────────────────
-
   const onDateChange = (_event: DateTimePickerEvent, selected?: Date) => {
-    setShowDatePicker(Platform.OS === 'ios'); // keep open on iOS until dismissed
+    setShowDatePicker(Platform.OS === 'ios');
     if (selected) setDob(selected);
   };
 
-  // ── Render helpers ─────────────────────────────────────────────────────────
-
-  const inputStyle = (field: string, hasError?: string) => [
-    styles.input,
-    focusedField === field && styles.inputFocused,
-    hasError ? styles.inputError : null,
-  ];
-
   const ReqRow = ({ met, label }: { met: boolean; label: string }) => (
     <View style={styles.reqRow}>
-      <Text style={[styles.reqDot, met ? styles.reqMet : styles.reqUnmet]}>
-        {met ? '✓' : '○'}
-      </Text>
-      <Text style={[styles.reqLabel, met ? styles.reqMet : styles.reqUnmet]}>{label}</Text>
+      <Feather name={met ? 'check-circle' : 'circle'} size={12} color={met ? colors.success : colors.textTertiary} style={{ marginRight: 6 }} />
+      <Text style={[styles.reqLabel, { color: met ? colors.success : colors.textTertiary }]}>{label}</Text>
     </View>
   );
 
@@ -181,155 +164,149 @@ export default function RegisterScreen() {
       style={{ flex: 1 }}
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
     >
-      <ScrollView contentContainerStyle={styles.container} keyboardShouldPersistTaps="handled">
-        <Text style={styles.title}>Create Account</Text>
-        <Text style={styles.subtitle}>Register as a patient</Text>
+      <ScrollView
+        contentContainerStyle={[styles.container, { backgroundColor: colors.background }]}
+        keyboardShouldPersistTaps="handled"
+      >
+        <View style={styles.header}>
+          <Text style={[styles.title, { color: colors.text }]}>Create Account</Text>
+          <Text style={[styles.subtitle, { color: colors.textSecondary }]}>Register as a patient</Text>
+        </View>
 
-        {/* Server-level error banner */}
         {errors.server ? (
-          <View style={styles.serverError}>
-            <Text style={styles.serverErrorText}>{errors.server}</Text>
+          <View style={[styles.serverError, { backgroundColor: colors.errorBg, borderColor: colors.error }]}>
+            <Feather name="alert-circle" size={18} color={colors.error} style={{ marginRight: 8 }} />
+            <Text style={[styles.serverErrorText, { color: colors.error }]}>{errors.server}</Text>
           </View>
         ) : null}
 
-        {/* Full Name */}
-        <TextInput
-          style={inputStyle('name', errors.name)}
-          placeholder="Full name *"
-          placeholderTextColor="#999"
-          value={name}
-          onChangeText={(v) => { setName(v); clearError('name'); }}
-          onBlur={() => { setFocusedField(null); setErrors((p) => ({ ...p, name: validateName() })); }}
-          onFocus={() => setFocusedField('name')}
-          autoCapitalize="words"
-          autoCorrect={false}
-          editable={!loading}
-          returnKeyType="next"
-        />
-        {errors.name ? <Text style={styles.fieldError}>{errors.name}</Text> : null}
+        <View style={styles.form}>
+          <Input
+            label="Full name *"
+            placeholder="Enter your full name"
+            value={name}
+            onChangeText={(v) => { setName(v); clearError('name'); }}
+            onBlur={() => setErrors((p) => ({ ...p, name: validateName() }))}
+            error={errors.name}
+            autoCapitalize="words"
+            autoCorrect={false}
+            editable={!loading}
+            returnKeyType="next"
+            leftIcon={<Feather name="user" size={18} color={colors.textTertiary} />}
+          />
 
-        {/* Email */}
-        <TextInput
-          style={inputStyle('email', errors.email)}
-          placeholder="Email address *"
-          placeholderTextColor="#999"
-          value={email}
-          onChangeText={(v) => { setEmail(v); clearError('email'); }}
-          onBlur={() => { setFocusedField(null); setErrors((p) => ({ ...p, email: validateEmail() })); }}
-          onFocus={() => setFocusedField('email')}
-          keyboardType="email-address"
-          autoCapitalize="none"
-          autoCorrect={false}
-          editable={!loading}
-          returnKeyType="next"
-        />
-        {errors.email ? <Text style={styles.fieldError}>{errors.email}</Text> : null}
+          <Input
+            label="Email address *"
+            placeholder="Enter your email"
+            value={email}
+            onChangeText={(v) => { setEmail(v); clearError('email'); }}
+            onBlur={() => setErrors((p) => ({ ...p, email: validateEmail() }))}
+            error={errors.email}
+            keyboardType="email-address"
+            autoCapitalize="none"
+            autoCorrect={false}
+            editable={!loading}
+            returnKeyType="next"
+            leftIcon={<Feather name="mail" size={18} color={colors.textTertiary} />}
+          />
 
-        {/* Password */}
-        <View style={[styles.passwordRow, focusedField === 'password' && styles.inputFocused, errors.password ? styles.inputError : null]}>
-          <TextInput
-            style={styles.passwordInput}
-            placeholder="Password *"
-            placeholderTextColor="#999"
+          <Input
+            label="Password *"
+            placeholder="Create a password"
             value={password}
             onChangeText={(v) => { setPassword(v); clearError('password'); }}
-            onBlur={() => { setFocusedField(null); setErrors((p) => ({ ...p, password: validatePassword() })); }}
-            onFocus={() => setFocusedField('password')}
+            onBlur={() => setErrors((p) => ({ ...p, password: validatePassword() }))}
+            error={errors.password}
             secureTextEntry={!showPassword}
             editable={!loading}
             returnKeyType="next"
+            leftIcon={<Feather name="lock" size={18} color={colors.textTertiary} />}
+            rightIcon={
+              <TouchableOpacity onPress={() => setShowPassword((s) => !s)} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
+                <Feather name={showPassword ? 'eye-off' : 'eye'} size={18} color={colors.textTertiary} />
+              </TouchableOpacity>
+            }
           />
-          <TouchableOpacity onPress={() => setShowPassword((s) => !s)} style={styles.eyeBtn}>
-            <Text style={styles.eyeIcon}>{showPassword ? '🙈' : '👁'}</Text>
-          </TouchableOpacity>
-        </View>
-        {errors.password ? <Text style={styles.fieldError}>{errors.password}</Text> : null}
 
-        {/* Password strength checklist — shown only while typing */}
-        {password.length > 0 && (
-          <View style={styles.reqContainer}>
-            <ReqRow met={pwdStrength.minLen} label="At least 8 characters" />
-            <ReqRow met={pwdStrength.hasUpper} label="One uppercase letter" />
-            <ReqRow met={pwdStrength.hasLower} label="One lowercase letter" />
-            <ReqRow met={pwdStrength.hasDigit} label="One number" />
-          </View>
-        )}
+          {password.length > 0 && (
+            <View style={styles.reqContainer}>
+              <ReqRow met={pwdStrength.minLen} label="At least 8 characters" />
+              <ReqRow met={pwdStrength.hasUpper} label="One uppercase letter" />
+              <ReqRow met={pwdStrength.hasLower} label="One lowercase letter" />
+              <ReqRow met={pwdStrength.hasDigit} label="One number" />
+            </View>
+          )}
 
-        {/* Confirm Password */}
-        <View style={[styles.passwordRow, focusedField === 'confirm' && styles.inputFocused, errors.confirmPassword ? styles.inputError : null]}>
-          <TextInput
-            style={styles.passwordInput}
-            placeholder="Confirm password *"
-            placeholderTextColor="#999"
+          <Input
+            label="Confirm password *"
+            placeholder="Confirm your password"
             value={confirmPassword}
             onChangeText={(v) => { setConfirmPassword(v); clearError('confirmPassword'); }}
-            onBlur={() => { setFocusedField(null); setErrors((p) => ({ ...p, confirmPassword: validateConfirm() })); }}
-            onFocus={() => setFocusedField('confirm')}
+            onBlur={() => setErrors((p) => ({ ...p, confirmPassword: validateConfirm() }))}
+            error={errors.confirmPassword}
             secureTextEntry={!showConfirm}
             editable={!loading}
             returnKeyType="next"
+            leftIcon={<Feather name="lock" size={18} color={colors.textTertiary} />}
+            rightIcon={
+              <TouchableOpacity onPress={() => setShowConfirm((s) => !s)} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
+                <Feather name={showConfirm ? 'eye-off' : 'eye'} size={18} color={colors.textTertiary} />
+              </TouchableOpacity>
+            }
           />
-          <TouchableOpacity onPress={() => setShowConfirm((s) => !s)} style={styles.eyeBtn}>
-            <Text style={styles.eyeIcon}>{showConfirm ? '🙈' : '👁'}</Text>
-          </TouchableOpacity>
-        </View>
-        {errors.confirmPassword ? <Text style={styles.fieldError}>{errors.confirmPassword}</Text> : null}
 
-        {/* Phone (optional) */}
-        <TextInput
-          style={inputStyle('phone', errors.phone)}
-          placeholder="Phone number (optional)"
-          placeholderTextColor="#999"
-          value={phone}
-          onChangeText={(v) => { setPhone(v); clearError('phone'); }}
-          onBlur={() => { setFocusedField(null); setErrors((p) => ({ ...p, phone: validatePhone() })); }}
-          onFocus={() => setFocusedField('phone')}
-          keyboardType="phone-pad"
-          editable={!loading}
-          returnKeyType="next"
-        />
-        {errors.phone ? <Text style={styles.fieldError}>{errors.phone}</Text> : null}
-
-        {/* Date of Birth */}
-        <TouchableOpacity
-          style={[styles.dobButton, !loading ? null : styles.buttonDisabled]}
-          onPress={() => setShowDatePicker(true)}
-          disabled={loading}
-        >
-          <Text style={dob ? styles.dobValue : styles.dobPlaceholder}>
-            {dob ? `Date of Birth: ${formatDate(dob)}` : 'Date of birth (optional)'}
-          </Text>
-          <Text style={styles.dobIcon}>📅</Text>
-        </TouchableOpacity>
-
-        {showDatePicker && (
-          <DateTimePicker
-            value={dob ?? new Date(2000, 0, 1)}
-            mode="date"
-            display={Platform.OS === 'ios' ? 'spinner' : 'default'}
-            maximumDate={new Date()}
-            onChange={onDateChange}
+          <Input
+            label="Phone number (optional)"
+            placeholder="Enter your phone number"
+            value={phone}
+            onChangeText={(v) => { setPhone(v); clearError('phone'); }}
+            onBlur={() => setErrors((p) => ({ ...p, phone: validatePhone() }))}
+            error={errors.phone}
+            keyboardType="phone-pad"
+            editable={!loading}
+            returnKeyType="next"
+            leftIcon={<Feather name="phone" size={18} color={colors.textTertiary} />}
           />
-        )}
 
-        {/* Submit */}
-        <TouchableOpacity
-          style={[styles.button, loading && styles.buttonDisabled]}
-          onPress={handleRegister}
-          disabled={loading}
-        >
-          {loading ? (
-            <ActivityIndicator color="#fff" />
-          ) : (
-            <Text style={styles.buttonText}>Register</Text>
+          <View style={styles.dobContainer}>
+            <Text style={[styles.label, { color: colors.text }]}>Date of birth (optional)</Text>
+            <TouchableOpacity
+              style={[styles.dobButton, { backgroundColor: colors.inputBackground, borderColor: errors.server ? colors.inputErrorBorder : colors.inputBorder }]}
+              onPress={() => setShowDatePicker(true)}
+              disabled={loading}
+            >
+              <Feather name="calendar" size={18} color={colors.textTertiary} />
+              <Text style={dob ? [styles.dobValue, { color: colors.text }] : [styles.dobPlaceholder, { color: colors.textTertiary }]}>
+                {dob ? formatDate(dob) : 'Select date of birth'}
+              </Text>
+            </TouchableOpacity>
+          </View>
+
+          {showDatePicker && (
+            <DateTimePicker
+              value={dob ?? new Date(2000, 0, 1)}
+              mode="date"
+              display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+              maximumDate={new Date()}
+              onChange={onDateChange}
+            />
           )}
-        </TouchableOpacity>
+
+          <Button
+            title="Create Account"
+            onPress={handleRegister}
+            loading={loading}
+            disabled={loading}
+            fullWidth
+            style={styles.button}
+          />
+        </View>
 
         <View style={styles.linkRow}>
-          <Text style={styles.linkText}>Already have an account? </Text>
+          <Text style={[styles.linkText, { color: colors.textSecondary }]}>Already have an account? </Text>
           <Link href="/login" asChild>
             <TouchableOpacity>
-              <Text style={styles.linkAction}>Sign In</Text>
+              <Text style={[styles.linkAction, { color: colors.primary }]}>Sign In</Text>
             </TouchableOpacity>
           </Link>
         </View>
@@ -338,164 +315,88 @@ export default function RegisterScreen() {
   );
 }
 
-// ── Styles ─────────────────────────────────────────────────────────────────────
-
 const styles = StyleSheet.create({
   container: {
     flexGrow: 1,
-    justifyContent: 'center',
-    paddingHorizontal: 24,
-    paddingVertical: 40,
-    backgroundColor: '#fff',
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.xl,
+  },
+  header: {
+    marginBottom: spacing.lg,
   },
   title: {
     fontSize: 28,
     fontWeight: '700',
     textAlign: 'center',
-    marginBottom: 8,
-    color: '#1a1a2e',
+    marginBottom: spacing.xs,
   },
   subtitle: {
     fontSize: 16,
     textAlign: 'center',
-    color: '#666',
-    marginBottom: 32,
   },
   serverError: {
-    backgroundColor: '#fef2f2',
     borderWidth: 1,
-    borderColor: '#fca5a5',
-    borderRadius: 8,
-    paddingHorizontal: 14,
-    paddingVertical: 10,
-    marginBottom: 16,
-  },
-  serverErrorText: {
-    color: '#b91c1c',
-    fontSize: 14,
-  },
-  input: {
-    borderWidth: 1,
-    borderColor: '#ddd',
-    borderRadius: 8,
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    fontSize: 16,
-    marginBottom: 4,
-    backgroundColor: '#fafafa',
-    color: '#1a1a2e',
-  },
-  inputFocused: {
-    borderColor: '#2563eb',
-    backgroundColor: '#eff6ff',
-  },
-  inputError: {
-    borderColor: '#ef4444',
-  },
-  fieldError: {
-    color: '#ef4444',
-    fontSize: 12,
-    marginBottom: 12,
-    marginLeft: 4,
-  },
-  // Password row wraps input + eye toggle in a single bordered box
-  passwordRow: {
+    borderRadius: spacing.sm,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+    marginBottom: spacing.md,
     flexDirection: 'row',
     alignItems: 'center',
-    borderWidth: 1,
-    borderColor: '#ddd',
-    borderRadius: 8,
-    backgroundColor: '#fafafa',
-    marginBottom: 4,
   },
-  passwordInput: {
+  serverErrorText: {
+    fontSize: 14,
     flex: 1,
-    paddingHorizontal: 16,
-    paddingVertical: 12,
+  },
+  form: {
+    gap: spacing.xs,
+  },
+  label: {
+    fontSize: 14,
+    fontWeight: '500',
+    marginBottom: spacing.xs,
+  },
+  dobContainer: {
+    marginBottom: spacing.sm,
+  },
+  dobButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    borderWidth: 1.5,
+    borderRadius: spacing.sm,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.md,
+  },
+  dobPlaceholder: {
     fontSize: 16,
-    color: '#1a1a2e',
   },
-  eyeBtn: {
-    paddingHorizontal: 12,
-    paddingVertical: 12,
+  dobValue: {
+    fontSize: 16,
   },
-  eyeIcon: {
-    fontSize: 18,
-  },
-  // Password strength checklist
   reqContainer: {
-    marginBottom: 12,
+    marginBottom: spacing.sm,
     paddingHorizontal: 4,
   },
   reqRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 2,
-  },
-  reqDot: {
-    fontSize: 12,
-    marginRight: 6,
-    fontWeight: '700',
+    marginBottom: 4,
   },
   reqLabel: {
     fontSize: 12,
   },
-  reqMet: {
-    color: '#16a34a',
-  },
-  reqUnmet: {
-    color: '#9ca3af',
-  },
-  // DOB
-  dobButton: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    borderWidth: 1,
-    borderColor: '#ddd',
-    borderRadius: 8,
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    backgroundColor: '#fafafa',
-    marginBottom: 16,
-  },
-  dobPlaceholder: {
-    color: '#999',
-    fontSize: 16,
-  },
-  dobValue: {
-    color: '#1a1a2e',
-    fontSize: 16,
-  },
-  dobIcon: {
-    fontSize: 18,
-  },
   button: {
-    backgroundColor: '#2563eb',
-    borderRadius: 8,
-    paddingVertical: 14,
-    alignItems: 'center',
-    marginTop: 8,
-  },
-  buttonDisabled: {
-    opacity: 0.6,
-  },
-  buttonText: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: '600',
+    marginTop: spacing.md,
   },
   linkRow: {
     flexDirection: 'row',
     justifyContent: 'center',
-    marginTop: 20,
+    marginTop: spacing.xl,
   },
   linkText: {
-    color: '#666',
     fontSize: 14,
   },
   linkAction: {
-    color: '#2563eb',
     fontSize: 14,
     fontWeight: '600',
   },

@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState, useMemo } from 'react';
 import {
   View,
   Text,
@@ -9,26 +9,21 @@ import {
   RefreshControl,
   Alert,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { Feather } from '@expo/vector-icons';
 import { useRouter, type Href } from 'expo-router';
 import { appointmentService } from '../services/appointment.service';
-import type { Appointment, Doctor, User } from '@/shared/types';
+import type { Appointment, Doctor } from '@/shared/types';
+import Colors from '@/constants/Colors';
+import { useColorScheme } from '@/components/useColorScheme';
+import { spacing, radius, shadows } from '@/constants/ThemeTokens';
 
-const STATUS_COLORS: Record<string, { bg: string; text: string }> = {
-  Pending: { bg: '#fef9c3', text: '#854d0e' },
-  Confirmed: { bg: '#dbeafe', text: '#1e40af' },
-  Completed: { bg: '#dcfce7', text: '#166534' },
-  Cancelled: { bg: '#fee2e2', text: '#991b1b' },
-};
+const TAB_BAR_HEIGHT = 70;
 
-/**
- * MyAppointmentsScreen — Member 3
- * Displays the authenticated patient's past and upcoming appointments.
- * TODO: Add tab/filter between Upcoming and Past appointments.
- * TODO: Add a "Book New Appointment" FAB button.
- * TODO: Add appointment detail modal or navigate to a detail screen.
- */
 export default function MyAppointmentsScreen() {
   const router = useRouter();
+  const colorScheme = useColorScheme() ?? 'light';
+  const theme = Colors[colorScheme];
   const [appointments, setAppointments] = useState<Appointment[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -49,13 +44,13 @@ export default function MyAppointmentsScreen() {
     fetchAppointments().finally(() => setLoading(false));
   }, [fetchAppointments]);
 
-  const onRefresh = async () => {
+  const onRefresh = useCallback(async () => {
     setRefreshing(true);
     await fetchAppointments();
     setRefreshing(false);
-  };
+  }, [fetchAppointments]);
 
-  const handleCancel = (id: string) => {
+  const handleCancel = useCallback((id: string) => {
     Alert.alert('Cancel Appointment', 'Are you sure you want to cancel this appointment?', [
       { text: 'No', style: 'cancel' },
       {
@@ -73,11 +68,25 @@ export default function MyAppointmentsScreen() {
         },
       },
     ]);
-  };
+  }, []);
 
-  const renderAppointment = ({ item }: { item: Appointment }) => {
-    const colors = STATUS_COLORS[item.status] ?? { bg: '#f3f4f6', text: '#374151' };
-    // Nested populate: doctorId → Doctor { userId → User { name } }
+  const getStatusStyle = useCallback((status: string) => {
+    switch (status) {
+      case 'Pending':
+        return { bg: theme.warningBg, text: theme.warning };
+      case 'Confirmed':
+        return { bg: theme.infoBg, text: theme.info };
+      case 'Completed':
+        return { bg: theme.successBg, text: theme.success };
+      case 'Cancelled':
+        return { bg: theme.errorBg, text: theme.error };
+      default:
+        return { bg: theme.surfaceTertiary, text: theme.textSecondary };
+    }
+  }, [theme]);
+
+  const renderAppointment = useCallback(({ item }: { item: Appointment }) => {
+    const statusStyle = getStatusStyle(item.status);
     let doctorName = 'Unknown Doctor';
     if (typeof item.doctorId === 'object') {
       const doctor = item.doctorId as Doctor;
@@ -86,124 +95,167 @@ export default function MyAppointmentsScreen() {
       }
     }
 
+    const dateStr = new Date(item.appointmentDate).toLocaleString(undefined, {
+      weekday: 'short',
+      month: 'short',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+    });
+
     return (
-      <View style={styles.card}>
+      <View style={[styles.card, { backgroundColor: theme.surface, borderColor: theme.border }]}>
         <View style={styles.cardHeader}>
-          <Text style={styles.doctorName}>{doctorName}</Text>
-          <View style={[styles.badge, { backgroundColor: colors.bg }]}>
-            <Text style={[styles.badgeText, { color: colors.text }]}>{item.status}</Text>
+          <View style={styles.doctorInfo}>
+            <Text style={[styles.doctorName, { color: theme.text }]}>{doctorName}</Text>
+            <View style={styles.dateRow}>
+              <Feather name="calendar" size={14} color={theme.textTertiary} />
+              <Text style={[styles.dateText, { color: theme.textSecondary }]}>{dateStr}</Text>
+            </View>
+          </View>
+          <View style={[styles.badge, { backgroundColor: statusStyle.bg }]}>
+            <Text style={[styles.badgeText, { color: statusStyle.text }]}>{item.status}</Text>
           </View>
         </View>
 
-        <Text style={styles.date}>
-          📅 {new Date(item.appointmentDate).toLocaleString()}
-        </Text>
-
         {item.reasonForVisit && (
-          <Text style={styles.reason} numberOfLines={2}>
-            {item.reasonForVisit}
-          </Text>
+          <View style={[styles.reasonContainer, { borderTopColor: theme.divider }]}>
+            <Text style={[styles.reasonLabel, { color: theme.textTertiary }]}>Reason for Visit</Text>
+            <Text style={[styles.reasonText, { color: theme.textSecondary }]} numberOfLines={2}>
+              {item.reasonForVisit}
+            </Text>
+          </View>
         )}
 
         {item.status === 'Pending' && (
           <TouchableOpacity
-            style={styles.cancelButton}
+            style={[styles.cancelButton, { borderColor: theme.error }]}
             onPress={() => handleCancel(item._id)}
+            activeOpacity={0.7}
           >
-            <Text style={styles.cancelButtonText}>Cancel</Text>
+            <Text style={[styles.cancelButtonText, { color: theme.error }]}>Cancel Appointment</Text>
           </TouchableOpacity>
         )}
       </View>
     );
-  };
+  }, [theme, getStatusStyle, handleCancel]);
+
+  const keyExtractor = useCallback((item: Appointment) => item._id, []);
+
+  const ListHeaderComponent = useMemo(() => (
+    <View style={styles.header}>
+      <Text style={[styles.headerTitle, { color: theme.text }]}>My Appointments</Text>
+      <TouchableOpacity
+        style={[styles.bookButton, { backgroundColor: theme.primary }]}
+        onPress={() => router.push('/(patient)/appointments/book' as Href)}
+        activeOpacity={0.8}
+      >
+        <Feather name="plus" size={16} color="#fff" style={{ marginRight: spacing.xs }} />
+        <Text style={styles.bookButtonText}>Book New</Text>
+      </TouchableOpacity>
+    </View>
+  ), [theme, router]);
+
+  const ListEmptyComponent = useMemo(() => (
+    <View style={styles.emptyContent}>
+      <Feather name="calendar" size={48} color={theme.textTertiary} />
+      <Text style={[styles.emptyText, { color: theme.textSecondary }]}>No appointments yet.</Text>
+      <Text style={[styles.emptySubText, { color: theme.textTertiary }]}>Book your first appointment to get started.</Text>
+    </View>
+  ), [theme]);
 
   if (loading) {
     return (
-      <View style={styles.center}>
-        <ActivityIndicator size="large" color="#2563eb" />
-      </View>
+      <SafeAreaView edges={['top', 'bottom']} style={[styles.container, { backgroundColor: theme.background }]}>
+        <View style={styles.center}>
+          <ActivityIndicator size="large" color={theme.primary} />
+        </View>
+      </SafeAreaView>
     );
   }
 
   if (error) {
     return (
-      <View style={styles.center}>
-        <Text style={styles.errorText}>{error}</Text>
-        <TouchableOpacity onPress={fetchAppointments}>
-          <Text style={styles.retryText}>Retry</Text>
-        </TouchableOpacity>
-      </View>
+      <SafeAreaView edges={['top', 'bottom']} style={[styles.container, { backgroundColor: theme.background }]}>
+        <View style={styles.center}>
+          <Text style={[styles.errorText, { color: theme.error }]}>{error}</Text>
+          <TouchableOpacity onPress={fetchAppointments}>
+            <Text style={[styles.retryText, { color: theme.primary }]}>Retry</Text>
+          </TouchableOpacity>
+        </View>
+      </SafeAreaView>
     );
   }
 
   return (
-    <FlatList
-      data={appointments}
-      keyExtractor={(item) => item._id}
-      renderItem={renderAppointment}
-      refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
-      contentContainerStyle={
-        appointments.length === 0 ? styles.emptyContainer : styles.listContainer
-      }
-      ListHeaderComponent={
-        <View>
-          <Text style={styles.header}>My Appointments</Text>
-          <TouchableOpacity
-            style={styles.bookButton}
-            onPress={() => router.push('/(patient)/appointments/book' as Href)}
-          >
-            <Text style={styles.bookButtonText}>+ Book New Appointment</Text>
-          </TouchableOpacity>
-        </View>
-      }
-      ListEmptyComponent={
-        <Text style={styles.emptyText}>
-          No appointments found.{'\n'}Book your first appointment!
-        </Text>
-      }
-    />
+    <SafeAreaView edges={['top', 'bottom']} style={[styles.container, { backgroundColor: theme.background }]}>
+      <FlatList
+        data={appointments}
+        keyExtractor={keyExtractor}
+        renderItem={renderAppointment}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={theme.primary} />}
+        contentContainerStyle={appointments.length === 0 ? styles.emptyContainer : styles.listContainer}
+        ListHeaderComponent={ListHeaderComponent}
+        ListEmptyComponent={ListEmptyComponent}
+        showsVerticalScrollIndicator={false}
+      />
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
+  container: { flex: 1 },
   center: { flex: 1, justifyContent: 'center', alignItems: 'center' },
-  listContainer: { padding: 12 },
-  emptyContainer: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: 24 },
-  header: { fontSize: 22, fontWeight: '700', color: '#1a1a2e', marginBottom: 12, paddingTop: 4 },
+  listContainer: { padding: spacing.md },
+  emptyContainer: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: spacing.lg },
+  header: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingBottom: spacing.md,
+  },
+  headerTitle: { fontSize: 22, fontWeight: '700' },
   card: {
-    backgroundColor: '#fff',
-    borderRadius: 10,
-    padding: 16,
-    marginBottom: 10,
-    shadowColor: '#000',
-    shadowOpacity: 0.06,
-    shadowRadius: 4,
-    elevation: 2,
-  },
-  cardHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 },
-  doctorName: { fontSize: 16, fontWeight: '700', color: '#1a1a2e', flex: 1 },
-  badge: { borderRadius: 10, paddingHorizontal: 10, paddingVertical: 3 },
-  badgeText: { fontSize: 12, fontWeight: '600' },
-  date: { fontSize: 13, color: '#555', marginBottom: 4 },
-  reason: { fontSize: 13, color: '#777', marginTop: 4 },
-  cancelButton: {
-    marginTop: 12,
+    borderRadius: radius.lg,
+    padding: spacing.md,
+    marginBottom: spacing.md,
     borderWidth: 1,
-    borderColor: '#ef4444',
-    borderRadius: 6,
-    paddingVertical: 7,
-    alignItems: 'center',
+    ...shadows.card,
   },
-  cancelButtonText: { color: '#ef4444', fontWeight: '600', fontSize: 13 },
-  errorText: { color: '#ef4444', fontSize: 15, marginBottom: 12 },
-  retryText: { color: '#2563eb', fontWeight: '600', fontSize: 15 },
-  emptyText: { color: '#888', fontSize: 15, textAlign: 'center', lineHeight: 22 },
+  cardHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', gap: spacing.md },
+  doctorInfo: { flex: 1 },
+  doctorName: { fontSize: 16, fontWeight: '700', marginBottom: spacing.xs },
+  dateRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs },
+  dateText: { fontSize: 13 },
+  badge: { borderRadius: radius.full, paddingHorizontal: spacing.sm, paddingVertical: spacing.xs },
+  badgeText: { fontSize: 12, fontWeight: '600' },
+  reasonContainer: {
+    marginTop: spacing.md,
+    paddingTop: spacing.md,
+    borderTopWidth: 1,
+  },
+  reasonLabel: { fontSize: 12, fontWeight: '600', textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: spacing.xs },
+  reasonText: { fontSize: 14, lineHeight: 20 },
+  cancelButton: {
+    marginTop: spacing.md,
+    borderWidth: 1,
+    borderRadius: radius.md,
+    paddingVertical: spacing.sm,
+    alignItems: 'center',
+    backgroundColor: 'transparent',
+  },
+  cancelButtonText: { fontWeight: '600', fontSize: 14 },
+  errorText: { fontSize: 15, marginBottom: spacing.sm },
+  retryText: { fontWeight: '600', fontSize: 15 },
+  emptyContent: { justifyContent: 'center', alignItems: 'center', gap: spacing.sm },
+  emptyText: { fontSize: 16, fontWeight: '600' },
+  emptySubText: { fontSize: 14, textAlign: 'center' },
   bookButton: {
-    backgroundColor: '#2563eb',
-    borderRadius: 10,
-    paddingVertical: 12,
+    borderRadius: radius.md,
+    paddingVertical: spacing.sm,
+    paddingHorizontal: spacing.md,
+    flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 12,
   },
-  bookButtonText: { color: '#fff', fontSize: 15, fontWeight: '600' },
+  bookButtonText: { color: '#fff', fontSize: 14, fontWeight: '600' },
 });

@@ -1,22 +1,33 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import {
-  ActivityIndicator,
   FlatList,
   RefreshControl,
   StyleSheet,
   Text,
-  TouchableOpacity,
   View,
 } from 'react-native';
+import { SymbolView } from 'expo-symbols';
+import Colors from '@/constants/Colors';
+import { useColorScheme } from '@/components/useColorScheme';
 import { apiClient } from '@/shared/api/client';
 import { ENDPOINTS } from '@/shared/api/endpoints';
 import type { ApiSuccessResponse, Appointment, User } from '@/shared/types';
+import { ListCard, EmptyState, LoadingState, ErrorState } from '@/components/ui';
+
+const STATUS_VARIANTS = {
+  Pending: 'warning' as const,
+  Confirmed: 'info' as const,
+  Completed: 'success' as const,
+  Cancelled: 'error' as const,
+};
 
 export default function DoctorScheduleScreen() {
   const [appointments, setAppointments] = useState<Appointment[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const colorScheme = useColorScheme();
+  const colors = Colors[colorScheme ?? 'light'];
 
   const fetchSchedule = useCallback(async () => {
     try {
@@ -46,74 +57,99 @@ export default function DoctorScheduleScreen() {
       ? (item.patientId as User).name
       : 'Unknown Patient';
 
+    const statusVariant = STATUS_VARIANTS[item.status] ?? 'neutral';
+
     return (
-      <View style={styles.card}>
-        <View style={styles.rowBetween}>
-          <Text style={styles.patientName}>{patientName}</Text>
-          <View style={styles.badge}>
-            <Text style={styles.badgeText}>{item.status}</Text>
-          </View>
-        </View>
-        <Text style={styles.date}>{new Date(item.appointmentDate).toLocaleString()}</Text>
-        {item.reasonForVisit ? <Text style={styles.reason}>{item.reasonForVisit}</Text> : null}
-      </View>
+      <ListCard
+        title={patientName}
+        subtitle={new Date(item.appointmentDate).toLocaleString()}
+        badge={{ label: item.status, variant: statusVariant }}
+        leftContent={
+          <SymbolView
+            name={{ ios: 'person.circle', android: 'account_circle', web: 'account_circle' }}
+            tintColor={colors.textTertiary}
+            size={32}
+          />
+        }
+        footer={
+          item.reasonForVisit ? (
+            <View style={styles.reasonRow}>
+              <SymbolView
+                name={{ ios: 'text.alignleft', android: 'notes', web: 'notes' }}
+                tintColor={colors.textTertiary}
+                size={14}
+              />
+              <Text
+                style={[styles.reasonText, { color: colors.textSecondary }]}
+                numberOfLines={2}
+              >
+                {item.reasonForVisit}
+              </Text>
+            </View>
+          ) : undefined
+        }
+      />
     );
   };
 
   if (loading && appointments.length === 0) {
-    return (
-      <View style={styles.center}>
-        <ActivityIndicator size="large" color="#2563eb" />
-      </View>
-    );
+    return <LoadingState message="Loading your schedule..." />;
   }
 
   if (error && appointments.length === 0) {
-    return (
-      <View style={styles.center}>
-        <Text style={styles.errorText}>{error}</Text>
-        <TouchableOpacity onPress={fetchSchedule}>
-          <Text style={styles.retryText}>Retry</Text>
-        </TouchableOpacity>
-      </View>
-    );
+    return <ErrorState message={error} onRetry={fetchSchedule} />;
   }
 
   return (
-    <FlatList
-      data={appointments}
-      keyExtractor={(item) => item._id}
-      renderItem={renderItem}
-      refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
-      contentContainerStyle={appointments.length === 0 ? styles.emptyContainer : styles.listContainer}
-      ListHeaderComponent={<Text style={styles.header}>My Schedule</Text>}
-      ListEmptyComponent={<Text style={styles.emptyText}>No appointments assigned yet.</Text>}
-    />
+    <View style={[styles.root, { backgroundColor: colors.background }]}>
+      <FlatList
+        data={appointments}
+        keyExtractor={(item) => item._id}
+        renderItem={renderItem}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={onRefresh}
+            tintColor={colors.primary}
+          />
+        }
+        contentContainerStyle={appointments.length === 0 ? styles.emptyContainer : styles.listContainer}
+        ListHeaderComponent={
+          <View style={styles.header}>
+            <Text style={[styles.headerTitle, { color: colors.text }]}>My Schedule</Text>
+            <Text style={[styles.headerSub, { color: colors.textSecondary }]}>
+              {appointments.length} appointment{appointments.length !== 1 ? 's' : ''}
+            </Text>
+          </View>
+        }
+        ListEmptyComponent={
+          <EmptyState
+            title="No Appointments"
+            message="You don't have any appointments scheduled yet."
+            icon="calendar.badge.exclamationmark"
+          />
+        }
+      />
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  center: { flex: 1, justifyContent: 'center', alignItems: 'center' },
+  root: { flex: 1 },
   listContainer: { padding: 12 },
-  emptyContainer: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: 24 },
-  header: { fontSize: 22, fontWeight: '700', color: '#1a1a2e', marginBottom: 12, paddingTop: 4 },
-  card: {
-    backgroundColor: '#fff',
-    borderRadius: 10,
-    padding: 16,
-    marginBottom: 10,
-    shadowColor: '#000',
-    shadowOpacity: 0.06,
-    shadowRadius: 4,
-    elevation: 2,
+  emptyContainer: { flex: 1 },
+  header: {
+    marginBottom: 12,
+    paddingTop: 4,
+    gap: 2,
   },
-  rowBetween: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 },
-  patientName: { fontSize: 16, fontWeight: '700', color: '#1a1a2e', flex: 1, marginRight: 8 },
-  badge: { backgroundColor: '#eff6ff', borderRadius: 10, paddingHorizontal: 10, paddingVertical: 3 },
-  badgeText: { color: '#1d4ed8', fontSize: 12, fontWeight: '600' },
-  date: { fontSize: 13, color: '#555', marginBottom: 4 },
-  reason: { fontSize: 13, color: '#777' },
-  errorText: { color: '#ef4444', fontSize: 15, marginBottom: 12 },
-  retryText: { color: '#2563eb', fontWeight: '600', fontSize: 15 },
-  emptyText: { color: '#888', fontSize: 15, textAlign: 'center' },
+  headerTitle: { fontSize: 22, fontWeight: '700' },
+  headerSub: { fontSize: 13 },
+  reasonRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 6,
+    marginTop: 2,
+  },
+  reasonText: { fontSize: 13, flex: 1 },
 });

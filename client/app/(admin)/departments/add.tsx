@@ -1,21 +1,56 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import {
   View,
   Text,
   TextInput,
   TouchableOpacity,
-  ScrollView,
-  StyleSheet,
   ActivityIndicator,
+  StyleSheet,
+  ScrollView,
   Alert,
   KeyboardAvoidingView,
   Platform,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
+import Colors from '@/constants/Colors';
+import { useColorScheme } from '@/components/useColorScheme';
 import { departmentService } from '@/features/departments/services/department.service';
+
+const makeStyles = (colorScheme: 'light' | 'dark') => StyleSheet.create({
+  container: { flex: 1, backgroundColor: Colors[colorScheme].background },
+  content: { padding: 20, paddingBottom: 40 },
+  title: { fontSize: 24, fontWeight: '700', color: Colors[colorScheme].text, marginBottom: 4 },
+  subtitle: { fontSize: 14, color: Colors[colorScheme].textSecondary, marginBottom: 24 },
+  label: { fontSize: 13, fontWeight: '600', color: Colors[colorScheme].textSecondary, marginBottom: 6, marginTop: 12 },
+  input: {
+    backgroundColor: Colors[colorScheme].surface,
+    borderWidth: 1,
+    borderColor: Colors[colorScheme].border,
+    borderRadius: 8,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    fontSize: 15,
+  },
+  textArea: {
+    minHeight: 100,
+    paddingTop: 12,
+  },
+  submitButton: {
+    backgroundColor: Colors[colorScheme].primary,
+    borderRadius: 10,
+    paddingVertical: 16,
+    alignItems: 'center',
+    marginTop: 28,
+  },
+  submitButtonDisabled: { opacity: 0.6 },
+  submitButtonText: { color: '#fff', fontSize: 16, fontWeight: '600' },
+});
 
 export default function AddDepartmentScreen() {
   const router = useRouter();
+  const colorScheme = useColorScheme() ?? 'light';
+  const styles = useMemo(() => makeStyles(colorScheme), [colorScheme]);
 
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
@@ -51,11 +86,12 @@ export default function AddDepartmentScreen() {
   };
 
   return (
-    <KeyboardAvoidingView
-      style={{ flex: 1 }}
-      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-    >
-      <ScrollView style={styles.container} contentContainerStyle={styles.content}>
+    <SafeAreaView style={{ flex: 1 }}>
+      <KeyboardAvoidingView
+        style={{ flex: 1 }}
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+      >
+        <ScrollView style={styles.container} contentContainerStyle={styles.content}>
         <Text style={styles.title}>Add New Department</Text>
         <Text style={styles.subtitle}>
           Create a new hospital department.
@@ -119,37 +155,8 @@ export default function AddDepartmentScreen() {
             <Text style={styles.submitButtonText}>Create Department</Text>
           )}
         </TouchableOpacity>
-      </ScrollView>
-    </KeyboardAvoidingView>
+        </ScrollView>
+      </KeyboardAvoidingView>
+    </SafeAreaView>
   );
 }
-
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#f5f5f5' },
-  content: { padding: 20, paddingBottom: 40 },
-  title: { fontSize: 24, fontWeight: '700', color: '#1a1a2e', marginBottom: 4 },
-  subtitle: { fontSize: 14, color: '#888', marginBottom: 24 },
-  label: { fontSize: 13, fontWeight: '600', color: '#374151', marginBottom: 6, marginTop: 12 },
-  input: {
-    backgroundColor: '#fff',
-    borderWidth: 1,
-    borderColor: '#ddd',
-    borderRadius: 8,
-    paddingHorizontal: 14,
-    paddingVertical: 12,
-    fontSize: 15,
-  },
-  textArea: {
-    minHeight: 100,
-    paddingTop: 12,
-  },
-  submitButton: {
-    backgroundColor: '#2563eb',
-    borderRadius: 10,
-    paddingVertical: 16,
-    alignItems: 'center',
-    marginTop: 28,
-  },
-  submitButtonDisabled: { opacity: 0.6 },
-  submitButtonText: { color: '#fff', fontSize: 16, fontWeight: '600' },
-});

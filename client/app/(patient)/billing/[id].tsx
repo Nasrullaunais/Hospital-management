@@ -6,15 +6,17 @@ import {
   StyleSheet,
   ScrollView,
   Image,
-  Alert,
 } from 'react-native';
-import { useLocalSearchParams, useRouter } from 'expo-router';
+import { useLocalSearchParams } from 'expo-router';
 import { invoiceService } from '@/features/billing/services/invoice.service';
 import type { Invoice } from '@/shared/types';
+import Colors from '@/constants/Colors';
+import { useColorScheme } from '@/components/useColorScheme';
 
 export default function PatientInvoiceDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
-  const router = useRouter();
+  const colorScheme = useColorScheme() ?? 'light';
+  const theme = Colors[colorScheme];
 
   const [invoice, setInvoice] = useState<Invoice | null>(null);
   const [loading, setLoading] = useState(true);
@@ -44,28 +46,28 @@ export default function PatientInvoiceDetailScreen() {
   const getStatusStyle = (status: string) => {
     switch (status) {
       case 'Unpaid':
-        return { bg: '#fee2e2', text: '#991b1b' };
+        return { bg: theme.errorBg, text: theme.error };
       case 'Pending Verification':
-        return { bg: '#fef9c3', text: '#854d0e' };
+        return { bg: theme.warningBg, text: theme.warning };
       case 'Paid':
-        return { bg: '#dcfce7', text: '#166534' };
+        return { bg: theme.successBg, text: theme.success };
       default:
-        return { bg: '#f3f4f6', text: '#6b7280' };
+        return { bg: theme.surfaceTertiary, text: theme.textSecondary };
     }
   };
 
   if (loading) {
     return (
-      <View style={styles.center}>
-        <ActivityIndicator size="large" color="#2563eb" />
+      <View style={[styles.center, { backgroundColor: theme.background }]}>
+        <ActivityIndicator size="large" color={theme.primary} />
       </View>
     );
   }
 
   if (error || !invoice) {
     return (
-      <View style={styles.center}>
-        <Text style={styles.errorText}>{error || 'Invoice not found'}</Text>
+      <View style={[styles.center, { backgroundColor: theme.background }]}>
+        <Text style={[styles.errorText, { color: theme.error }]}>{error || 'Invoice not found'}</Text>
       </View>
     );
   }
@@ -73,10 +75,10 @@ export default function PatientInvoiceDetailScreen() {
   const statusStyle = getStatusStyle(invoice.paymentStatus);
 
   return (
-    <ScrollView style={styles.container}>
-      <View style={styles.card}>
-        <View style={styles.header}>
-          <Text style={styles.amount}>${invoice.totalAmount.toFixed(2)}</Text>
+    <ScrollView style={[styles.container, { backgroundColor: theme.background }]}>
+      <View style={[styles.card, { backgroundColor: theme.surface, borderColor: theme.border }]}>
+        <View style={[styles.header, { borderBottomColor: theme.divider }]}>
+          <Text style={[styles.amount, { color: theme.text }]}>${invoice.totalAmount.toFixed(2)}</Text>
           <View style={[styles.badge, { backgroundColor: statusStyle.bg }]}>
             <Text style={[styles.badgeText, { color: statusStyle.text }]}>
               {invoice.paymentStatus}
@@ -85,21 +87,21 @@ export default function PatientInvoiceDetailScreen() {
         </View>
 
         <View style={styles.section}>
-          <Text style={styles.label}>Invoice ID</Text>
-          <Text style={styles.value}>{invoice._id}</Text>
+          <Text style={[styles.label, { color: theme.textTertiary }]}>Invoice ID</Text>
+          <Text style={[styles.value, { color: theme.text }]}>{invoice._id}</Text>
         </View>
 
         <View style={styles.section}>
-          <Text style={styles.label}>Issued Date</Text>
-          <Text style={styles.value}>
+          <Text style={[styles.label, { color: theme.textTertiary }]}>Issued Date</Text>
+          <Text style={[styles.value, { color: theme.text }]}>
             {new Date(invoice.issuedDate).toLocaleDateString()}
           </Text>
         </View>
 
         {invoice.appointmentId && (
           <View style={styles.section}>
-            <Text style={styles.label}>Appointment</Text>
-            <Text style={styles.value}>
+            <Text style={[styles.label, { color: theme.textTertiary }]}>Appointment</Text>
+            <Text style={[styles.value, { color: theme.text }]}>
               {typeof invoice.appointmentId === 'string'
                 ? invoice.appointmentId
                 : invoice.appointmentId._id}
@@ -109,10 +111,10 @@ export default function PatientInvoiceDetailScreen() {
 
         {invoice.paymentReceiptUrl && (
           <View style={styles.section}>
-            <Text style={styles.label}>Payment Receipt</Text>
+            <Text style={[styles.label, { color: theme.textTertiary }]}>Payment Receipt</Text>
             <Image
               source={{ uri: invoice.paymentReceiptUrl }}
-              style={styles.receiptImage}
+              style={[styles.receiptImage, { backgroundColor: theme.surfaceTertiary }]}
               resizeMode="contain"
             />
           </View>
@@ -123,13 +125,13 @@ export default function PatientInvoiceDetailScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#f9fafb' },
+  container: { flex: 1 },
   center: { flex: 1, justifyContent: 'center', alignItems: 'center' },
   card: {
-    backgroundColor: '#fff',
     borderRadius: 12,
     padding: 20,
     margin: 16,
+    borderWidth: 1,
     shadowColor: '#000',
     shadowOpacity: 0.08,
     shadowRadius: 8,
@@ -142,14 +144,13 @@ const styles = StyleSheet.create({
     marginBottom: 20,
     paddingBottom: 16,
     borderBottomWidth: 1,
-    borderBottomColor: '#f3f4f6',
   },
-  amount: { fontSize: 32, fontWeight: '700', color: '#1a1a2e' },
+  amount: { fontSize: 32, fontWeight: '700' },
   badge: { borderRadius: 10, paddingHorizontal: 12, paddingVertical: 4 },
   badgeText: { fontSize: 14, fontWeight: '600' },
   section: { marginBottom: 16 },
-  label: { fontSize: 12, color: '#888', marginBottom: 4, textTransform: 'uppercase' },
-  value: { fontSize: 16, color: '#1a1a2e', fontWeight: '500' },
-  receiptImage: { width: '100%', height: 200, borderRadius: 8, backgroundColor: '#f3f4f6' },
-  errorText: { color: '#ef4444', fontSize: 16 },
+  label: { fontSize: 12, marginBottom: 4, textTransform: 'uppercase', fontWeight: '600' },
+  value: { fontSize: 16, fontWeight: '500' },
+  receiptImage: { width: '100%', height: 200, borderRadius: 8 },
+  errorText: { fontSize: 16 },
 });

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import {
   View,
   Text,
@@ -10,10 +10,14 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import { useRouter } from 'expo-router';
+import Colors from '@/constants/Colors';
+import { useColorScheme } from '@/components/useColorScheme';
 import { invoiceService, CreateInvoicePayload } from '@/features/billing/services/invoice.service';
 
 export default function CreateInvoiceScreen() {
   const router = useRouter();
+  const colorScheme = useColorScheme() ?? 'light';
+  const styles = useMemo(() => makeStyles(colorScheme), [colorScheme]);
 
   const [patientId, setPatientId] = useState('');
   const [totalAmount, setTotalAmount] = useState('');
@@ -128,10 +132,10 @@ export default function CreateInvoiceScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#f9fafb' },
+const makeStyles = (colorScheme: 'light' | 'dark') => StyleSheet.create({
+  container: { flex: 1, backgroundColor: Colors[colorScheme].background },
   card: {
-    backgroundColor: '#fff',
+    backgroundColor: Colors[colorScheme].surface,
     borderRadius: 12,
     padding: 20,
     margin: 16,
@@ -140,23 +144,23 @@ const styles = StyleSheet.create({
     shadowRadius: 8,
     elevation: 3,
   },
-  title: { fontSize: 22, fontWeight: '700', color: '#1a1a2e', marginBottom: 20 },
+  title: { fontSize: 22, fontWeight: '700', color: Colors[colorScheme].text, marginBottom: 20 },
   field: { marginBottom: 16 },
-  label: { fontSize: 14, fontWeight: '600', color: '#374151', marginBottom: 6 },
+  label: { fontSize: 14, fontWeight: '600', color: Colors[colorScheme].textSecondary, marginBottom: 6 },
   input: {
-    backgroundColor: '#f9fafb',
+    backgroundColor: Colors[colorScheme].inputBackground,
     borderWidth: 1,
-    borderColor: '#d1d5db',
+    borderColor: Colors[colorScheme].inputBorder,
     borderRadius: 8,
     paddingHorizontal: 14,
     paddingVertical: 12,
     fontSize: 16,
-    color: '#1a1a2e',
+    color: Colors[colorScheme].inputText,
   },
-  inputError: { borderColor: '#ef4444' },
-  errorText: { color: '#ef4444', fontSize: 12, marginTop: 4 },
+  inputError: { borderColor: Colors[colorScheme].inputError },
+  errorText: { color: Colors[colorScheme].error, fontSize: 12, marginTop: 4 },
   submitButton: {
-    backgroundColor: '#2563eb',
+    backgroundColor: Colors[colorScheme].primary,
     borderRadius: 8,
     paddingVertical: 14,
     alignItems: 'center',
@@ -170,5 +174,5 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginTop: 12,
   },
-  cancelButtonText: { color: '#6b7280', fontWeight: '600', fontSize: 16 },
+  cancelButtonText: { color: Colors[colorScheme].textSecondary, fontWeight: '600', fontSize: 16 },
 });

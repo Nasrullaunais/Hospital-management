@@ -7,20 +7,24 @@ import {
   ActivityIndicator,
   StyleSheet,
   ScrollView,
-  KeyboardAvoidingView,
-  Platform,
   Alert,
   Modal,
   FlatList,
+  KeyboardAvoidingView,
+  Platform,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { SymbolView } from 'expo-symbols';
 import * as DocumentPicker from 'expo-document-picker';
 import { useRouter } from 'expo-router';
+import Colors from '@/constants/Colors';
+import { useColorScheme } from '@/components/useColorScheme';
 import { apiClient } from '@/shared/api/client';
 import { ENDPOINTS } from '@/shared/api/endpoints';
 import { recordService } from '@/features/records/services/record.service';
 import { prescriptionService, type PrescriptionItem } from '@/features/prescriptions/services/prescription.service';
 import { medicineService } from '@/features/pharmacy/services/medicine.service';
-import type { ApiSuccessResponse, Appointment, User } from '@/shared/types';
+import type { ApiSuccessResponse, Appointment, User, Medicine } from '@/shared/types';
 
 type PatientOption = {
   appointmentId: string;
@@ -28,15 +32,10 @@ type PatientOption = {
   patientName: string;
 };
 
-type MedicineOption = {
-  _id: string;
-  name: string;
-  stockQuantity: number;
-  dosage: string;
-};
-
 export default function AddRecordScreen() {
   const router = useRouter();
+  const colorScheme = useColorScheme();
+  const colors = Colors[colorScheme ?? 'light'];
 
   const [patients, setPatients] = useState<PatientOption[]>([]);
   const [selectedPatient, setSelectedPatient] = useState<PatientOption | null>(null);
@@ -45,15 +44,15 @@ export default function AddRecordScreen() {
   const [loadingPatients, setLoadingPatients] = useState(true);
   const [submitting, setSubmitting] = useState(false);
 
-  // Prescription items state
   const [rxItems, setRxItems] = useState<PrescriptionItem[]>([]);
   const [medicineModalOpen, setMedicineModalOpen] = useState(false);
-  const [medicines, setMedicines] = useState<MedicineOption[]>([]);
+  const [medicines, setMedicines] = useState<Medicine[]>([]);
   const [loadingMedicines, setLoadingMedicines] = useState(false);
   const [newItem, setNewItem] = useState<Partial<PrescriptionItem>>({});
 
-  // Fetch the doctor's own schedule and extract unique patients from
-  // Confirmed / Completed appointments
+  // Focus state for inputs
+  const [diagnosisFocused, setDiagnosisFocused] = useState(false);
+
   useEffect(() => {
     const loadPatients = async () => {
       try {
@@ -152,7 +151,6 @@ export default function AddRecordScreen() {
 
       const record = await recordService.createRecord(formData);
 
-      // Create prescription if items exist
       if (rxItems.length > 0) {
         await prescriptionService.createPrescription({
           patientId: selectedPatient.patientId,
@@ -175,24 +173,28 @@ export default function AddRecordScreen() {
 
   if (loadingPatients) {
     return (
-      <View style={styles.centered}>
-        <ActivityIndicator size="large" color="#2563EB" />
-        <Text style={styles.loadingText}>Loading patients…</Text>
+      <View style={[styles.centered, { backgroundColor: colors.background }]}>
+        <ActivityIndicator size="large" color={colors.primary} />
+        <Text style={[styles.loadingText, { color: colors.textSecondary }]}>Loading patients…</Text>
       </View>
     );
   }
 
   return (
-    <KeyboardAvoidingView
-      style={styles.flex}
-      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-    >
-      <ScrollView contentContainerStyle={styles.container} keyboardShouldPersistTaps="handled">
+    <SafeAreaView style={{ flex: 1 }}>
+      <KeyboardAvoidingView
+        style={[styles.flex, { backgroundColor: colors.background }]}
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+      >
+        <ScrollView contentContainerStyle={styles.container} keyboardShouldPersistTaps="handled">
 
         {/* Patient Selector */}
-        <Text style={styles.label}>Patient *</Text>
+        <Text style={[styles.label, { color: colors.text }]}>Patient *</Text>
         {patients.length === 0 ? (
-          <Text style={styles.hint}>No confirmed/completed appointments found.</Text>
+          <View style={[styles.hintBox, { backgroundColor: colors.surfaceTertiary }]}>
+            <SymbolView name={{ ios: 'info.circle', android: 'info', web: 'info' }} tintColor={colors.textSecondary} size={16} />
+            <Text style={[styles.hint, { color: colors.textSecondary }]}>No confirmed/completed appointments found.</Text>
+          </View>
         ) : (
           <View style={styles.patientList}>
             {patients.map((p) => (
@@ -200,14 +202,21 @@ export default function AddRecordScreen() {
                 key={p.patientId}
                 style={[
                   styles.patientChip,
-                  selectedPatient?.patientId === p.patientId && styles.patientChipSelected,
+                  selectedPatient?.patientId === p.patientId
+                    ? { backgroundColor: colors.primaryMuted, borderColor: colors.primary }
+                    : { backgroundColor: colors.surface, borderColor: colors.border },
                 ]}
                 onPress={() => setSelectedPatient(p)}
               >
+                <SymbolView
+                  name={{ ios: 'person', android: 'person', web: 'person' }}
+                  tintColor={selectedPatient?.patientId === p.patientId ? colors.primary : colors.textSecondary}
+                  size={14}
+                />
                 <Text
                   style={[
                     styles.patientChipText,
-                    selectedPatient?.patientId === p.patientId && styles.patientChipTextSelected,
+                    { color: selectedPatient?.patientId === p.patientId ? colors.primary : colors.text },
                   ]}
                 >
                   {p.patientName}
@@ -218,61 +227,87 @@ export default function AddRecordScreen() {
         )}
 
         {/* Diagnosis */}
-        <Text style={styles.label}>Diagnosis *</Text>
+        <Text style={[styles.label, { color: colors.text }]}>Diagnosis *</Text>
         <TextInput
-          style={[styles.input, styles.multiline]}
+          style={[
+            styles.input,
+            styles.multiline,
+            {
+              backgroundColor: colors.inputBackground,
+              borderColor: diagnosisFocused ? colors.primary : colors.inputBorder,
+              color: colors.inputText,
+            },
+          ]}
           placeholder="Enter diagnosis details…"
-          placeholderTextColor="#9CA3AF"
+          placeholderTextColor={colors.inputPlaceholder}
           value={diagnosis}
           onChangeText={setDiagnosis}
+          onFocus={() => setDiagnosisFocused(true)}
+          onBlur={() => setDiagnosisFocused(false)}
           multiline
           numberOfLines={4}
           textAlignVertical="top"
         />
 
         {/* Prescription Items */}
-        <Text style={styles.label}>Prescription Items</Text>
+        <Text style={[styles.label, { color: colors.text }]}>Prescription Items</Text>
         {rxItems.length > 0 && (
           <View style={styles.rxItemList}>
             {rxItems.map((item, idx) => (
-              <View key={idx} style={styles.rxItemRow}>
+              <View key={idx} style={[styles.rxItemRow, { backgroundColor: colors.surface, borderColor: colors.border }]}>
                 <View style={styles.rxItemInfo}>
-                  <Text style={styles.rxItemName}>{item.medicineName}</Text>
-                  <Text style={styles.rxItemDetail}>{item.dosage} — Qty: {item.quantity}</Text>
-                  {item.instructions && <Text style={styles.rxItemInstructions}>{item.instructions}</Text>}
+                  <Text style={[styles.rxItemName, { color: colors.text }]}>{item.medicineName}</Text>
+                  <Text style={[styles.rxItemDetail, { color: colors.textSecondary }]}>
+                    {item.dosage} — Qty: {item.quantity}
+                  </Text>
+                  {item.instructions && (
+                    <Text style={[styles.rxItemInstructions, { color: colors.textTertiary }]}>{item.instructions}</Text>
+                  )}
                 </View>
-                <TouchableOpacity onPress={() => removeRxItem(idx)}>
-                  <Text style={styles.removeItem}>✕</Text>
+                <TouchableOpacity onPress={() => removeRxItem(idx)} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+                  <SymbolView name={{ ios: 'xmark.circle.fill', android: 'cancel', web: 'cancel' }} tintColor={colors.error} size={22} />
                 </TouchableOpacity>
               </View>
             ))}
           </View>
         )}
-        <TouchableOpacity style={styles.addMedicineButton} onPress={() => void openMedicinePicker()}>
-          <Text style={styles.addMedicineButtonText}>+ Add Medicine</Text>
+        <TouchableOpacity
+          style={[styles.addMedicineButton, { borderColor: colors.primary }]}
+          onPress={() => void openMedicinePicker()}
+        >
+          <SymbolView name={{ ios: 'plus.circle', android: 'add_circle', web: 'add_circle' }} tintColor={colors.primary} size={18} />
+          <Text style={[styles.addMedicineButtonText, { color: colors.primary }]}>Add Medicine</Text>
         </TouchableOpacity>
 
         {/* Lab Report Upload */}
-        <Text style={styles.label}>Lab Report</Text>
-        <TouchableOpacity style={styles.uploadButton} onPress={() => void pickLabReport()}>
-          <Text style={styles.uploadButtonText}>
+        <Text style={[styles.label, { color: colors.text }]}>Lab Report</Text>
+        <TouchableOpacity
+          style={[styles.uploadButton, { backgroundColor: colors.surface, borderColor: colors.border }]}
+          onPress={() => void pickLabReport()}
+        >
+          <SymbolView
+            name={labFile ? { ios: 'doc.fill', android: 'description', web: 'description' } : { ios: 'link', android: 'link', web: 'link' }}
+            tintColor={labFile ? colors.primary : colors.textSecondary}
+            size={18}
+          />
+          <Text style={[styles.uploadButtonText, { color: labFile ? colors.primary : colors.textSecondary }]}>
             {labFile ? `📎 ${labFile.name}` : 'Attach PDF or Image (optional)'}
           </Text>
         </TouchableOpacity>
         {labFile ? (
           <TouchableOpacity onPress={() => setLabFile(null)}>
-            <Text style={styles.removeFile}>Remove file</Text>
+            <Text style={[styles.removeFile, { color: colors.error }]}>Remove file</Text>
           </TouchableOpacity>
         ) : null}
 
         {/* Submit */}
         <TouchableOpacity
-          style={[styles.submitButton, submitting && styles.submitButtonDisabled]}
+          style={[styles.submitButton, { backgroundColor: colors.primary }, submitting && styles.submitButtonDisabled]}
           onPress={() => void handleSubmit()}
           disabled={submitting}
         >
           {submitting ? (
-            <ActivityIndicator color="#FFF" />
+            <ActivityIndicator color="#fff" />
           ) : (
             <Text style={styles.submitButtonText}>
               {rxItems.length > 0 ? 'Create Record + Prescription' : 'Create Record'}
@@ -284,10 +319,10 @@ export default function AddRecordScreen() {
       {/* Medicine Picker Modal */}
       <Modal visible={medicineModalOpen} animationType="slide" transparent>
         <View style={styles.modalOverlay}>
-          <View style={styles.modalContent}>
-            <Text style={styles.modalTitle}>Select Medicine</Text>
+          <View style={[styles.modalContent, { backgroundColor: colors.surface }]}>
+            <Text style={[styles.modalTitle, { color: colors.text }]}>Select Medicine</Text>
             {loadingMedicines ? (
-              <ActivityIndicator size="large" color="#2563EB" />
+              <ActivityIndicator size="large" color={colors.primary} />
             ) : (
               <FlatList
                 data={medicines}
@@ -295,45 +330,52 @@ export default function AddRecordScreen() {
                 style={styles.medicineList}
                 renderItem={({ item }) => (
                   <TouchableOpacity
-                    style={styles.medicineRow}
+                    style={[styles.medicineRow, { borderBottomColor: colors.divider }]}
                     onPress={() => {
                       setNewItem(prev => ({
                         ...prev,
                         medicineId: item._id,
                         medicineName: item.name,
-                        dosage: item.dosage || '',
                       }));
                     }}
                   >
-                    <Text style={styles.medicineName}>{item.name}</Text>
-                    <Text style={styles.medicineStock}>Stock: {item.stockQuantity}</Text>
+                    <View>
+                      <Text style={[styles.medicineName, { color: colors.text }]}>{item.name}</Text>
+                      <Text style={[styles.medicineDosage, { color: colors.textSecondary }]}>{item.category}</Text>
+                    </View>
+                    <Text style={[styles.medicineStock, { color: colors.textSecondary }]}>
+                      Stock: {item.stockQuantity}
+                    </Text>
                   </TouchableOpacity>
                 )}
               />
             )}
 
             {newItem.medicineId && (
-              <View style={styles.itemForm}>
+              <View style={[styles.itemForm, { backgroundColor: colors.surfaceTertiary }]}>
                 <TextInput
-                  style={styles.input}
+                  style={[styles.input, { backgroundColor: colors.inputBackground, borderColor: colors.inputBorder, color: colors.inputText }]}
                   placeholder="Dosage (e.g., 500mg)"
+                  placeholderTextColor={colors.inputPlaceholder}
                   value={newItem.dosage}
                   onChangeText={(v) => setNewItem(prev => ({ ...prev, dosage: v }))}
                 />
                 <TextInput
-                  style={[styles.input, { marginTop: 8 }]}
+                  style={[styles.input, { backgroundColor: colors.inputBackground, borderColor: colors.inputBorder, color: colors.inputText, marginTop: 8 }]}
                   placeholder="Quantity"
                   keyboardType="number-pad"
+                  placeholderTextColor={colors.inputPlaceholder}
                   value={newItem.quantity ? String(newItem.quantity) : ''}
                   onChangeText={(v) => setNewItem(prev => ({ ...prev, quantity: parseInt(v, 10) || 0 }))}
                 />
                 <TextInput
-                  style={[styles.input, { marginTop: 8 }]}
+                  style={[styles.input, { backgroundColor: colors.inputBackground, borderColor: colors.inputBorder, color: colors.inputText, marginTop: 8 }]}
                   placeholder="Instructions (optional)"
+                  placeholderTextColor={colors.inputPlaceholder}
                   value={newItem.instructions}
                   onChangeText={(v) => setNewItem(prev => ({ ...prev, instructions: v }))}
                 />
-                <TouchableOpacity style={styles.confirmAddButton} onPress={() => void addRxItem()}>
+                <TouchableOpacity style={[styles.confirmAddButton, { backgroundColor: colors.primary }]} onPress={() => void addRxItem()}>
                   <Text style={styles.confirmAddButtonText}>Add to Prescription</Text>
                 </TouchableOpacity>
               </View>
@@ -343,85 +385,132 @@ export default function AddRecordScreen() {
               style={styles.closeModalButton}
               onPress={() => { setMedicineModalOpen(false); setNewItem({}); }}
             >
-              <Text style={styles.closeModalButtonText}>Cancel</Text>
+              <Text style={[styles.closeModalButtonText, { color: colors.textSecondary }]}>Cancel</Text>
             </TouchableOpacity>
           </View>
         </View>
       </Modal>
-    </KeyboardAvoidingView>
+      </KeyboardAvoidingView>
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  flex: { flex: 1, backgroundColor: '#F3F4F6' },
+  flex: { flex: 1 },
   centered: { flex: 1, justifyContent: 'center', alignItems: 'center', gap: 12 },
-  loadingText: { color: '#6B7280', fontSize: 15 },
+  loadingText: { fontSize: 15 },
   container: { padding: 20, paddingBottom: 48 },
   label: {
-    fontSize: 13, fontWeight: '600', color: '#374151',
-    marginBottom: 6, marginTop: 16, textTransform: 'uppercase', letterSpacing: 0.4,
+    fontSize: 13,
+    fontWeight: '600',
+    marginBottom: 8,
+    marginTop: 16,
+    textTransform: 'uppercase',
+    letterSpacing: 0.4,
   },
-  hint: { color: '#9CA3AF', fontSize: 14, marginBottom: 8 },
+  hintBox: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    borderRadius: 8,
+    padding: 12,
+    marginBottom: 4,
+  },
+  hint: { fontSize: 14 },
   patientList: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 4 },
   patientChip: {
-    paddingHorizontal: 14, paddingVertical: 8, borderRadius: 20,
-    borderWidth: 1.5, borderColor: '#D1D5DB', backgroundColor: '#FFF',
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderRadius: 20,
+    borderWidth: 1.5,
   },
-  patientChipSelected: { borderColor: '#2563EB', backgroundColor: '#EFF6FF' },
-  patientChipText: { color: '#374151', fontSize: 14, fontWeight: '500' },
-  patientChipTextSelected: { color: '#2563EB', fontWeight: '600' },
+  patientChipText: { fontSize: 14, fontWeight: '500' },
   input: {
-    backgroundColor: '#FFF', borderWidth: 1, borderColor: '#D1D5DB',
-    borderRadius: 10, paddingHorizontal: 14, paddingVertical: 12, fontSize: 15, color: '#111827',
+    borderWidth: 1,
+    borderRadius: 10,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    fontSize: 15,
   },
   multiline: { minHeight: 100 },
   rxItemList: { gap: 8, marginBottom: 8 },
   rxItemRow: {
-    flexDirection: 'row', backgroundColor: '#FFF', borderRadius: 10, padding: 12,
-    borderWidth: 1, borderColor: '#D1D5DB', alignItems: 'center',
+    flexDirection: 'row',
+    borderRadius: 10,
+    padding: 12,
+    borderWidth: 1,
+    alignItems: 'center',
   },
   rxItemInfo: { flex: 1 },
-  rxItemName: { fontSize: 15, fontWeight: '600', color: '#111827' },
-  rxItemDetail: { fontSize: 13, color: '#6B7280', marginTop: 2 },
-  rxItemInstructions: { fontSize: 12, color: '#9CA3AF', fontStyle: 'italic', marginTop: 2 },
-  removeItem: { color: '#EF4444', fontSize: 18, paddingHorizontal: 8 },
+  rxItemName: { fontSize: 15, fontWeight: '600' },
+  rxItemDetail: { fontSize: 13, marginTop: 2 },
+  rxItemInstructions: { fontSize: 12, fontStyle: 'italic', marginTop: 2 },
   addMedicineButton: {
-    borderWidth: 1.5, borderColor: '#2563EB', borderStyle: 'dashed',
-    borderRadius: 10, paddingVertical: 12, alignItems: 'center',
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    borderWidth: 1.5,
+    borderStyle: 'dashed',
+    borderRadius: 10,
+    paddingVertical: 12,
   },
-  addMedicineButtonText: { color: '#2563EB', fontSize: 14, fontWeight: '600' },
+  addMedicineButtonText: { fontSize: 14, fontWeight: '600' },
   uploadButton: {
-    backgroundColor: '#FFF', borderWidth: 1.5, borderColor: '#D1D5DB',
-    borderStyle: 'dashed', borderRadius: 10, paddingVertical: 14, paddingHorizontal: 16, alignItems: 'center',
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    borderWidth: 1.5,
+    borderStyle: 'dashed',
+    borderRadius: 10,
+    paddingVertical: 14,
+    paddingHorizontal: 16,
   },
-  uploadButtonText: { color: '#6B7280', fontSize: 14 },
-  removeFile: { color: '#EF4444', fontSize: 13, marginTop: 6, textAlign: 'right' },
+  uploadButtonText: { fontSize: 14 },
+  removeFile: { fontSize: 13, marginTop: 6, textAlign: 'right' },
   submitButton: {
-    marginTop: 32, backgroundColor: '#2563EB', borderRadius: 12, paddingVertical: 16, alignItems: 'center',
+    marginTop: 32,
+    borderRadius: 12,
+    paddingVertical: 16,
+    alignItems: 'center',
   },
   submitButtonDisabled: { opacity: 0.6 },
-  submitButtonText: { color: '#FFF', fontSize: 16, fontWeight: '700' },
+  submitButtonText: { color: '#fff', fontSize: 16, fontWeight: '700' },
   modalOverlay: {
-    flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'flex-end',
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    justifyContent: 'flex-end',
   },
   modalContent: {
-    backgroundColor: '#FFF', borderTopLeftRadius: 24, borderTopRightRadius: 24,
-    padding: 24, maxHeight: '80%',
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    padding: 24,
+    maxHeight: '80%',
   },
-  modalTitle: { fontSize: 18, fontWeight: '700', color: '#111827', marginBottom: 16 },
+  modalTitle: { fontSize: 18, fontWeight: '700', marginBottom: 16 },
   medicineList: { maxHeight: 300 },
   medicineRow: {
-    flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
-    paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: '#F3F4F6',
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: 12,
+    borderBottomWidth: 1,
   },
-  medicineName: { fontSize: 15, fontWeight: '600', color: '#111827' },
-  medicineStock: { fontSize: 13, color: '#6B7280' },
-  itemForm: { marginTop: 16 },
+  medicineName: { fontSize: 15, fontWeight: '600' },
+  medicineDosage: { fontSize: 12, marginTop: 1 },
+  medicineStock: { fontSize: 13 },
+  itemForm: { marginTop: 16, borderRadius: 12, padding: 14 },
   confirmAddButton: {
-    marginTop: 12, backgroundColor: '#2563EB', borderRadius: 10,
-    paddingVertical: 14, alignItems: 'center',
+    marginTop: 12,
+    borderRadius: 10,
+    paddingVertical: 14,
+    alignItems: 'center',
   },
-  confirmAddButtonText: { color: '#FFF', fontSize: 15, fontWeight: '700' },
+  confirmAddButtonText: { color: '#fff', fontSize: 15, fontWeight: '700' },
   closeModalButton: { marginTop: 12, alignItems: 'center', paddingVertical: 12 },
-  closeModalButtonText: { color: '#6B7280', fontSize: 15 },
+  closeModalButtonText: { fontSize: 15 },
 });

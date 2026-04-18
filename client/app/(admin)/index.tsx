@@ -1,79 +1,87 @@
 import React from 'react';
-import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { ScrollView, StyleSheet, Text, View } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
+import Colors from '@/constants/Colors';
+import { useColorScheme } from '@/components/useColorScheme';
+import { Card, Button, Badge } from '@/components/ui';
+import { spacing } from '@/constants/ThemeTokens';
+
+const TAB_BAR_HEIGHT = 70;
 
 export default function AdminDashboard() {
   const router = useRouter();
+  const colorScheme = useColorScheme() ?? 'light';
+  const colors = Colors[colorScheme];
 
   return (
-    <ScrollView style={styles.container} contentContainerStyle={styles.content}>
-      <Text style={styles.title}>Admin Dashboard</Text>
-      <Text style={styles.subtitle}>Control users, finance operations, and inventory governance.</Text>
+    <SafeAreaView style={[styles.safeArea, { backgroundColor: colors.background }]}>
+      <ScrollView style={styles.container} contentContainerStyle={styles.content}>
+      <Text style={[styles.title, { color: colors.text }]}>Admin Dashboard</Text>
+      <Text style={[styles.subtitle, { color: colors.textSecondary }]}>
+        Control users, finance operations, and inventory governance.
+      </Text>
 
       <View style={styles.gridRow}>
-        <TouchableOpacity style={styles.tile} onPress={() => router.push('/(admin)/doctors/add')}>
-          <Text style={styles.tileLabel}>Add Doctor</Text>
-          <Text style={styles.tileSub}>Create a new doctor profile</Text>
-        </TouchableOpacity>
-        <TouchableOpacity style={styles.tile} onPress={() => router.push('/(admin)/billing')}>
-          <Text style={styles.tileLabel}>Finance Queue</Text>
-          <Text style={styles.tileSub}>Verify pending invoice payments</Text>
-        </TouchableOpacity>
+        <Card
+          style={styles.tile}
+          onPress={() => router.push('/(admin)/doctors/add')}
+        >
+          <Badge label="New" variant="success" />
+          <Text style={[styles.tileLabel, { color: colors.text }]}>Add Doctor</Text>
+          <Text style={[styles.tileSub, { color: colors.textSecondary }]}>
+            Create a new doctor profile
+          </Text>
+        </Card>
+        <Card
+          style={styles.tile}
+          onPress={() => router.push('/(admin)/billing')}
+        >
+          <Badge label="Queue" variant="warning" />
+          <Text style={[styles.tileLabel, { color: colors.text }]}>Finance Queue</Text>
+          <Text style={[styles.tileSub, { color: colors.textSecondary }]}>
+            Verify pending invoice payments
+          </Text>
+        </Card>
       </View>
 
-      <View style={styles.card}>
-        <Text style={styles.cardTitle}>Operations</Text>
-        <TouchableOpacity style={styles.primaryButton} onPress={() => router.push('/(admin)/doctors')}>
-          <Text style={styles.primaryButtonText}>Manage Doctor Directory</Text>
-        </TouchableOpacity>
-        <TouchableOpacity style={styles.secondaryButton} onPress={() => router.push('/(admin)/pharmacy')}>
-          <Text style={styles.secondaryButtonText}>Review Inventory Actions</Text>
-        </TouchableOpacity>
-      </View>
+      <Card title="Operations">
+        <Button
+          title="Manage Doctor Directory"
+          onPress={() => router.push('/(admin)/doctors')}
+          variant="primary"
+          fullWidth
+          style={styles.button}
+        />
+        <Button
+          title="Review Inventory Actions"
+          onPress={() => router.push('/(admin)/pharmacy')}
+          variant="outline"
+          fullWidth
+        />
+      </Card>
     </ScrollView>
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#f8fafc' },
-  content: { padding: 16, gap: 14 },
-  title: { fontSize: 28, fontWeight: '700', color: '#0f172a' },
-  subtitle: { fontSize: 14, color: '#475569' },
-  gridRow: { flexDirection: 'row', gap: 10 },
+  safeArea: { flex: 1 },
+  container: { flex: 1 },
+  content: {
+    padding: spacing.md,
+    gap: spacing.md,
+    paddingBottom: TAB_BAR_HEIGHT + spacing.md,
+  },
+  title: { fontSize: 28, fontWeight: '700' },
+  subtitle: { fontSize: 14 },
+  gridRow: { flexDirection: 'row', gap: spacing.md },
   tile: {
     flex: 1,
-    backgroundColor: '#ffffff',
-    borderRadius: 12,
-    padding: 12,
-    borderWidth: 1,
-    borderColor: '#e2e8f0',
     minHeight: 110,
     justifyContent: 'space-between',
   },
-  tileLabel: { fontSize: 15, fontWeight: '700', color: '#0f172a' },
-  tileSub: { fontSize: 12, color: '#64748b' },
-  card: {
-    backgroundColor: '#ffffff',
-    borderRadius: 14,
-    padding: 14,
-    borderWidth: 1,
-    borderColor: '#e2e8f0',
-    gap: 10,
-  },
-  cardTitle: { fontSize: 16, fontWeight: '700', color: '#0f172a' },
-  primaryButton: {
-    backgroundColor: '#0f766e',
-    borderRadius: 10,
-    paddingVertical: 12,
-    alignItems: 'center',
-  },
-  primaryButtonText: { color: '#fff', fontWeight: '700' },
-  secondaryButton: {
-    borderWidth: 1,
-    borderColor: '#0f766e',
-    borderRadius: 10,
-    paddingVertical: 12,
-    alignItems: 'center',
-  },
-  secondaryButtonText: { color: '#0f766e', fontWeight: '700' },
+  tileLabel: { fontSize: 15, fontWeight: '700', marginTop: spacing.sm },
+  tileSub: { fontSize: 12 },
+  button: { marginBottom: spacing.sm },
 });

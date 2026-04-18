@@ -1,79 +1,104 @@
 import React from 'react';
 import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
+import { useAuth } from '@/shared/context/AuthContext';
+import Colors from '@/constants/Colors';
+import { useColorScheme } from '@/components/useColorScheme';
+import { Card, Button, Badge } from '@/components/ui';
+import { spacing, radius, shadows } from '@/constants/ThemeTokens';
+
+const TAB_BAR_HEIGHT = 70;
 
 export default function PatientDashboard() {
   const router = useRouter();
+  const { user } = useAuth();
+  const colorScheme = useColorScheme() ?? 'light';
+  const colors = Colors[colorScheme];
+
+  const firstName = user?.name?.split(' ')[0] ?? 'there';
 
   return (
-    <ScrollView style={styles.container} contentContainerStyle={styles.content}>
-      <Text style={styles.title}>Patient Dashboard</Text>
-      <Text style={styles.subtitle}>Manage appointments, records, and billing from one place.</Text>
-
-      <View style={styles.card}>
-        <Text style={styles.cardTitle}>Quick Actions</Text>
-        <TouchableOpacity style={styles.primaryButton} onPress={() => router.push('/(patient)/appointments/book')}>
-          <Text style={styles.primaryButtonText}>Book Appointment</Text>
-        </TouchableOpacity>
-        <TouchableOpacity style={styles.secondaryButton} onPress={() => router.push('/(patient)/doctors')}>
-          <Text style={styles.secondaryButtonText}>Browse Doctors</Text>
-        </TouchableOpacity>
+    <SafeAreaView edges={['bottom']} style={styles.safeArea}>
+      <ScrollView style={styles.container} contentContainerStyle={styles.content}>
+      {/* Greeting */}
+      <View style={styles.greeting}>
+        <Text style={styles.greetingText}>Hello, {firstName}</Text>
+        <Text style={[styles.subtitle, { color: colors.textSecondary }]}>
+          Manage appointments, records, and billing from one place.
+        </Text>
       </View>
 
+      {/* Quick Actions Card */}
+      <Card title="Quick Actions">
+        <Button
+          title="Book Appointment"
+          onPress={() => router.push('/(patient)/appointments/book')}
+          variant="primary"
+          fullWidth
+          style={styles.primaryButton}
+        />
+        <Button
+          title="Browse Doctors"
+          onPress={() => router.push('/(patient)/doctors')}
+          variant="outline"
+          fullWidth
+        />
+      </Card>
+
+      {/* Secondary Actions Grid */}
       <View style={styles.gridRow}>
-        <TouchableOpacity style={styles.tile} onPress={() => router.push('/(patient)/records')}>
-          <Text style={styles.tileLabel}>Medical Records</Text>
-          <Text style={styles.tileSub}>View diagnosis and reports</Text>
-        </TouchableOpacity>
-        <TouchableOpacity style={styles.tile} onPress={() => router.push('/(patient)/billing')}>
-          <Text style={styles.tileLabel}>Billing</Text>
-          <Text style={styles.tileSub}>Upload receipts and track payments</Text>
-        </TouchableOpacity>
+        <Card
+          style={styles.tile}
+          onPress={() => router.push('/(patient)/records')}
+        >
+          <View style={styles.tileHeader}>
+            <Badge label="Records" variant="primary" />
+          </View>
+          <Text style={[styles.tileLabel, { color: colors.text }]}>Medical Records</Text>
+          <Text style={[styles.tileSub, { color: colors.textSecondary }]}>
+            View diagnosis and reports
+          </Text>
+        </Card>
+        <Card
+          style={styles.tile}
+          onPress={() => router.push('/(patient)/billing')}
+        >
+          <View style={styles.tileHeader}>
+            <Badge label="Billing" variant="info" />
+          </View>
+          <Text style={[styles.tileLabel, { color: colors.text }]}>Billing</Text>
+          <Text style={[styles.tileSub, { color: colors.textSecondary }]}>
+            Upload receipts and track payments
+          </Text>
+        </Card>
       </View>
-    </ScrollView>
+      </ScrollView>
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#f8fafc' },
-  content: { padding: 16, gap: 14 },
-  title: { fontSize: 28, fontWeight: '700', color: '#0f172a' },
-  subtitle: { fontSize: 14, color: '#475569' },
-  card: {
-    backgroundColor: '#ffffff',
-    borderRadius: 14,
-    padding: 14,
-    borderWidth: 1,
-    borderColor: '#e2e8f0',
-    gap: 10,
+  safeArea: {
+    flex: 1,
   },
-  cardTitle: { fontSize: 16, fontWeight: '700', color: '#0f172a' },
-  primaryButton: {
-    backgroundColor: '#2563eb',
-    borderRadius: 10,
-    paddingVertical: 12,
-    alignItems: 'center',
+  container: { flex: 1 },
+  content: {
+    padding: spacing.md,
+    gap: spacing.md,
+    paddingBottom: TAB_BAR_HEIGHT + spacing.md,
   },
-  primaryButtonText: { color: '#fff', fontWeight: '700' },
-  secondaryButton: {
-    borderWidth: 1,
-    borderColor: '#2563eb',
-    borderRadius: 10,
-    paddingVertical: 12,
-    alignItems: 'center',
-  },
-  secondaryButtonText: { color: '#2563eb', fontWeight: '700' },
-  gridRow: { flexDirection: 'row', gap: 10 },
+  greeting: { marginBottom: spacing.xs },
+  greetingText: { fontSize: 28, fontWeight: '700', marginBottom: spacing.xs },
+  subtitle: { fontSize: 15, lineHeight: 20 },
+  primaryButton: { marginBottom: spacing.sm },
+  gridRow: { flexDirection: 'row', gap: spacing.md },
   tile: {
     flex: 1,
-    backgroundColor: '#ffffff',
-    borderRadius: 12,
-    padding: 12,
-    borderWidth: 1,
-    borderColor: '#e2e8f0',
     minHeight: 110,
     justifyContent: 'space-between',
   },
-  tileLabel: { fontSize: 15, fontWeight: '700', color: '#0f172a' },
-  tileSub: { fontSize: 12, color: '#64748b' },
+  tileHeader: { marginBottom: spacing.sm },
+  tileLabel: { fontSize: 15, fontWeight: '600', marginBottom: spacing.xs },
+  tileSub: { fontSize: 12 },
 });

@@ -30,11 +30,17 @@ export const authService = {
    * Register a new patient account.
    */
   register: async (payload: RegisterPayload): Promise<AuthResponse> => {
-    const res = await apiClient.post<ApiSuccessResponse<AuthResponse>>(
-      ENDPOINTS.AUTH.REGISTER,
-      payload,
-    );
-    return res.data.data;
+    try {
+      console.log('[AUTH] registering:', payload.email);
+      const res = await apiClient.post<ApiSuccessResponse<AuthResponse>>(
+        ENDPOINTS.AUTH.REGISTER,
+        payload,
+      );
+      return res.data.data;
+    } catch (err) {
+      console.error('[AUTH] registration failed:', (err as Error).message);
+      throw err;
+    }
   },
 
   /**

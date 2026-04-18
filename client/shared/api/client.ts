@@ -1,27 +1,20 @@
 import axios, { type AxiosError, type InternalAxiosRequestConfig } from 'axios';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Config } from '../constants/Config';
+import { getFriendlyErrorMessage, withRetry } from '../services/errorService';
 
 export const AUTH_TOKEN_KEY = '@hospital_auth_token';
 
-// Registered by AuthProvider at mount — clears React state on 401
+let _toastShow: ((message: string, type?: 'success' | 'error' | 'info') => void) | null = null;
+export function registerToast(showFn: (message: string, type?: 'success' | 'error' | 'info') => void) {
+  _toastShow = showFn;
+}
+
 let _clearSession: (() => void) | null = null;
 export function registerClearSession(fn: () => void) {
   _clearSession = fn;
 }
 
-/**
- * Axios API Client
- *
- * Pre-configured with:
- *   - Base URL from Config.API_URL (set via EXPO_PUBLIC_API_URL env var)
- *   - Request interceptor: auto-attaches Authorization Bearer token from AsyncStorage
- *   - Response interceptor: standardized error handling
- *   - 15s timeout
- *
- * All feature service files should import this client:
- *   import { apiClient } from '@/shared/api/client';
- */
 export const apiClient = axios.create({
   baseURL: Config.API_URL,
   timeout: Config.REQUEST_TIMEOUT_MS,
@@ -30,7 +23,6 @@ export const apiClient = axios.create({
   },
 });
 
-// ── Request Interceptor — Attach auth token ────────────────────────────────────
 apiClient.interceptors.request.use(
   async (config: InternalAxiosRequestConfig) => {
     const token = await AsyncStorage.getItem(AUTH_TOKEN_KEY);
@@ -42,25 +34,28 @@ apiClient.interceptors.request.use(
   (error) => Promise.reject(error),
 );
 
-// ── Response Interceptor — Normalize errors ────────────────────────────────────
 apiClient.interceptors.response.use(
   (response) => response,
-  async (error: AxiosError<{ message?: string }>) => {
-    // Network error (server down, no connection)
-    if (!error.response) {
-      return Promise.reject(new Error('Network error. Please check your connection.'));
-    }
+  async (error: AxiosError) => {
+    const errorInfo = getFriendlyErrorMessage(error);
 
-    // 401 Unauthorized — token expired or invalid, clear stored token and React state
-    if (error.response.status === 401) {
+    if (error.response?.status === 401) {
       await AsyncStorage.removeItem(AUTH_TOKEN_KEY);
       _clearSession?.();
     }
 
-    // Extract backend message or fall back to a generic error
-    const message =
-      error.response.data?.message ?? `Request failed with status ${error.response.status}`;
+    if (errorInfo.shouldToast && _toastShow) {
+      _toastShow(errorInfo.userMessage, 'error');
+    }
 
-    return Promise.reject(new Error(message));
+    return Promise.reject(new Error(errorInfo.userMessage));
   },
 );
+
+export async function apiRequest<T>(fn: () => Promise<T>, showRetryToast = true): Promise<T> {
+  return withRetry(fn, (attempt) => {
+    if (showRetryToast && _toastShow) {
+      _toastShow(`Retrying... (attempt ${attempt})`, 'info');
+    }
+  });
+}

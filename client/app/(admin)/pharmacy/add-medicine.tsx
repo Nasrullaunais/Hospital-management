@@ -1,20 +1,23 @@
 import React, { useMemo, useState } from 'react';
 import {
+  View,
+  Text,
+  TextInput,
+  TouchableOpacity,
   ActivityIndicator,
+  StyleSheet,
+  ScrollView,
   Alert,
   Image,
   KeyboardAvoidingView,
   Platform,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  View,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import DateTimePicker, { type DateTimePickerEvent } from '@react-native-community/datetimepicker';
 import * as ImagePicker from 'expo-image-picker';
 import { useRouter } from 'expo-router';
+import Colors from '@/constants/Colors';
+import { useColorScheme } from '@/components/useColorScheme';
 import { useAuth } from '@/shared/context/AuthContext';
 import { medicineService } from '@/features/pharmacy/services/medicine.service';
 
@@ -24,9 +27,106 @@ interface PickedImage {
   type: string;
 }
 
+const makeStyles = (colorScheme: 'light' | 'dark') => StyleSheet.create({
+  flex: { flex: 1 },
+  container: {
+    flex: 1,
+    backgroundColor: Colors[colorScheme].surfaceTertiary,
+  },
+  content: {
+    padding: 18,
+    paddingBottom: 30,
+  },
+  title: {
+    fontSize: 24,
+    fontWeight: '700',
+    color: Colors[colorScheme].text,
+    marginBottom: 4,
+  },
+  subtitle: {
+    fontSize: 13,
+    color: Colors[colorScheme].textSecondary,
+    marginBottom: 16,
+  },
+  label: {
+    marginBottom: 6,
+    marginTop: 8,
+    color: Colors[colorScheme].textSecondary,
+    fontWeight: '600',
+    fontSize: 13,
+  },
+  input: {
+    borderWidth: 1,
+    borderColor: Colors[colorScheme].border,
+    borderRadius: 8,
+    backgroundColor: Colors[colorScheme].surface,
+    paddingHorizontal: 12,
+    paddingVertical: 11,
+    fontSize: 15,
+  },
+  dateButton: {
+    borderWidth: 1,
+    borderColor: Colors[colorScheme].border,
+    borderRadius: 8,
+    backgroundColor: Colors[colorScheme].surface,
+    paddingHorizontal: 12,
+    paddingVertical: 12,
+  },
+  dateButtonText: {
+    color: Colors[colorScheme].text,
+    fontSize: 14,
+  },
+  imageButton: {
+    borderWidth: 1,
+    borderStyle: 'dashed',
+    borderColor: Colors[colorScheme].primary,
+    borderRadius: 8,
+    backgroundColor: Colors[colorScheme].infoBg,
+    paddingVertical: 14,
+    alignItems: 'center',
+  },
+  imageButtonText: {
+    color: Colors[colorScheme].primary,
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  previewWrap: {
+    marginTop: 10,
+    alignItems: 'center',
+  },
+  previewImage: {
+    width: 160,
+    height: 160,
+    borderRadius: 10,
+    backgroundColor: Colors[colorScheme].border,
+  },
+  previewLabel: {
+    marginTop: 8,
+    color: Colors[colorScheme].textSecondary,
+    fontSize: 12,
+  },
+  submitButton: {
+    marginTop: 24,
+    backgroundColor: Colors[colorScheme].primary,
+    borderRadius: 10,
+    paddingVertical: 14,
+    alignItems: 'center',
+  },
+  submitButtonDisabled: {
+    opacity: 0.6,
+  },
+  submitButtonText: {
+    color: '#ffffff',
+    fontSize: 15,
+    fontWeight: '700',
+  },
+});
+
 export default function AddMedicineScreen() {
   const router = useRouter();
   const { user } = useAuth();
+  const colorScheme = useColorScheme() ?? 'light';
+  const styles = useMemo(() => makeStyles(colorScheme), [colorScheme]);
 
   const [name, setName] = useState('');
   const [category, setCategory] = useState('');
@@ -121,11 +221,12 @@ export default function AddMedicineScreen() {
   };
 
   return (
-    <KeyboardAvoidingView
-      style={styles.flex}
-      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-    >
-      <ScrollView style={styles.container} contentContainerStyle={styles.content}>
+    <SafeAreaView style={{ flex: 1 }}>
+      <KeyboardAvoidingView
+        style={styles.flex}
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+      >
+        <ScrollView style={styles.container} contentContainerStyle={styles.content}>
         <Text style={styles.title}>Add Medication</Text>
         <Text style={styles.subtitle}>Capture packaging and register medicine inventory.</Text>
 
@@ -211,102 +312,8 @@ export default function AddMedicineScreen() {
         >
           {submitting ? <ActivityIndicator color="#fff" /> : <Text style={styles.submitButtonText}>Save Medication</Text>}
         </TouchableOpacity>
-      </ScrollView>
-    </KeyboardAvoidingView>
+        </ScrollView>
+      </KeyboardAvoidingView>
+    </SafeAreaView>
   );
 }
-
-const styles = StyleSheet.create({
-  flex: { flex: 1 },
-  container: {
-    flex: 1,
-    backgroundColor: '#f4f6f8',
-  },
-  content: {
-    padding: 18,
-    paddingBottom: 30,
-  },
-  title: {
-    fontSize: 24,
-    fontWeight: '700',
-    color: '#1f2937',
-    marginBottom: 4,
-  },
-  subtitle: {
-    fontSize: 13,
-    color: '#6b7280',
-    marginBottom: 16,
-  },
-  label: {
-    marginBottom: 6,
-    marginTop: 8,
-    color: '#374151',
-    fontWeight: '600',
-    fontSize: 13,
-  },
-  input: {
-    borderWidth: 1,
-    borderColor: '#d1d5db',
-    borderRadius: 8,
-    backgroundColor: '#ffffff',
-    paddingHorizontal: 12,
-    paddingVertical: 11,
-    fontSize: 15,
-  },
-  dateButton: {
-    borderWidth: 1,
-    borderColor: '#d1d5db',
-    borderRadius: 8,
-    backgroundColor: '#ffffff',
-    paddingHorizontal: 12,
-    paddingVertical: 12,
-  },
-  dateButtonText: {
-    color: '#1f2937',
-    fontSize: 14,
-  },
-  imageButton: {
-    borderWidth: 1,
-    borderStyle: 'dashed',
-    borderColor: '#1f6feb',
-    borderRadius: 8,
-    backgroundColor: '#eaf2ff',
-    paddingVertical: 14,
-    alignItems: 'center',
-  },
-  imageButtonText: {
-    color: '#1d4ed8',
-    fontSize: 14,
-    fontWeight: '600',
-  },
-  previewWrap: {
-    marginTop: 10,
-    alignItems: 'center',
-  },
-  previewImage: {
-    width: 160,
-    height: 160,
-    borderRadius: 10,
-    backgroundColor: '#e5e7eb',
-  },
-  previewLabel: {
-    marginTop: 8,
-    color: '#4b5563',
-    fontSize: 12,
-  },
-  submitButton: {
-    marginTop: 24,
-    backgroundColor: '#1f6feb',
-    borderRadius: 10,
-    paddingVertical: 14,
-    alignItems: 'center',
-  },
-  submitButtonDisabled: {
-    opacity: 0.6,
-  },
-  submitButtonText: {
-    color: '#ffffff',
-    fontSize: 15,
-    fontWeight: '700',
-  },
-});

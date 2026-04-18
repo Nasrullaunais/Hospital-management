@@ -2,31 +2,40 @@ import { DarkTheme, DefaultTheme, ThemeProvider } from '@react-navigation/native
 import { useFonts } from 'expo-font';
 import { Stack } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
-import { useEffect } from 'react';
+import { useEffect, useCallback } from 'react';
 import 'react-native-reanimated';
+import { SafeAreaProvider } from 'react-native-safe-area-context';
 
 import { useColorScheme } from '@/components/useColorScheme';
 import { AuthProvider } from '@/shared/context/AuthContext';
+import { ToastProvider, useToast } from '@/shared/providers/ToastProvider';
+import { registerToast } from '@/shared/api/client';
 
 export {
-  // Catch any errors thrown by the Layout component.
   ErrorBoundary,
 } from 'expo-router';
 
 export const unstable_settings = {
-  // Ensure that reloading on `/modal` keeps a back button present.
   initialRouteName: 'index',
 };
 
-// Prevent the splash screen from auto-hiding before asset loading is complete.
 SplashScreen.preventAutoHideAsync();
+
+function ToastSetup({ children }: { children: React.ReactNode }) {
+  const toast = useToast();
+
+  useEffect(() => {
+    registerToast(toast.show);
+  }, [toast]);
+
+  return <>{children}</>;
+}
 
 export default function RootLayout() {
   const [loaded, error] = useFonts({
     SpaceMono: require('../assets/fonts/SpaceMono-Regular.ttf'),
   });
 
-  // Expo Router uses Error Boundaries to catch errors in the navigation tree.
   useEffect(() => {
     if (error) throw error;
   }, [error]);
@@ -42,9 +51,15 @@ export default function RootLayout() {
   }
 
   return (
-    <AuthProvider>
-      <RootLayoutNav />
-    </AuthProvider>
+    <ToastProvider>
+      <ToastSetup>
+        <SafeAreaProvider>
+          <AuthProvider>
+            <RootLayoutNav />
+          </AuthProvider>
+        </SafeAreaProvider>
+      </ToastSetup>
+    </ToastProvider>
   );
 }
 
@@ -61,7 +76,6 @@ function RootLayoutNav() {
         <Stack.Screen name="(admin)" />
         <Stack.Screen name="login" />
         <Stack.Screen name="register" />
-        <Stack.Screen name="modal" options={{ presentation: 'modal', headerShown: true }} />
       </Stack>
     </ThemeProvider>
   );

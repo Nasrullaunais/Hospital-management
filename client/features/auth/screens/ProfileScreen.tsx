@@ -10,11 +10,17 @@ import {
   Alert,
   Image,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
+import { Feather } from '@expo/vector-icons';
 import * as DocumentPicker from 'expo-document-picker';
 import { useAuth } from '@/shared/context/AuthContext';
 import { authService, type UpdateProfilePayload } from '../services/auth.service';
 import { Config } from '@/shared/constants/Config';
+import Colors from '@/constants/Colors';
+import { useColorScheme } from '@/components/useColorScheme';
+
+const TAB_BAR_HEIGHT = 70;
 
 /**
  * ProfileScreen — Member 1
@@ -24,6 +30,8 @@ import { Config } from '@/shared/constants/Config';
 export default function ProfileScreen() {
   const { user, logout, refreshUser } = useAuth();
   const router = useRouter();
+  const colorScheme = useColorScheme() ?? 'light';
+  const theme = Colors[colorScheme];
 
   useEffect(() => {
     if (!user) {
@@ -104,102 +112,114 @@ export default function ProfileScreen() {
 
   const isImageUrl = user.idDocumentUrl && /\.(jpe?g|png|gif|webp)$/i.test(user.idDocumentUrl);
 
-  return (
-    <ScrollView style={styles.container} contentContainerStyle={styles.content}>
-      <Text style={styles.title}>My Profile</Text>
+return (
+    <SafeAreaView edges={['top', 'bottom']} style={[styles.container, { backgroundColor: theme.background }]}>
+      <ScrollView style={styles.scroll} contentContainerStyle={styles.content}>
+        <Text style={[styles.title, { color: theme.text }]}>My Profile</Text>
 
-      <View style={styles.roleTag}>
-        <Text style={styles.roleText}>{user.role.toUpperCase()}</Text>
-      </View>
+        <View style={[styles.roleTag, { backgroundColor: theme.primaryMuted }]}>
+          <Text style={[styles.roleText, { color: theme.primary }]}>{user.role.toUpperCase()}</Text>
+        </View>
 
-      <View style={styles.field}>
-        <Text style={styles.label}>Full Name</Text>
-        {editing ? (
-          <TextInput style={styles.input} value={form.name} onChangeText={update('name')} />
+        <View style={styles.field}>
+          <Text style={[styles.label, { color: theme.textSecondary }]}>Full Name</Text>
+          {editing ? (
+            <TextInput style={[styles.input, { backgroundColor: theme.surface, borderColor: theme.border, color: theme.text }]} value={form.name} onChangeText={update('name')} placeholderTextColor={theme.placeholder} />
         ) : (
-          <Text style={styles.value}>{user.name}</Text>
+          <Text style={[styles.value, { color: theme.text }]}>{user.name}</Text>
         )}
       </View>
 
       <View style={styles.field}>
-        <Text style={styles.label}>Email</Text>
-        <Text style={styles.value}>{user.email}</Text>
+        <Text style={[styles.label, { color: theme.textSecondary }]}>Email</Text>
+        <Text style={[styles.value, { color: theme.text }]}>{user.email}</Text>
       </View>
 
       <View style={styles.field}>
-        <Text style={styles.label}>Phone</Text>
-        {editing ? (
-          <TextInput
-            style={styles.input}
-            value={form.phone}
-            onChangeText={update('phone')}
-            keyboardType="phone-pad"
-          />
-        ) : (
-          <Text style={styles.value}>{user.phone || '—'}</Text>
-        )}
+        <Text style={[styles.label, { color: theme.textSecondary }]}>Phone</Text>
+          {editing ? (
+            <TextInput
+              style={[styles.input, { backgroundColor: theme.surface, borderColor: theme.border, color: theme.text }]}
+              value={form.phone}
+              onChangeText={update('phone')}
+              keyboardType="phone-pad"
+              placeholderTextColor={theme.placeholder}
+            />
+          ) : (
+            <Text style={[styles.value, { color: theme.text }]}>{user.phone || '—'}</Text>
+          )}
       </View>
 
       <View style={styles.field}>
-        <Text style={styles.label}>Date of Birth</Text>
-        {editing ? (
-          <TextInput
-            style={styles.input}
-            value={form.dateOfBirth}
-            onChangeText={update('dateOfBirth')}
-            placeholder="YYYY-MM-DD"
-          />
-        ) : (
-          <Text style={styles.value}>{user.dateOfBirth || '—'}</Text>
-        )}
+        <Text style={[styles.label, { color: theme.textSecondary }]}>Date of Birth</Text>
+          {editing ? (
+            <TextInput
+              style={[styles.input, { backgroundColor: theme.surface, borderColor: theme.border, color: theme.text }]}
+              value={form.dateOfBirth}
+              onChangeText={update('dateOfBirth')}
+              placeholder="YYYY-MM-DD"
+              placeholderTextColor={theme.placeholder}
+            />
+          ) : (
+            <Text style={[styles.value, { color: theme.text }]}>{user.dateOfBirth || '—'}</Text>
+          )}
       </View>
 
       {/* ID Document Section */}
       <View style={styles.field}>
-        <Text style={styles.label}>ID Document</Text>
+        <Text style={[styles.label, { color: theme.textSecondary }]}>ID Document</Text>
         {editing ? (
           <View>
-            <TouchableOpacity style={styles.pickButton} onPress={pickDocument}>
-              <Text style={styles.pickButtonText}>
+            <TouchableOpacity style={[styles.pickButton, { borderColor: theme.primary, backgroundColor: theme.primaryMuted }]} onPress={pickDocument}>
+              <Feather name="upload" size={18} color={theme.primary} style={{ marginRight: 8 }} />
+              <Text style={[styles.pickButtonText, { color: theme.primary }]}>
                 {selectedFile ? selectedFile.name : 'Select ID Document'}
               </Text>
             </TouchableOpacity>
             {selectedFile && (
-              <Text style={styles.fileHint}>
-                {selectedFile.mimeType} — {((selectedFile.size ?? 0) / 1024).toFixed(1)} KB
-              </Text>
+              <View style={styles.fileInfo}>
+                <Text style={[styles.fileHint, { color: theme.textSecondary }]}>
+                  {selectedFile.mimeType} — {((selectedFile.size ?? 0) / 1024).toFixed(1)} KB
+                </Text>
+                <TouchableOpacity onPress={() => setSelectedFile(null)}>
+                  <Text style={[styles.removeFile, { color: theme.error }]}>Remove</Text>
+                </TouchableOpacity>
+              </View>
             )}
           </View>
         ) : user.idDocumentUrl ? (
           isImageUrl ? (
             <Image
               source={{ uri: `${Config.BASE_URL}${user.idDocumentUrl}` }}
-              style={styles.documentImage}
+              style={[styles.documentImage, { backgroundColor: theme.surfaceTertiary }]}
               resizeMode="contain"
             />
           ) : (
-            <Text style={styles.documentLink}>
-              📄 Document uploaded ({user.idDocumentUrl.split('/').pop()})
-            </Text>
+            <View style={[styles.documentLink, { backgroundColor: theme.surfaceTertiary }]}>
+              <Feather name="file-text" size={16} color={theme.primary} style={{ marginRight: 6 }} />
+              <Text style={[styles.documentLinkText, { color: theme.primary }]}>Document uploaded ({user.idDocumentUrl.split('/').pop()})</Text>
+            </View>
           )
         ) : (
-          <Text style={styles.value}>No document uploaded</Text>
+          <Text style={[styles.value, { color: theme.textSecondary }]}>No document uploaded</Text>
         )}
       </View>
 
       {editing ? (
         <View style={styles.row}>
           <TouchableOpacity
-            style={[styles.button, styles.outline, { flex: 1, marginRight: 8 }]}
+            style={[styles.button, styles.outline, { flex: 1, marginRight: 8, backgroundColor: theme.surface, borderColor: theme.primary }]}
             onPress={() => { setEditing(false); setSelectedFile(null); }}
             disabled={loading}
+            activeOpacity={0.8}
           >
-            <Text style={[styles.buttonText, { color: '#2563eb' }]}>Cancel</Text>
+            <Text style={[styles.buttonText, { color: theme.primary }]}>Cancel</Text>
           </TouchableOpacity>
           <TouchableOpacity
-            style={[styles.button, { flex: 1 }, loading && styles.buttonDisabled]}
+            style={[styles.button, { flex: 1, backgroundColor: theme.primary }, loading && styles.buttonDisabled]}
             onPress={handleSave}
             disabled={loading}
+            activeOpacity={0.8}
           >
             {loading ? (
               <ActivityIndicator color="#fff" />
@@ -209,67 +229,77 @@ export default function ProfileScreen() {
           </TouchableOpacity>
         </View>
       ) : (
-        <TouchableOpacity style={styles.button} onPress={() => setEditing(true)}>
+        <TouchableOpacity style={[styles.button, { backgroundColor: theme.primary }]} onPress={() => setEditing(true)} activeOpacity={0.8}>
+          <Feather name="edit-2" size={16} color="#fff" style={{ marginRight: 8 }} />
           <Text style={styles.buttonText}>Edit Profile</Text>
         </TouchableOpacity>
       )}
 
-      <TouchableOpacity style={[styles.button, styles.danger, { marginTop: 12 }]} onPress={handleLogout}>
+      <TouchableOpacity style={[styles.button, styles.danger, { marginTop: 12 }]} onPress={handleLogout} activeOpacity={0.8}>
+        <Feather name="log-out" size={16} color="#fff" style={{ marginRight: 8 }} />
         <Text style={styles.buttonText}>Sign Out</Text>
       </TouchableOpacity>
     </ScrollView>
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#fff' },
-  content: { padding: 24 },
-  title: { fontSize: 26, fontWeight: '700', marginBottom: 8, color: '#1a1a2e' },
+  container: { flex: 1 },
+  scroll: { flex: 1 },
+  content: { padding: 24, paddingBottom: TAB_BAR_HEIGHT + 24 },
+  title: { fontSize: 22, fontWeight: '700', marginBottom: 8 },
   roleTag: {
     alignSelf: 'flex-start',
-    backgroundColor: '#dbeafe',
     borderRadius: 12,
     paddingHorizontal: 12,
     paddingVertical: 4,
     marginBottom: 24,
   },
-  roleText: { color: '#1d4ed8', fontSize: 12, fontWeight: '600' },
+  roleText: { fontSize: 12, fontWeight: '600' },
   field: { marginBottom: 20 },
-  label: { fontSize: 12, fontWeight: '600', color: '#888', marginBottom: 4, textTransform: 'uppercase' },
-  value: { fontSize: 16, color: '#1a1a2e' },
+  label: { fontSize: 12, fontWeight: '600', marginBottom: 4, textTransform: 'uppercase' },
+  value: { fontSize: 16 },
   input: {
     borderWidth: 1,
-    borderColor: '#ddd',
     borderRadius: 8,
     paddingHorizontal: 12,
     paddingVertical: 10,
     fontSize: 16,
-    backgroundColor: '#fafafa',
   },
   row: { flexDirection: 'row', marginTop: 8 },
   button: {
-    backgroundColor: '#2563eb',
     borderRadius: 8,
     paddingVertical: 13,
     alignItems: 'center',
     marginTop: 8,
+    flexDirection: 'row',
+    justifyContent: 'center',
   },
-  outline: { backgroundColor: '#fff', borderWidth: 1, borderColor: '#2563eb' },
+  outline: { backgroundColor: '#ffffff', borderWidth: 1 },
   danger: { backgroundColor: '#ef4444' },
   buttonDisabled: { opacity: 0.6 },
   buttonText: { color: '#fff', fontSize: 15, fontWeight: '600' },
   pickButton: {
     borderWidth: 1,
-    borderColor: '#2563eb',
     borderStyle: 'dashed',
     borderRadius: 8,
     paddingVertical: 14,
     paddingHorizontal: 12,
     alignItems: 'center',
-    backgroundColor: '#f0f7ff',
+    flexDirection: 'row',
+    justifyContent: 'center',
   },
-  pickButtonText: { color: '#2563eb', fontSize: 14, fontWeight: '500' },
-  fileHint: { color: '#888', fontSize: 12, marginTop: 4 },
-  documentImage: { width: '100%', height: 200, borderRadius: 8, backgroundColor: '#f5f5f5' },
-  documentLink: { fontSize: 14, color: '#2563eb' },
+  pickButtonText: { fontSize: 14, fontWeight: '500' },
+  fileInfo: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginTop: 8,
+  },
+  fileHint: { fontSize: 12 },
+  removeFile: { fontSize: 12, fontWeight: '600' },
+  documentImage: { width: '100%', height: 200, borderRadius: 8 },
+  documentLink: { flexDirection: 'row', alignItems: 'center', padding: 12, borderRadius: 8 },
+  documentLinkText: { fontSize: 14 },
 });

@@ -1,6 +1,6 @@
 import React from 'react';
 import { render, screen } from '@testing-library/react-native';
-import PharmacyLayout from '@/app/(pharmacist)/pharmacy/_layout';
+import PharmacistLayout from '@/app/(pharmacist)/_layout';
 import { useAuth } from '@/shared/context/AuthContext';
 
 jest.mock('@/shared/context/AuthContext', () => ({
@@ -11,10 +11,10 @@ jest.mock('expo-router', () => {
   const ReactImpl = require('react');
   const { Text } = require('react-native');
 
-  const StackBase = ({ children }: { children: React.ReactNode }) => <>{children}</>;
-  const Stack = Object.assign(StackBase, {
+  const TabsBase = ({ children }: { children: React.ReactNode }) => <>{children}</>;
+  const Tabs = Object.assign(TabsBase, {
     Screen: ({ name, options }: { name: string; options?: { title?: string } }) => (
-      <Text>{`screen:${name}:${options?.title ?? ''}`}</Text>
+      <Text>{`tab:${name}:${options?.title ?? ''}`}</Text>
     ),
   });
 
@@ -22,31 +22,40 @@ jest.mock('expo-router', () => {
 
   return {
     Redirect,
-    Stack,
+    Tabs,
   };
 });
 
 const mockedUseAuth = useAuth as jest.Mock;
 
-describe('PharmacyLayout', () => {
+describe('PharmacistLayout', () => {
   beforeEach(() => {
     jest.clearAllMocks();
   });
 
-  it('redirects non-staff users', () => {
-    mockedUseAuth.mockReturnValue({ user: { role: 'patient' } });
+  it('redirects non-pharmacist users', () => {
+    mockedUseAuth.mockReturnValue({ user: { role: 'patient' }, isLoading: false });
 
-    render(<PharmacyLayout />);
+    render(<PharmacistLayout />);
 
     expect(screen.getByText('redirect:/(patient)')).toBeTruthy();
   });
 
-  it('renders stack screens for staff users', () => {
-    mockedUseAuth.mockReturnValue({ user: { role: 'pharmacist' } });
+  it('shows loading indicator while auth is loading', () => {
+    mockedUseAuth.mockReturnValue({ user: null, isLoading: true });
 
-    render(<PharmacyLayout />);
+    render(<PharmacistLayout />);
 
-    expect(screen.getByText('screen:index:Pharmacy Inventory')).toBeTruthy();
-    expect(screen.getByText('screen:add-medicine:Add Medication')).toBeTruthy();
+    expect(screen.getByTestId('loading')).toBeTruthy();
+  });
+
+  it('renders tabs for pharmacist users', () => {
+    mockedUseAuth.mockReturnValue({ user: { role: 'pharmacist', name: 'Test Pharmacist' }, isLoading: false });
+
+    render(<PharmacistLayout />);
+
+    expect(screen.getByText('tab:index:Home')).toBeTruthy();
+    expect(screen.getByText('tab:pharmacy:Inventory')).toBeTruthy();
+    expect(screen.getByText('tab:profile:Profile')).toBeTruthy();
   });
 });

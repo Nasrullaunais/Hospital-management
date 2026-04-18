@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState, useMemo } from 'react';
 import {
   View,
   Text,
@@ -9,10 +9,15 @@ import {
   TextInput,
   RefreshControl,
 } from 'react-native';
+import { Feather } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
+import Colors from '@/constants/Colors';
 import { departmentService } from '../services/department.service';
 import type { Department } from '@/shared/types';
 import { useAuth } from '@/shared/context/AuthContext';
+import { useColorScheme } from '@/components/useColorScheme';
+import { spacing, radius, shadows } from '@/constants/ThemeTokens';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 export default function DepartmentListScreen() {
   const router = useRouter();
@@ -22,6 +27,8 @@ export default function DepartmentListScreen() {
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [search, setSearch] = useState('');
+  const colorScheme = useColorScheme() ?? 'light';
+  const theme = Colors[colorScheme];
 
   const fetchDepartments = useCallback(async () => {
     try {
@@ -38,129 +45,170 @@ export default function DepartmentListScreen() {
     fetchDepartments().finally(() => setLoading(false));
   }, [fetchDepartments]);
 
-  const onRefresh = async () => {
+  const onRefresh = useCallback(async () => {
     setRefreshing(true);
     await fetchDepartments();
     setRefreshing(false);
-  };
+  }, [fetchDepartments]);
 
-  const filteredDepartments = departments.filter((dept) =>
-    dept.name.toLowerCase().includes(search.toLowerCase()),
+  const filteredDepartments = useMemo(() =>
+    departments.filter((dept) => dept.name.toLowerCase().includes(search.toLowerCase())),
+    [departments, search]
   );
 
   const departmentDetailPath = user?.role === 'admin' ? '/(admin)/departments/[id]' : '/(patient)/departments/[id]';
 
-  const renderDepartment = ({ item }: { item: Department }) => (
-    <TouchableOpacity
-      style={styles.card}
-      onPress={() => router.push({ pathname: departmentDetailPath, params: { id: item._id } })}
-    >
-      <View style={styles.header}>
-        <Text style={styles.departmentName}>{item.name}</Text>
-        <View style={[styles.badge, item.status === 'active' ? styles.badgeGreen : styles.badgeGray]}>
-          <Text style={[styles.badgeText, item.status === 'active' ? styles.badgeTextGreen : styles.badgeTextGray]}>
-            {item.status}
-          </Text>
+  const getStatusStyle = useCallback((status: string) => {
+    if (status === 'active') {
+      return { bg: theme.successBg, text: theme.success };
+    }
+    return { bg: theme.surfaceTertiary, text: theme.textSecondary };
+  }, [theme]);
+
+  const renderDepartment = useCallback(({ item }: { item: Department }) => {
+    const statusStyle = getStatusStyle(item.status);
+
+    return (
+      <TouchableOpacity
+        style={[styles.card, { backgroundColor: theme.surface, borderColor: theme.border }]}
+        onPress={() => router.push({ pathname: departmentDetailPath, params: { id: item._id } })}
+        activeOpacity={0.7}
+      >
+        <View style={styles.header}>
+          <Text style={[styles.departmentName, { color: theme.text }]}>{item.name}</Text>
+          <View style={[styles.badge, { backgroundColor: statusStyle.bg }]}>
+            <Text style={[styles.badgeText, { color: statusStyle.text }]}>{item.status}</Text>
+          </View>
         </View>
-      </View>
-      <Text style={styles.description} numberOfLines={2}>{item.description}</Text>
-      <View style={styles.row}>
-        <Text style={styles.detail}>📍 {item.location}</Text>
-      </View>
-      <View style={styles.row}>
-        <Text style={styles.detail}>📞 {item.phone}</Text>
-      </View>
-    </TouchableOpacity>
-  );
+        <Text style={[styles.description, { color: theme.textSecondary }]} numberOfLines={2}>{item.description}</Text>
+        <View style={styles.row}>
+          <Feather name="map-pin" size={13} color={theme.textTertiary} style={{ marginRight: spacing.xs }} />
+          <Text style={[styles.detail, { color: theme.textSecondary }]}>{item.location}</Text>
+        </View>
+        <View style={styles.row}>
+          <Feather name="phone" size={13} color={theme.textTertiary} style={{ marginRight: spacing.xs }} />
+          <Text style={[styles.detail, { color: theme.textSecondary }]}>{item.phone}</Text>
+        </View>
+      </TouchableOpacity>
+    );
+  }, [theme, router, departmentDetailPath, getStatusStyle]);
 
-  return (
-    <View style={styles.container}>
-      {user?.role === 'admin' && (
-        <TouchableOpacity
-          style={styles.addButton}
-          onPress={() => router.push('/(admin)/departments/add')}
-        >
-          <Text style={styles.addButtonText}>+ Add Department</Text>
-        </TouchableOpacity>
-      )}
-      <TextInput
-        style={styles.searchInput}
-        placeholder="Search departments..."
-        value={search}
-        onChangeText={setSearch}
-      />
+  const keyExtractor = useCallback((item: Department) => item._id, []);
 
-      {loading ? (
-        <ActivityIndicator size="large" color="#2563eb" style={{ marginTop: 40 }} />
-      ) : error ? (
+  const ListEmptyComponent = useMemo(() => (
+    <View style={styles.emptyContainer}>
+      <Feather name="grid" size={48} color={theme.textTertiary} />
+      <Text style={[styles.emptyText, { color: theme.textSecondary }]}>No departments found.</Text>
+    </View>
+  ), [theme]);
+
+  if (loading) {
+    return (
+      <SafeAreaView edges={['top', 'bottom']} style={[styles.container, { backgroundColor: theme.background }]}>
         <View style={styles.center}>
-          <Text style={styles.errorText}>{error}</Text>
+          <ActivityIndicator size="large" color={theme.primary} />
+        </View>
+      </SafeAreaView>
+    );
+  }
+
+  if (error) {
+    return (
+      <SafeAreaView edges={['top', 'bottom']} style={[styles.container, { backgroundColor: theme.background }]}>
+        <View style={styles.center}>
+          <Feather name="alert-circle" size={48} color={theme.error} />
+          <Text style={[styles.errorText, { color: theme.error }]}>{error}</Text>
           <TouchableOpacity onPress={fetchDepartments}>
-            <Text style={styles.retryText}>Retry</Text>
+            <Text style={[styles.retryText, { color: theme.primary }]}>Retry</Text>
           </TouchableOpacity>
         </View>
-      ) : (
-        <FlatList
-          data={filteredDepartments}
-          keyExtractor={(item) => item._id}
-          renderItem={renderDepartment}
-          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
-          ListEmptyComponent={
-            <Text style={styles.emptyText}>No departments found.</Text>
-          }
-          contentContainerStyle={filteredDepartments.length === 0 ? styles.emptyContainer : undefined}
-        />
+      </SafeAreaView>
+    );
+  }
+
+  return (
+    <SafeAreaView edges={['top', 'bottom']} style={[styles.container, { backgroundColor: theme.background }]}>
+      {user?.role === 'admin' && (
+        <TouchableOpacity
+          style={[styles.addButton, { backgroundColor: theme.primary }]}
+          onPress={() => router.push('/(admin)/departments/add')}
+          activeOpacity={0.8}
+        >
+          <Feather name="plus" size={18} color="#fff" style={{ marginRight: spacing.xs }} />
+          <Text style={styles.addButtonText}>Add Department</Text>
+        </TouchableOpacity>
       )}
-    </View>
+
+      <View style={[styles.searchContainer, { backgroundColor: theme.surface, borderColor: theme.border }]}>
+        <Feather name="search" size={18} color={theme.textTertiary} />
+        <TextInput
+          style={[styles.searchInput, { color: theme.text }]}
+          placeholder="Search departments..."
+          placeholderTextColor={theme.inputPlaceholder}
+          value={search}
+          onChangeText={setSearch}
+        />
+      </View>
+
+      <FlatList
+        data={filteredDepartments}
+        keyExtractor={keyExtractor}
+        renderItem={renderDepartment}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={theme.primary} />}
+        ListEmptyComponent={ListEmptyComponent}
+        contentContainerStyle={filteredDepartments.length === 0 ? styles.emptyList : styles.list}
+        showsVerticalScrollIndicator={false}
+      />
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#f5f5f5' },
-  searchInput: {
-    margin: 12,
+  container: { flex: 1 },
+  center: { flex: 1, justifyContent: 'center', alignItems: 'center' },
+  list: { padding: spacing.md },
+  emptyList: { flex: 1 },
+  emptyContainer: { flexGrow: 1, justifyContent: 'center', alignItems: 'center' },
+  searchContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    margin: spacing.md,
+    marginBottom: spacing.xs,
+    paddingHorizontal: spacing.md,
+    borderRadius: radius.md,
     borderWidth: 1,
-    borderColor: '#ddd',
-    borderRadius: 8,
-    paddingHorizontal: 14,
-    paddingVertical: 10,
-    backgroundColor: '#fff',
+    gap: spacing.sm,
+  },
+  searchInput: {
+    flex: 1,
+    paddingVertical: spacing.md,
     fontSize: 15,
   },
   card: {
-    backgroundColor: '#fff',
-    marginHorizontal: 12,
-    marginBottom: 10,
-    borderRadius: 10,
-    padding: 16,
-    shadowColor: '#000',
-    shadowOpacity: 0.06,
-    shadowRadius: 4,
-    elevation: 2,
+    marginBottom: spacing.md,
+    borderRadius: radius.lg,
+    padding: spacing.md,
+    borderWidth: 1,
+    ...shadows.card,
   },
-  header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 },
-  departmentName: { fontSize: 17, fontWeight: '700', color: '#1a1a2e', flex: 1 },
-  description: { fontSize: 14, color: '#666', marginBottom: 10 },
-  row: { flexDirection: 'row', alignItems: 'center', marginBottom: 4 },
-  detail: { fontSize: 13, color: '#555' },
-  badge: { borderRadius: 10, paddingHorizontal: 8, paddingVertical: 2 },
-  badgeGreen: { backgroundColor: '#dcfed6' },
-  badgeGray: { backgroundColor: '#f3f4f6' },
+  header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: spacing.sm },
+  departmentName: { fontSize: 17, fontWeight: '700', flex: 1 },
+  description: { fontSize: 14, marginBottom: spacing.sm },
+  row: { flexDirection: 'row', alignItems: 'center', marginBottom: spacing.xs },
+  detail: { fontSize: 13 },
+  badge: { borderRadius: radius.md, paddingHorizontal: spacing.sm, paddingVertical: spacing.xs },
   badgeText: { fontSize: 11, fontWeight: '600' },
-  badgeTextGreen: { color: '#166534' },
-  badgeTextGray: { color: '#6b7280' },
-  center: { flex: 1, justifyContent: 'center', alignItems: 'center', marginTop: 60 },
-  errorText: { color: '#ef4444', fontSize: 15, marginBottom: 12 },
-  retryText: { color: '#2563eb', fontWeight: '600', fontSize: 15 },
-  emptyContainer: { flex: 1, justifyContent: 'center', alignItems: 'center' },
-  emptyText: { color: '#888', fontSize: 15, textAlign: 'center', marginTop: 60 },
+  emptyText: { fontSize: 16, marginTop: spacing.md },
+  errorText: { fontSize: 15, marginTop: spacing.md },
+  retryText: { fontWeight: '600', fontSize: 15, marginTop: spacing.sm },
   addButton: {
-    backgroundColor: '#2563eb',
-    marginHorizontal: 12,
-    marginTop: 12,
-    borderRadius: 10,
-    paddingVertical: 12,
+    flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'center',
+    marginHorizontal: spacing.md,
+    marginTop: spacing.md,
+    borderRadius: radius.md,
+    paddingVertical: spacing.md,
   },
   addButtonText: { color: '#fff', fontSize: 15, fontWeight: '600' },
 });

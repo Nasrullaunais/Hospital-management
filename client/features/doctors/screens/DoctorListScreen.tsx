@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState, useMemo } from 'react';
 import {
   View,
   Text,
@@ -9,21 +9,23 @@ import {
   TextInput,
   RefreshControl,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { Feather } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { doctorService, type DoctorFilters } from '../services/doctor.service';
 import type { Doctor } from '@/shared/types';
 import { useAuth } from '@/shared/context/AuthContext';
+import Colors from '@/constants/Colors';
+import { useColorScheme } from '@/components/useColorScheme';
+import { spacing, radius, shadows } from '@/constants/ThemeTokens';
 
-/**
- * DoctorListScreen — Member 2
- * Displays a filterable, paginated list of doctors.
- * TODO: Add navigation to DoctorDetailScreen on card press.
- * TODO: Add pagination / infinite scroll (update backend controller too).
- * TODO: Replace simple dropdown with a proper picker component.
- */
+const TAB_BAR_HEIGHT = 70;
+
 export default function DoctorListScreen() {
   const router = useRouter();
   const { user } = useAuth();
+  const colorScheme = useColorScheme() ?? 'light';
+  const theme = Colors[colorScheme];
   const [doctors, setDoctors] = useState<Doctor[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -48,121 +50,178 @@ export default function DoctorListScreen() {
     fetchDoctors().finally(() => setLoading(false));
   }, [fetchDoctors]);
 
-  const onRefresh = async () => {
+  const onRefresh = useCallback(async () => {
     setRefreshing(true);
     await fetchDoctors();
     setRefreshing(false);
-  };
+  }, [fetchDoctors]);
 
   const doctorDetailPath = user?.role === 'admin' ? '/(admin)/doctors/[id]' : '/(patient)/doctors/[id]';
 
-  const renderDoctor = ({ item }: { item: Doctor }) => (
-    <TouchableOpacity
-      style={styles.card}
-      onPress={() => router.push({ pathname: doctorDetailPath, params: { id: item._id } })}>
-      <Text style={styles.doctorName}>
-        {typeof item.userId === 'object' ? item.userId.name : 'Dr. Unknown'}
-      </Text>
-      <Text style={styles.specialization}>{item.specialization}</Text>
-      <View style={styles.row}>
-        <Text style={styles.detail}>⏱ {item.experienceYears} yrs exp</Text>
-        <Text style={styles.detail}>💵 ${item.consultationFee}</Text>
-        <Text
-          style={[
-            styles.badge,
-            item.availability === 'Available' ? styles.badgeGreen : styles.badgeGray,
-          ]}
-        >
-          {item.availability}
-        </Text>
-      </View>
-    </TouchableOpacity>
-  );
+  const renderDoctor = useCallback(({ item }: { item: Doctor }) => {
+    const doctorName = typeof item.userId === 'object' ? item.userId.name : 'Dr. Unknown';
+    const isAvailable = item.availability === 'Available';
+
+    const initials = doctorName
+      .split(' ')
+      .map((n) => n[0])
+      .slice(0, 2)
+      .join('')
+      .toUpperCase();
+
+    return (
+      <TouchableOpacity
+        style={[styles.card, { backgroundColor: theme.surface, borderColor: theme.border }]}
+        onPress={() => router.push({ pathname: doctorDetailPath, params: { id: item._id } })}
+        activeOpacity={0.7}
+      >
+        <View style={styles.cardTop}>
+          <View style={[styles.avatar, { backgroundColor: theme.primary }]}>
+            <Text style={styles.avatarText}>{initials}</Text>
+          </View>
+          <View style={styles.basicInfo}>
+            <Text style={[styles.doctorName, { color: theme.text }]}>{doctorName}</Text>
+            <Text style={[styles.specialization, { color: theme.primary }]}>{item.specialization}</Text>
+          </View>
+          <View
+            style={[
+              styles.badge,
+              { backgroundColor: isAvailable ? theme.successBg : theme.surfaceTertiary },
+            ]}
+          >
+            <Text
+              style={[
+                styles.badgeText,
+                { color: isAvailable ? theme.success : theme.textSecondary },
+              ]}
+            >
+              {item.availability}
+            </Text>
+          </View>
+        </View>
+
+        <View style={[styles.metaRow, { borderTopColor: theme.divider }]}>
+          <View style={styles.metaItem}>
+            <Feather name="clock" size={14} color={theme.textTertiary} />
+            <Text style={[styles.metaText, { color: theme.textSecondary }]}>{item.experienceYears} yrs exp</Text>
+          </View>
+          <View style={styles.metaItem}>
+            <Feather name="dollar-sign" size={14} color={theme.textTertiary} />
+            <Text style={[styles.metaText, { color: theme.textSecondary }]}>${item.consultationFee}</Text>
+          </View>
+        </View>
+      </TouchableOpacity>
+    );
+  }, [theme, router, doctorDetailPath]);
+
+  const keyExtractor = useCallback((item: Doctor) => item._id, []);
+
+  const ListEmptyComponent = useMemo(() => (
+    <View style={styles.emptyContainer}>
+      <Feather name="users" size={48} color={theme.textTertiary} />
+      <Text style={[styles.emptyText, { color: theme.textSecondary }]}>No doctors found.</Text>
+      <Text style={[styles.emptySubText, { color: theme.textTertiary }]}>Try a different search.</Text>
+    </View>
+  ), [theme]);
 
   return (
-    <View style={styles.container}>
+    <SafeAreaView edges={['top', 'bottom']} style={[styles.container, { backgroundColor: theme.background }]}>
       {user?.role === 'admin' && (
         <TouchableOpacity
-          style={styles.addButton}
+          style={[styles.addButton, { backgroundColor: theme.primary }]}
           onPress={() => router.push('/(admin)/doctors/add')}
         >
           <Text style={styles.addButtonText}>+ Add Doctor</Text>
         </TouchableOpacity>
       )}
-      <TextInput
-        style={styles.searchInput}
-        placeholder="Search by specialization..."
-        value={search}
-        onChangeText={setSearch}
-      />
 
-      {loading ? (
-        <ActivityIndicator size="large" color="#2563eb" style={{ marginTop: 40 }} />
-      ) : error ? (
-        <View style={styles.center}>
-          <Text style={styles.errorText}>{error}</Text>
-          <TouchableOpacity onPress={fetchDoctors}>
-            <Text style={styles.retryText}>Retry</Text>
-          </TouchableOpacity>
-        </View>
-      ) : (
-        <FlatList
-          data={doctors}
-          keyExtractor={(item) => item._id}
-          renderItem={renderDoctor}
-          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
-          ListEmptyComponent={
-            <Text style={styles.emptyText}>No doctors found. Try a different search.</Text>
-          }
-          contentContainerStyle={doctors.length === 0 ? styles.emptyContainer : undefined}
+      <View style={[styles.searchContainer, { backgroundColor: theme.surface, borderColor: theme.border }]}>
+        <Feather name="search" size={18} color={theme.textTertiary} />
+        <TextInput
+          style={[styles.searchInput, { color: theme.text }]}
+          placeholder="Search by specialization..."
+          placeholderTextColor={theme.inputPlaceholder}
+          value={search}
+          onChangeText={setSearch}
         />
-      )}
-    </View>
+      </View>
+
+      <FlatList
+        data={doctors}
+        keyExtractor={keyExtractor}
+        renderItem={renderDoctor}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={theme.primary} />}
+        ListEmptyComponent={ListEmptyComponent}
+        contentContainerStyle={doctors.length === 0 ? styles.emptyList : styles.listContent}
+        showsVerticalScrollIndicator={false}
+      />
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#f5f5f5' },
-  searchInput: {
-    margin: 12,
+  container: { flex: 1 },
+  searchContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    margin: spacing.md,
+    marginBottom: spacing.xs,
+    paddingHorizontal: spacing.md,
+    borderRadius: radius.md,
     borderWidth: 1,
-    borderColor: '#ddd',
-    borderRadius: 8,
-    paddingHorizontal: 14,
-    paddingVertical: 10,
-    backgroundColor: '#fff',
-    fontSize: 15,
+    gap: spacing.sm,
   },
+  searchInput: { flex: 1, paddingVertical: spacing.md, fontSize: 15 },
+  listContent: { padding: spacing.md, paddingTop: spacing.xs },
+  emptyList: { flex: 1 },
+  center: { flex: 1, justifyContent: 'center', alignItems: 'center' },
+  emptyContainer: { flex: 1, justifyContent: 'center', alignItems: 'center', gap: spacing.sm },
+  emptyText: { fontSize: 16, fontWeight: '600' },
+  emptySubText: { fontSize: 14 },
   card: {
-    backgroundColor: '#fff',
-    marginHorizontal: 12,
-    marginBottom: 10,
-    borderRadius: 10,
-    padding: 16,
-    shadowColor: '#000',
-    shadowOpacity: 0.06,
-    shadowRadius: 4,
-    elevation: 2,
+    borderRadius: radius.lg,
+    padding: spacing.md,
+    marginBottom: spacing.md,
+    borderWidth: 1,
+    ...shadows.card,
   },
-  doctorName: { fontSize: 17, fontWeight: '700', color: '#1a1a2e', marginBottom: 2 },
-  specialization: { fontSize: 14, color: '#2563eb', marginBottom: 10 },
-  row: { flexDirection: 'row', alignItems: 'center', gap: 8, flexWrap: 'wrap' },
-  detail: { fontSize: 13, color: '#555' },
-  badge: { fontSize: 11, fontWeight: '600', borderRadius: 10, paddingHorizontal: 8, paddingVertical: 2 },
-  badgeGreen: { backgroundColor: '#dcfce7', color: '#166534' },
-  badgeGray: { backgroundColor: '#f3f4f6', color: '#6b7280' },
-  center: { flex: 1, justifyContent: 'center', alignItems: 'center', marginTop: 60 },
-  errorText: { color: '#ef4444', fontSize: 15, marginBottom: 12 },
-  retryText: { color: '#2563eb', fontWeight: '600', fontSize: 15 },
-  emptyContainer: { flex: 1, justifyContent: 'center', alignItems: 'center' },
-  emptyText: { color: '#888', fontSize: 15, textAlign: 'center', marginTop: 60 },
+  cardTop: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
+  avatar: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  avatarText: { color: '#fff', fontSize: 16, fontWeight: '700' },
+  basicInfo: { flex: 1 },
+  doctorName: { fontSize: 16, fontWeight: '700', marginBottom: 2 },
+  specialization: { fontSize: 13, fontWeight: '500' },
+  badge: {
+    borderRadius: radius.full,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: spacing.xs,
+  },
+  badgeText: { fontSize: 11, fontWeight: '600' },
+  metaRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.md,
+    marginTop: spacing.md,
+    paddingTop: spacing.md,
+    borderTopWidth: 1,
+  },
+  metaItem: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs },
+  metaText: { fontSize: 13 },
   addButton: {
-    backgroundColor: '#2563eb',
-    marginHorizontal: 12,
-    marginTop: 12,
-    borderRadius: 10,
-    paddingVertical: 12,
+    marginHorizontal: spacing.md,
+    marginTop: spacing.md,
+    marginBottom: spacing.xs,
+    borderRadius: radius.md,
+    paddingVertical: spacing.md,
     alignItems: 'center',
   },
   addButtonText: { color: '#fff', fontSize: 15, fontWeight: '600' },
+  errorText: { fontSize: 15, marginBottom: spacing.sm },
+  retryText: { fontWeight: '600', fontSize: 15 },
 });

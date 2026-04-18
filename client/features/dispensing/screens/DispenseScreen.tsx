@@ -1,11 +1,17 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback, useMemo } from 'react';
 import { View, Text, StyleSheet, ActivityIndicator, ScrollView, TouchableOpacity, Alert } from 'react-native';
+import { Feather } from '@expo/vector-icons';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { dispensingService } from '../services/dispensing.service';
 import { prescriptionService } from '../../prescriptions/services/prescription.service';
+import Colors from '@/constants/Colors';
+import { useColorScheme } from '@/components/useColorScheme';
+import { spacing, radius, shadows } from '@/constants/ThemeTokens';
 
 export default function DispenseScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
+  const colorScheme = useColorScheme() ?? 'light';
+  const theme = Colors[colorScheme];
   const [prescription, setPrescription] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
@@ -25,7 +31,7 @@ export default function DispenseScreen() {
       .finally(() => setLoading(false));
   }, [id]);
 
-  const handleDispense = async () => {
+  const handleDispense = useCallback(async () => {
     if (!prescription) return;
     try {
       setSubmitting(true);
@@ -42,45 +48,61 @@ export default function DispenseScreen() {
     } finally {
       setSubmitting(false);
     }
-  };
+  }, [prescription, dispensed, id, router]);
 
-  if (loading) return <View style={styles.center}><ActivityIndicator size="large" color="#4CAF50" /></View>;
+  const handleAdjust = useCallback((medicineId: string, delta: number) => {
+    setDispensed(d => ({
+      ...d,
+      [medicineId]: Math.max(0, (d[medicineId] || 0) + delta)
+    }));
+  }, []);
+
+  if (loading) return (
+    <View style={[styles.center, { backgroundColor: theme.background }]}>
+      <ActivityIndicator size="large" color={theme.primary} />
+    </View>
+  );
+
   if (!prescription) return null;
 
   const patientName = typeof prescription.patientId === 'object' ? prescription.patientId?.name : 'Patient';
 
   return (
-    <ScrollView style={styles.container}>
-      <View style={styles.patientCard}>
-        <Text style={styles.patientLabel}>Patient</Text>
-        <Text style={styles.patientName}>{patientName}</Text>
+    <ScrollView style={[styles.container, { backgroundColor: theme.background }]} contentContainerStyle={styles.content}>
+      <View style={[styles.patientCard, { backgroundColor: theme.surface, borderColor: theme.border }]}>
+        <Text style={[styles.patientLabel, { color: theme.textSecondary }]}>Patient</Text>
+        <Text style={[styles.patientName, { color: theme.text }]}>{patientName}</Text>
       </View>
 
-      <Text style={styles.sectionTitle}>Medicines to Dispense</Text>
+      <Text style={[styles.sectionTitle, { color: theme.text }]}>Medicines to Dispense</Text>
 
       {prescription.items.map((item: any) => {
         const stock = item.medicineId?.stockQuantity ?? 'N/A';
-        const isOverStock = typeof stock === 'number' && dispensed[item.medicineId] > stock;
+        const currentDispensed = dispensed[item.medicineId] || 0;
+        const isOverStock = typeof stock === 'number' && currentDispensed > stock;
+
         return (
-          <View key={item.medicineId} style={styles.itemCard}>
+          <View key={item.medicineId} style={[styles.itemCard, { backgroundColor: theme.surface, borderColor: theme.border }]}>
             <View style={styles.itemInfo}>
-              <Text style={styles.medicineName}>{item.medicineName}</Text>
-              <Text style={styles.dosage}>{item.dosage} — Prescribed: {item.quantity}</Text>
-              <Text style={[styles.stock, isOverStock && styles.stockWarning]}>
+              <Text style={[styles.medicineName, { color: theme.text }]}>{item.medicineName}</Text>
+              <Text style={[styles.dosage, { color: theme.textSecondary }]}>{item.dosage} — Prescribed: {item.quantity}</Text>
+              <Text style={[styles.stock, isOverStock && { color: theme.error }]}>
                 Stock: {typeof stock === 'number' ? `${stock} available` : 'N/A'}
               </Text>
             </View>
             <View style={styles.controls}>
               <TouchableOpacity
-                style={styles.adjustBtn}
-                onPress={() => setDispensed(d => ({ ...d, [item.medicineId]: Math.max(0, (d[item.medicineId] || 0) - 1) }))}
+                style={[styles.adjustBtn, { backgroundColor: theme.primary }]}
+                onPress={() => handleAdjust(item.medicineId, -1)}
+                activeOpacity={0.7}
               >
                 <Text style={styles.adjustBtnText}>−</Text>
               </TouchableOpacity>
-              <Text style={[styles.qty, isOverStock && styles.qtyWarning]}>{dispensed[item.medicineId] || 0}</Text>
+              <Text style={[styles.qty, { color: isOverStock ? theme.error : theme.text }]}>{currentDispensed}</Text>
               <TouchableOpacity
-                style={styles.adjustBtn}
-                onPress={() => setDispensed(d => ({ ...d, [item.medicineId]: (d[item.medicineId] || 0) + 1 }))}
+                style={[styles.adjustBtn, { backgroundColor: theme.primary }]}
+                onPress={() => handleAdjust(item.medicineId, 1)}
+                activeOpacity={0.7}
               >
                 <Text style={styles.adjustBtnText}>+</Text>
               </TouchableOpacity>
@@ -90,13 +112,14 @@ export default function DispenseScreen() {
       })}
 
       <TouchableOpacity
-        style={[styles.submitBtn, submitting && styles.submitBtnDisabled]}
+        style={[styles.submitBtn, { backgroundColor: theme.success }, submitting && { opacity: 0.6 }]}
         onPress={handleDispense}
         disabled={submitting}
+        activeOpacity={0.8}
       >
         {submitting
           ? <ActivityIndicator color="#fff" />
-          : <Text style={styles.submitBtnText}>✓  Fulfill Prescription</Text>
+          : <Text style={styles.submitBtnText}>Fulfill Prescription</Text>
         }
       </TouchableOpacity>
     </ScrollView>
@@ -104,24 +127,45 @@ export default function DispenseScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#f5f5f5' },
+  container: { flex: 1 },
+  content: { paddingBottom: spacing.xl },
   center: { flex: 1, justifyContent: 'center', alignItems: 'center' },
-  patientCard: { backgroundColor: '#fff', padding: 20, marginHorizontal: 16, marginTop: 16, borderRadius: 12, elevation: 1 },
-  patientLabel: { fontSize: 13, color: '#888', fontWeight: '600', textTransform: 'uppercase', letterSpacing: 0.5 },
-  patientName: { fontSize: 20, fontWeight: '700', color: '#1a1a1a', marginTop: 4 },
-  sectionTitle: { fontSize: 16, fontWeight: '600', color: '#555', marginHorizontal: 16, marginTop: 24, marginBottom: 12 },
-  itemCard: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#fff', padding: 16, marginHorizontal: 16, marginBottom: 10, borderRadius: 12, elevation: 1 },
+  patientCard: {
+    padding: spacing.lg,
+    marginHorizontal: spacing.md,
+    marginTop: spacing.md,
+    borderRadius: radius.lg,
+    borderWidth: 1,
+    ...shadows.card,
+  },
+  patientLabel: { fontSize: 12, fontWeight: '600', textTransform: 'uppercase', letterSpacing: 0.5 },
+  patientName: { fontSize: 20, fontWeight: '700', marginTop: spacing.xs },
+  sectionTitle: { fontSize: 16, fontWeight: '600', marginHorizontal: spacing.md, marginTop: spacing.xl, marginBottom: spacing.md },
+  itemCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: spacing.md,
+    marginHorizontal: spacing.md,
+    marginBottom: spacing.md,
+    borderRadius: radius.lg,
+    borderWidth: 1,
+    ...shadows.card,
+  },
   itemInfo: { flex: 1 },
-  medicineName: { fontSize: 16, fontWeight: '600', color: '#1a1a1a', marginBottom: 4 },
-  dosage: { fontSize: 14, color: '#666', marginBottom: 2 },
-  stock: { fontSize: 13, color: '#888' },
-  stockWarning: { color: '#e53935' },
-  controls: { flexDirection: 'row', alignItems: 'center', gap: 12 },
-  adjustBtn: { width: 38, height: 38, borderRadius: 19, backgroundColor: '#4CAF50', justifyContent: 'center', alignItems: 'center', elevation: 1 },
+  medicineName: { fontSize: 16, fontWeight: '600', marginBottom: spacing.xs },
+  dosage: { fontSize: 14, marginBottom: spacing.xs },
+  stock: { fontSize: 13 },
+  controls: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
+  adjustBtn: { width: 38, height: 38, borderRadius: 19, justifyContent: 'center', alignItems: 'center' },
   adjustBtnText: { color: '#fff', fontSize: 22, fontWeight: '700', lineHeight: 24 },
-  qty: { fontSize: 20, fontWeight: '700', color: '#333', minWidth: 30, textAlign: 'center' },
-  qtyWarning: { color: '#e53935' },
-  submitBtn: { backgroundColor: '#4CAF50', padding: 18, borderRadius: 12, alignItems: 'center', marginHorizontal: 16, marginTop: 24, marginBottom: 40, elevation: 2 },
-  submitBtnDisabled: { backgroundColor: '#a5d6a7' },
+  qty: { fontSize: 20, fontWeight: '700', minWidth: 30, textAlign: 'center' },
+  submitBtn: {
+    padding: spacing.lg,
+    borderRadius: radius.lg,
+    alignItems: 'center',
+    marginHorizontal: spacing.md,
+    marginTop: spacing.lg,
+    ...shadows.button,
+  },
   submitBtnText: { color: '#fff', fontSize: 18, fontWeight: '700' },
 });
