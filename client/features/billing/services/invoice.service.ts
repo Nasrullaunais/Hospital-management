@@ -33,18 +33,23 @@ export const invoiceService = {
    * Fetch all invoices for the authenticated patient.
    */
   getMyBills: async (): Promise<Invoice[]> => {
-    const res = await apiClient.get<ApiSuccessResponse<Invoice[]>>(ENDPOINTS.INVOICES.MY_BILLS);
-    return res.data.data;
+    const res = await apiClient.get<ApiSuccessResponse<{ invoices: Invoice[]; count: number }>>(
+      ENDPOINTS.INVOICES.MY_BILLS,
+    );
+    return res.data.data.invoices;
   },
 
   /**
    * Fetch all invoices (admin view), with optional filters.
    */
   getAllInvoices: async (filters?: InvoiceFilters): Promise<Invoice[]> => {
-    const res = await apiClient.get<ApiSuccessResponse<Invoice[]>>(ENDPOINTS.INVOICES.BASE, {
-      params: filters,
-    });
-    return res.data.data;
+    const res = await apiClient.get<ApiSuccessResponse<{ invoices: Invoice[]; count: number }>>(
+      ENDPOINTS.INVOICES.BASE,
+      {
+        params: filters,
+      },
+    );
+    return res.data.data.invoices;
   },
 
   /**
@@ -56,7 +61,7 @@ export const invoiceService = {
    */
   uploadPaymentReceipt: async (id: string, formData: FormData): Promise<Invoice> => {
     const res = await apiClient.put<ApiSuccessResponse<Invoice>>(
-      ENDPOINTS.INVOICES.PAY(id),
+      ENDPOINTS.INVOICES.UPLOAD_RECEIPT(id),
       formData,
       { headers: { 'Content-Type': 'multipart/form-data' } },
     );

@@ -7,7 +7,7 @@ import { useAuth } from '@/shared/context/AuthContext';
 import { getRoleHomeRoute } from '@/shared/constants/roleRoutes';
 import { CustomTabBar, TabItem } from '@/components/ui/CustomTabBar';
 
-const TAB_SCREENS = ['index', 'doctors', 'billing', 'pharmacy', 'profile'];
+const TAB_SCREENS = ['index', 'doctors', 'billing', 'pharmacy', 'departments', 'wards', 'profile'];
 
 export default function AdminLayout() {
   const colorScheme = useColorScheme() ?? 'light';
@@ -22,6 +22,8 @@ export default function AdminLayout() {
     { key: 'doctors', title: 'Users', icon: '👥' },
     { key: 'billing', title: 'Finances', icon: '💳' },
     { key: 'pharmacy', title: 'Inventory', icon: '💊' },
+    { key: 'departments', title: 'Depts', icon: '🏥' },
+    { key: 'wards', title: 'Wards', icon: '🛏️' },
     { key: 'profile', title: 'Profile', icon: '👤' },
   ];
 
@@ -35,7 +37,16 @@ export default function AdminLayout() {
 
   const handleTabPress = (tabKey: string) => {
     setActiveTab(tabKey);
-    const path = tabKey === 'index' ? '/(admin)' : `/(admin)/${tabKey}`;
+    const tabPathMap: Record<string, string> = {
+      index: '/(admin)',
+      doctors: '/(admin)/doctors',
+      billing: '/(admin)/billing',
+      pharmacy: '/(admin)/pharmacy',
+      departments: '/(admin)/departments',
+      wards: '/(admin)/wards',
+      profile: '/(admin)/profile',
+    };
+    const path = tabPathMap[tabKey] ?? `/(admin)/${tabKey}`;
     router.push(path as any);
   };
 
@@ -68,6 +79,8 @@ export default function AdminLayout() {
         <Stack.Screen name="doctors" options={{ headerShown: false }} />
         <Stack.Screen name="billing" options={{ headerShown: false }} />
         <Stack.Screen name="pharmacy" options={{ headerShown: false }} />
+        <Stack.Screen name="departments" options={{ headerShown: false }} />
+        <Stack.Screen name="wards" options={{ headerShown: false }} />
         <Stack.Screen name="profile" options={{ headerShown: false }} />
 
         {/* Detail pages with headers */}
@@ -126,6 +139,16 @@ export default function AdminLayout() {
           options={{
             headerShown: true,
             title: 'Add Ward',
+            headerStyle: { backgroundColor: theme.surface },
+            headerTintColor: theme.text,
+            headerShadowVisible: false,
+          }}
+        />
+        <Stack.Screen
+          name="pharmacy/edit-medicine"
+          options={{
+            headerShown: true,
+            title: 'Edit Medicine',
             headerStyle: { backgroundColor: theme.surface },
             headerTintColor: theme.text,
             headerShadowVisible: false,

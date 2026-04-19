@@ -3,6 +3,7 @@ import {
   createDoctor,
   getDoctors,
   getDoctorById,
+  getMyDoctorProfile,
   updateDoctor,
   deleteDoctor,
 } from './doctor.controller.js';
@@ -28,6 +29,9 @@ router.post(
 
 /** GET /api/doctors — Public, supports ?specialization= and ?availability= filters */
 router.get('/', listDoctorsValidation, getDoctors);
+
+/** GET /api/doctors/me — Authenticated doctor fetches their own profile */
+router.get('/me', authMiddleware, requireRole('doctor'), getMyDoctorProfile);
 
 /** GET /api/doctors/:id — Public */
 router.get('/:id', getDoctorById);

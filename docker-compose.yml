@@ -1,12 +1,39 @@
 services:
-  mongo:
+  mongodb:
     image: mongo:7
-    container_name: hospital-mongo
-    restart: unless-stopped
+    container_name: hospital-mongodb
     ports:
       - "27017:27017"
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: ${MONGO_ROOT_USER:-admin}
+      MONGO_INITDB_ROOT_PASSWORD: ${MONGO_ROOT_PASSWORD:-leo12345}
+      MONGO_INITDB_DATABASE: hospital-management
     volumes:
-      - mongo-data:/data/db
+      - mongodb_data:/data/db
+    restart: unless-stopped
+
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: hospital-api
+    ports:
+      - "5000:5000"
+    environment:
+      NODE_ENV: development
+      PORT: 5000
+      MONGO_URI: mongodb://${MONGO_ROOT_USER:-admin}:${MONGO_ROOT_PASSWORD:-leo12345}@mongodb:27017/hospital-management?authSource=admin
+      JWT_SECRET: ${JWT_SECRET:-dev_secret_change_in_production}
+      JWT_EXPIRES_IN: ${JWT_EXPIRES_IN:-7d}
+      CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:8082,http://localhost:8081,http://192.168.8.108}
+    volumes:
+      - ./server/src:/app/server/src
+      - ./server/.env:/app/server/.env:ro
+      - uploads:/app/server/uploads
+    depends_on:
+      - mongodb
+    restart: unless-stopped
 
 volumes:
-  mongo-data:
+  mongodb_data:
+  uploads:

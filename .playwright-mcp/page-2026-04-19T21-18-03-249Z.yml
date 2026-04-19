@@ -1,0 +1,113 @@
+- generic [ref=e43]:
+  - generic [ref=e109]:
+    - generic [ref=e111] [cursor=pointer]: + Add Doctor
+    - generic [ref=e112]:
+      - generic [ref=e113]: 
+      - textbox "Search by specialization..." [ref=e114]
+    - generic [ref=e117]:
+      - generic [ref=e119] [cursor=pointer]:
+        - generic [ref=e120]:
+          - generic [ref=e122]: DS
+          - generic [ref=e123]:
+            - generic [ref=e124]: Dr. Sarah Mitchell
+            - generic [ref=e125]: cardiology
+          - generic [ref=e127]: Available
+        - generic [ref=e128]:
+          - generic [ref=e129]:
+            - generic [ref=e130]: 
+            - generic [ref=e131]: 18 yrs exp
+          - generic [ref=e132]:
+            - generic [ref=e133]: 
+            - generic [ref=e134]: $300
+      - generic [ref=e136] [cursor=pointer]:
+        - generic [ref=e137]:
+          - generic [ref=e139]: DJ
+          - generic [ref=e140]:
+            - generic [ref=e141]: Dr. James Chen
+            - generic [ref=e142]: neurology
+          - generic [ref=e144]: Available
+        - generic [ref=e145]:
+          - generic [ref=e146]:
+            - generic [ref=e147]: 
+            - generic [ref=e148]: 22 yrs exp
+          - generic [ref=e149]:
+            - generic [ref=e150]: 
+            - generic [ref=e151]: $350
+      - generic [ref=e153] [cursor=pointer]:
+        - generic [ref=e154]:
+          - generic [ref=e156]: DM
+          - generic [ref=e157]:
+            - generic [ref=e158]: Dr. Maria Rodriguez
+            - generic [ref=e159]: orthopedics
+          - generic [ref=e161]: On Leave
+        - generic [ref=e162]:
+          - generic [ref=e163]:
+            - generic [ref=e164]: 
+            - generic [ref=e165]: 15 yrs exp
+          - generic [ref=e166]:
+            - generic [ref=e167]: 
+            - generic [ref=e168]: $280
+      - generic [ref=e170] [cursor=pointer]:
+        - generic [ref=e171]:
+          - generic [ref=e173]: DE
+          - generic [ref=e174]:
+            - generic [ref=e175]: Dr. Emily Thompson
+            - generic [ref=e176]: pediatrics
+          - generic [ref=e178]: Available
+        - generic [ref=e179]:
+          - generic [ref=e180]:
+            - generic [ref=e181]: 
+            - generic [ref=e182]: 12 yrs exp
+          - generic [ref=e183]:
+            - generic [ref=e184]: 
+            - generic [ref=e185]: $200
+      - generic [ref=e187] [cursor=pointer]:
+        - generic [ref=e188]:
+          - generic [ref=e190]: DR
+          - generic [ref=e191]:
+            - generic [ref=e192]: Dr. Robert Williams
+            - generic [ref=e193]: general medicine
+          - generic [ref=e195]: Available
+        - generic [ref=e196]:
+          - generic [ref=e197]:
+            - generic [ref=e198]: 
+            - generic [ref=e199]: 25 yrs exp
+          - generic [ref=e200]:
+            - generic [ref=e201]: 
+            - generic [ref=e202]: $150
+      - generic [ref=e204] [cursor=pointer]:
+        - generic [ref=e205]:
+          - generic [ref=e207]: DP
+          - generic [ref=e208]:
+            - generic [ref=e209]: Dr. Priya Patel
+            - generic [ref=e210]: emergency medicine
+          - generic [ref=e212]: Available
+        - generic [ref=e213]:
+          - generic [ref=e214]:
+            - generic [ref=e215]: 
+            - generic [ref=e216]: 10 yrs exp
+          - generic [ref=e217]:
+            - generic [ref=e218]: 
+            - generic [ref=e219]: $180
+  - generic [ref=e76]:
+    - generic [ref=e77] [cursor=pointer]:
+      - generic [ref=e79]: ⚙️
+      - generic [ref=e81]: System
+    - generic [active] [ref=e82] [cursor=pointer]:
+      - generic [ref=e84]: 👥
+      - generic [ref=e85]: Users
+    - generic [ref=e86] [cursor=pointer]:
+      - generic [ref=e88]: 💳
+      - generic [ref=e89]: Finances
+    - generic [ref=e90] [cursor=pointer]:
+      - generic [ref=e92]: 💊
+      - generic [ref=e93]: Inventory
+    - generic [ref=e94] [cursor=pointer]:
+      - generic [ref=e96]: 🏥
+      - generic [ref=e97]: Depts
+    - generic [ref=e98] [cursor=pointer]:
+      - generic [ref=e100]: 🛏️
+      - generic [ref=e101]: Wards
+    - generic [ref=e102] [cursor=pointer]:
+      - generic [ref=e104]: 👤
+      - generic [ref=e105]: Profile

@@ -1,0 +1,44 @@
+{
+  "$schema": "https://opencode.ai/config.json",
+  "mcp": {
+    "github": {
+      "type": "local",
+      "command": ["npx", "-y", "@modelcontextprotocol/server-github"],
+      "enabled": true,
+      "environment": {
+        "GITHUB_TOKEN": "{env:GITHUB_TOKEN}"
+      }
+    },
+    "mongodb": {
+      "type": "local",
+      "command": ["npx", "-y", "@mongodb-js/mongodb-mcp-server"],
+      "environment": {
+        "MDB_MCP_CONNECTION_STRING": "mongodb://admin:leo12345@localhost:27017/hospital-management?authSource=admin"
+      }
+    },
+    "MiniMax": {
+      "type": "local",
+      "command": ["uvx", "minimax-coding-plan-mcp", "-y"],
+      "environment": {
+        "MINIMAX_API_KEY": "sk-cp-gELVv9Z3c8Qa7jnqRW9nHrz5XD7drPIFWdrxWCnKatJVM6rjXTnOTK5PlAgHKPXuU71KK2c1MM9AR6pZTmotDmoMn5kXohw7zvt2bktazmyhslJcfPITQfc",
+        "MINIMAX_API_HOST": "https://api.minimax.io"
+      },
+      "enabled": true
+    }
+  },
+  "plugin": [
+    "list"
+  ]
+
+}
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+

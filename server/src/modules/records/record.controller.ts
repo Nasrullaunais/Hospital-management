@@ -16,6 +16,7 @@ export const createRecord = async (req: Request, res: Response, next: NextFuncti
     const record = await MedicalRecord.create({
       patientId: req.body.patientId,
       doctorId: doctor._id,
+      appointmentId: req.body.appointmentId || undefined,
       diagnosis: req.body.diagnosis,
       prescription: req.body.prescription,
       labReportUrl: req.file ? `/uploads/${req.file.filename}` : undefined,

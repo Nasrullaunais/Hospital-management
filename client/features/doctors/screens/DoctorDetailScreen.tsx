@@ -57,7 +57,7 @@ export default function DoctorDetailScreen() {
     );
   }
 
-  const doctorName = typeof doctor.userId === 'object' ? doctor.userId.name : 'Unknown';
+  const doctorName = doctor.userId && typeof doctor.userId === 'object' ? doctor.userId.name : 'Unknown';
   const isAdmin = user?.role === 'admin';
   const canBookAppointment = user?.role === 'patient';
 

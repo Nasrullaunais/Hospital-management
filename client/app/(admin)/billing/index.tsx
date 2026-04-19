@@ -8,6 +8,7 @@ import {
   StyleSheet,
   RefreshControl,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import Colors from '@/constants/Colors';
 import { useColorScheme } from '@/components/useColorScheme';
@@ -113,7 +114,7 @@ export default function BillingScreen() {
   }
 
   return (
-    <View style={styles.container}>
+    <SafeAreaView edges={['top', 'bottom']} style={[styles.container, { backgroundColor: Colors[colorScheme].background }]}>
       {loading && invoices.length > 0 && (
         <View style={styles.loadingOverlay}>
           <ActivityIndicator size="large" color={Colors[colorScheme].primary} />
@@ -139,6 +140,6 @@ export default function BillingScreen() {
           <Text style={styles.emptyText}>No invoices found.</Text>
         }
       />
-    </View>
+    </SafeAreaView>
   );
 }

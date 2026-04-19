@@ -59,7 +59,7 @@ export default function DoctorListScreen() {
   const doctorDetailPath = user?.role === 'admin' ? '/(admin)/doctors/[id]' : '/(patient)/doctors/[id]';
 
   const renderDoctor = useCallback(({ item }: { item: Doctor }) => {
-    const doctorName = typeof item.userId === 'object' ? item.userId.name : 'Dr. Unknown';
+    const doctorName = item.userId && typeof item.userId === 'object' ? item.userId.name : 'Dr. Unknown';
     const isAvailable = item.availability === 'Available';
 
     const initials = doctorName

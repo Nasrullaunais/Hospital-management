@@ -1,0 +1,15 @@
+node_modules/
+server/node_modules/
+
+.git
+.github
+
+*.log
+npm-debug.log*
+
+.env
+.env.local
+.env.*.local
+
+client/
+uploads/

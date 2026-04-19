@@ -35,7 +35,7 @@ export default function PharmacistLayout() {
   const handleTabPress = (tabKey: string) => {
     setActiveTab(tabKey);
     const path = tabKey === 'index' ? '/(pharmacist)' : `/(pharmacist)/${tabKey}`;
-    router.push(path as `/(${string})` | `/${string}`);
+    router.push(path as any);
   };
 
   if (isLoading) {

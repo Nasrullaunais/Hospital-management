@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useCallback } from 'react';
-import { ToastAndroid, Platform } from 'react-native';
+import { ToastAndroid, Platform, Alert } from 'react-native';
 
 export type ToastType = 'success' | 'error' | 'info';
 
@@ -12,8 +12,9 @@ interface ToastContextValue {
 
 const ToastContext = createContext<ToastContextValue | null>(null);
 
-const DURATION = ToastAndroid.SHORT;
-const BOTTOM = ToastAndroid.BOTTOM;
+// ToastAndroid.SHORT=0, ToastAndroid.BOTTOM=1 — inline to avoid Android-only module errors on web
+const DURATION = 0;
+const BOTTOM = 1;
 
 export function ToastProvider({ children }: { children: React.ReactNode }) {
   const show = useCallback((message: string, type: ToastType = 'info') => {

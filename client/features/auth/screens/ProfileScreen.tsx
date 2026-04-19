@@ -88,7 +88,6 @@ export default function ProfileScreen() {
         if (form.phone) formData.append('phone', form.phone);
         if (form.dateOfBirth) formData.append('dateOfBirth', form.dateOfBirth);
 
-        // React Native FormData expects { uri, name, type } cast to any
         formData.append('idDocument', {
           uri: selectedFile.uri,
           name: selectedFile.name,

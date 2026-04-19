@@ -15,7 +15,7 @@ export default function AdminDashboard() {
   const colors = Colors[colorScheme];
 
   return (
-    <SafeAreaView style={[styles.safeArea, { backgroundColor: colors.background }]}>
+    <SafeAreaView edges={['top', 'bottom']} style={[styles.safeArea, { backgroundColor: colors.background }]}>
       <ScrollView style={styles.container} contentContainerStyle={styles.content}>
       <Text style={[styles.title, { color: colors.text }]}>Admin Dashboard</Text>
       <Text style={[styles.subtitle, { color: colors.textSecondary }]}>

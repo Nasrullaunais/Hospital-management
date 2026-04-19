@@ -88,9 +88,9 @@ export default function MyAppointmentsScreen() {
   const renderAppointment = useCallback(({ item }: { item: Appointment }) => {
     const statusStyle = getStatusStyle(item.status);
     let doctorName = 'Unknown Doctor';
-    if (typeof item.doctorId === 'object') {
+    if (item.doctorId && typeof item.doctorId === 'object') {
       const doctor = item.doctorId as Doctor;
-      if (typeof doctor.userId === 'object') {
+      if (doctor.userId && typeof doctor.userId === 'object') {
         doctorName = doctor.userId.name;
       }
     }

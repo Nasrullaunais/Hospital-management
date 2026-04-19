@@ -4,6 +4,7 @@ export interface IMedicalRecord extends Document {
   _id: mongoose.Types.ObjectId;
   patientId: mongoose.Types.ObjectId;
   doctorId: mongoose.Types.ObjectId;
+  appointmentId?: mongoose.Types.ObjectId;
   diagnosis: string;
   prescription?: string;
   dateRecorded: Date;
@@ -23,6 +24,10 @@ const medicalRecordSchema = new Schema<IMedicalRecord>(
       type: Schema.Types.ObjectId,
       ref: 'Doctor',
       required: [true, 'Doctor is required'],
+    },
+    appointmentId: {
+      type: Schema.Types.ObjectId,
+      ref: 'Appointment',
     },
     diagnosis: {
       type: String,

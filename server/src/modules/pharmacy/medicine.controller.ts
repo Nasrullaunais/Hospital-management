@@ -94,6 +94,14 @@ export const updateMedicine = async (req: Request, res: Response, next: NextFunc
       updates['price'] = parsedPrice;
     }
 
+    if (req.body['stockQuantity'] !== undefined) {
+      const parsedStock = Number(req.body['stockQuantity']);
+      if (!Number.isInteger(parsedStock) || parsedStock < 0) {
+        return next(ApiError.badRequest('Stock quantity must be a non-negative integer'));
+      }
+      updates['stockQuantity'] = parsedStock;
+    }
+
     if (req.body['expiryDate'] !== undefined) {
       const parsedExpiryDate = new Date(String(req.body['expiryDate']));
       if (Number.isNaN(parsedExpiryDate.getTime())) {

@@ -43,6 +43,13 @@ export default function PatientDashboard() {
           onPress={() => router.push('/(patient)/doctors')}
           variant="outline"
           fullWidth
+          style={styles.primaryButton}
+        />
+        <Button
+          title="Billing & Invoices"
+          onPress={() => router.push('/(patient)/billing')}
+          variant="outline"
+          fullWidth
         />
       </Card>
 
@@ -62,14 +69,41 @@ export default function PatientDashboard() {
         </Card>
         <Card
           style={styles.tile}
-          onPress={() => router.push('/(patient)/billing')}
+          onPress={() => router.push('/(patient)/prescriptions')}
         >
           <View style={styles.tileHeader}>
-            <Badge label="Billing" variant="info" />
+            <Badge label="Rx" variant="info" />
           </View>
-          <Text style={[styles.tileLabel, { color: colors.text }]}>Billing</Text>
+          <Text style={[styles.tileLabel, { color: colors.text }]}>Prescriptions</Text>
           <Text style={[styles.tileSub, { color: colors.textSecondary }]}>
-            Upload receipts and track payments
+            View your prescriptions
+          </Text>
+        </Card>
+      </View>
+
+      <View style={styles.gridRow}>
+        <Card
+          style={styles.tile}
+          onPress={() => router.push('/(patient)/departments')}
+        >
+          <View style={styles.tileHeader}>
+            <Badge label="Hospital" variant="primary" />
+          </View>
+          <Text style={[styles.tileLabel, { color: colors.text }]}>Departments</Text>
+          <Text style={[styles.tileSub, { color: colors.textSecondary }]}>
+            Browse hospital departments
+          </Text>
+        </Card>
+        <Card
+          style={styles.tile}
+          onPress={() => router.push('/(patient)/wards')}
+        >
+          <View style={styles.tileHeader}>
+            <Badge label="Rooms" variant="info" />
+          </View>
+          <Text style={[styles.tileLabel, { color: colors.text }]}>Wards</Text>
+          <Text style={[styles.tileSub, { color: colors.textSecondary }]}>
+            View ward availability
           </Text>
         </Card>
       </View>

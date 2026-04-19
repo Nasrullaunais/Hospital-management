@@ -59,13 +59,13 @@ export default function PrescriptionListScreen() {
   }, [theme]);
 
   const renderPrescription = useCallback(({ item }: { item: Prescription }) => {
-    const doctorName = typeof item.doctorId === 'object' ? item.doctorId?.userId?.name : 'Doctor';
+    const doctorName = item.doctorId && typeof item.doctorId === 'object' ? item.doctorId?.userId?.name : 'Doctor';
     const statusStyle = getStatusStyle(item.status);
 
     return (
       <TouchableOpacity
         style={[styles.card, { backgroundColor: theme.surface, borderColor: theme.border }]}
-        onPress={() => router.push(`/prescriptions/${item._id}`)}
+        onPress={() => router.push(`/(patient)/prescriptions/${item._id}` as any)}
         activeOpacity={0.7}
       >
         <View style={styles.cardHeader}>

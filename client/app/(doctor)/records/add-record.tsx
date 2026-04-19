@@ -140,6 +140,7 @@ export default function AddRecordScreen() {
 
       const formData = new FormData();
       formData.append('patientId', selectedPatient.patientId);
+      formData.append('appointmentId', selectedPatient.appointmentId);
       formData.append('diagnosis', diagnosis.trim());
       if (labFile) {
         formData.append('labReport', {
@@ -192,8 +193,13 @@ export default function AddRecordScreen() {
         <Text style={[styles.label, { color: colors.text }]}>Patient *</Text>
         {patients.length === 0 ? (
           <View style={[styles.hintBox, { backgroundColor: colors.surfaceTertiary }]}>
-            <SymbolView name={{ ios: 'info.circle', android: 'info', web: 'info' }} tintColor={colors.textSecondary} size={16} />
-            <Text style={[styles.hint, { color: colors.textSecondary }]}>No confirmed/completed appointments found.</Text>
+            <SymbolView name={{ ios: 'calendar.badge.exclamationmark', android: 'event', web: 'event' }} tintColor={colors.warning} size={20} />
+            <View style={styles.hintContent}>
+              <Text style={[styles.hintTitle, { color: colors.text }]}>No patients available</Text>
+              <Text style={[styles.hint, { color: colors.textSecondary }]}>
+                You need confirmed or completed appointments before creating medical records. Patients must book and confirm appointments first.
+              </Text>
+            </View>
           </View>
         ) : (
           <View style={styles.patientList}>
@@ -330,21 +336,32 @@ export default function AddRecordScreen() {
                 style={styles.medicineList}
                 renderItem={({ item }) => (
                   <TouchableOpacity
-                    style={[styles.medicineRow, { borderBottomColor: colors.divider }]}
+                    style={[
+                      styles.medicineRow,
+                      { borderBottomColor: colors.divider },
+                      item.stockQuantity === 0 && { opacity: 0.4 },
+                    ]}
                     onPress={() => {
+                      if (item.stockQuantity === 0) return;
                       setNewItem(prev => ({
                         ...prev,
                         medicineId: item._id,
                         medicineName: item.name,
                       }));
                     }}
+                    disabled={item.stockQuantity === 0}
                   >
                     <View>
                       <Text style={[styles.medicineName, { color: colors.text }]}>{item.name}</Text>
                       <Text style={[styles.medicineDosage, { color: colors.textSecondary }]}>{item.category}</Text>
                     </View>
-                    <Text style={[styles.medicineStock, { color: colors.textSecondary }]}>
-                      Stock: {item.stockQuantity}
+                    <Text
+                      style={[
+                        styles.medicineStock,
+                        { color: item.stockQuantity === 0 ? colors.error : colors.textSecondary },
+                      ]}
+                    >
+                      {item.stockQuantity === 0 ? 'Out of stock' : `Stock: ${item.stockQuantity}`}
                     </Text>
                   </TouchableOpacity>
                 )}
@@ -411,12 +428,14 @@ const styles = StyleSheet.create({
   hintBox: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
+    gap: 12,
     borderRadius: 8,
     padding: 12,
     marginBottom: 4,
   },
-  hint: { fontSize: 14 },
+  hintContent: { flex: 1 },
+  hintTitle: { fontSize: 15, fontWeight: '600', marginBottom: 4 },
+  hint: { fontSize: 14, lineHeight: 20 },
   patientList: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 4 },
   patientChip: {
     flexDirection: 'row',

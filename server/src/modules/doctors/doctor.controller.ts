@@ -65,6 +65,17 @@ export const getDoctors = async (req: Request, res: Response, next: NextFunction
   }
 };
 
+/** GET /api/doctors/me — Get authenticated doctor's own profile */
+export const getMyDoctorProfile = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+  try {
+    const doctor = await Doctor.findOne({ userId: req.user!.id }).populate('userId', 'name email phone dateOfBirth');
+    if (!doctor) return next(ApiError.notFound('Doctor profile not found for this account'));
+    res.json({ success: true, data: { doctor } });
+  } catch (err) {
+    next(err);
+  }
+};
+
 /** GET /api/doctors/:id — Get single doctor (public) */
 export const getDoctorById = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   try {

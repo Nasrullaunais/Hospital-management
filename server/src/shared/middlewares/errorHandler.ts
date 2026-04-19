@@ -57,10 +57,9 @@ export const errorHandler = (
 
   // ── 3. Mongoose CastError (invalid ObjectId) ──────────────────────────────────
   if (err.name === 'CastError') {
-    const castErr = err as MongooseError.CastError;
     res.status(400).json({
       success: false,
-      message: `Invalid value for field '${castErr.path}': ${castErr.value}`,
+      message: 'Invalid value provided for one of the fields.',
     });
     return;
   }

@@ -20,6 +20,7 @@ export const updateMedicineValidation = [
   body('name').optional().trim().notEmpty().withMessage('Medicine name cannot be empty'),
   body('category').optional().trim().notEmpty().withMessage('Category cannot be empty'),
   body('price').optional().isFloat({ min: 0 }).withMessage('Price must be a non-negative number'),
+  body('stockQuantity').optional().isInt({ min: 0 }).withMessage('Stock quantity must be a non-negative integer'),
   body('expiryDate')
     .optional()
     .custom((value: string) => !Number.isNaN(new Date(value).getTime()))

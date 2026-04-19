@@ -1,11 +1,14 @@
-import React from 'react';
-import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import React, { useEffect, useState, useCallback } from 'react';
+import { ActivityIndicator, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { SymbolView } from 'expo-symbols';
 import { useRouter } from 'expo-router';
 import Colors from '@/constants/Colors';
 import { useColorScheme } from '@/components/useColorScheme';
 import { useAuth } from '@/shared/context/AuthContext';
+import { apiClient } from '@/shared/api/client';
+import { ENDPOINTS } from '@/shared/api/endpoints';
+import type { ApiSuccessResponse, Appointment } from '@/shared/types';
 
 const TAB_BAR_HEIGHT = 70;
 
@@ -14,6 +17,46 @@ export default function DoctorDashboard() {
   const { user } = useAuth();
   const colorScheme = useColorScheme();
   const colors = Colors[colorScheme ?? 'light'];
+
+  const [stats, setStats] = useState({ todayCount: 0, totalPatients: 0, loading: true });
+
+  const fetchStats = useCallback(async () => {
+    try {
+      const res = await apiClient.get<ApiSuccessResponse<{ appointments: Appointment[]; count: number }>>(
+        ENDPOINTS.APPOINTMENTS.MY_DOCTOR_SCHEDULE,
+      );
+      const allAppointments = res.data.data.appointments;
+
+      // Today's appointments
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      const tomorrow = new Date(today);
+      tomorrow.setDate(tomorrow.getDate() + 1);
+
+      const todayCount = allAppointments.filter((appt) => {
+        const apptDate = new Date(appt.appointmentDate);
+        return apptDate >= today && apptDate < tomorrow && appt.status !== 'Cancelled';
+      }).length;
+
+      // Unique patients
+      const uniquePatients = new Set(
+        allAppointments
+          .filter((appt) => appt.status === 'Completed' || appt.status === 'Confirmed')
+          .map((appt) => {
+            if (typeof appt.patientId === 'object') return (appt.patientId as any)._id;
+            return appt.patientId;
+          })
+      );
+
+      setStats({ todayCount, totalPatients: uniquePatients.size, loading: false });
+    } catch {
+      setStats({ todayCount: 0, totalPatients: 0, loading: false });
+    }
+  }, []);
+
+  useEffect(() => {
+    void fetchStats();
+  }, [fetchStats]);
 
   const firstName = user?.name?.split(' ')[0] ?? 'Doctor';
   const today = new Date().toLocaleDateString('en-US', {
@@ -61,12 +104,20 @@ export default function DoctorDashboard() {
       <View style={styles.statsRow}>
         <View style={[styles.statCard, { backgroundColor: colors.surface }]}>
           <SymbolView name={{ ios: 'calendar', android: 'event', web: 'event' }} tintColor={colors.primary} size={22} />
-          <Text style={[styles.statValue, { color: colors.text }]}>—</Text>
+          {stats.loading ? (
+            <ActivityIndicator size="small" color={colors.primary} style={{ marginTop: 4 }} />
+          ) : (
+            <Text style={[styles.statValue, { color: colors.text }]}>{stats.todayCount}</Text>
+          )}
           <Text style={[styles.statLabel, { color: colors.textSecondary }]}>Today's Appts</Text>
         </View>
         <View style={[styles.statCard, { backgroundColor: colors.surface }]}>
           <SymbolView name={{ ios: 'person.3', android: 'groups', web: 'groups' }} tintColor={colors.primary} size={22} />
-          <Text style={[styles.statValue, { color: colors.text }]}>—</Text>
+          {stats.loading ? (
+            <ActivityIndicator size="small" color={colors.primary} style={{ marginTop: 4 }} />
+          ) : (
+            <Text style={[styles.statValue, { color: colors.text }]}>{stats.totalPatients}</Text>
+          )}
           <Text style={[styles.statLabel, { color: colors.textSecondary }]}>Total Patients</Text>
         </View>
       </View>

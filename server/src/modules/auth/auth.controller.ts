@@ -17,6 +17,7 @@ function signToken(userId: string, email: string, role: string): string {
 function handleValidationErrors(req: Request, next: NextFunction): boolean {
   const errors = validationResult(req);
   if (!errors.isEmpty()) {
+    logger.warn({ event: 'validation_failed', errors: errors.array(), ...getRequestContext(req) }, 'Validation failed');
     next(
       new ApiError(
         422,
@@ -36,8 +37,10 @@ function handleValidationErrors(req: Request, next: NextFunction): boolean {
  */
 export const register = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   if (handleValidationErrors(req, next)) return;
+  const { email } = req.body as { name: string; email: string; password: string };
+  logger.info({ event: 'register_attempt', email, ...getRequestContext(req) }, 'Registration attempt');
   try {
-    const { name, email, password } = req.body as {
+    const { name, password } = req.body as {
       name: string;
       email: string;
       password: string;
@@ -75,6 +78,7 @@ export const register = async (req: Request, res: Response, next: NextFunction):
       data: { token, user },
     });
   } catch (err) {
+    logger.error({ event: 'register_error', err: (err as Error).message, ...getRequestContext(req) }, 'Registration error');
     next(err);
   }
 };
@@ -99,7 +103,7 @@ export const login = async (req: Request, res: Response, next: NextFunction): Pr
         },
         'Login failed due to invalid credentials',
       );
-      return next(ApiError.unauthorized('Invalid email or password'));
+      return next(ApiError.unauthorized('Invalid credentials'));
     }
 
     const token = signToken(user._id.toString(), user.email, user.role);

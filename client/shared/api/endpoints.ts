@@ -19,6 +19,7 @@ export const ENDPOINTS = {
   // Member 2 — Doctors
   DOCTORS: {
     BASE: '/doctors',
+    ME: '/doctors/me',
     BY_ID: (id: string) => `/doctors/${id}`,
   },
 
@@ -51,7 +52,7 @@ export const ENDPOINTS = {
   INVOICES: {
     BASE: '/invoices',
     MY_BILLS: '/invoices/my-bills',
-    PAY: (id: string) => `/invoices/${id}/upload-receipt`,
+    UPLOAD_RECEIPT: (id: string) => `/invoices/${id}/upload-receipt`,
     VERIFY: (id: string) => `/invoices/${id}/verify`,
   },
 

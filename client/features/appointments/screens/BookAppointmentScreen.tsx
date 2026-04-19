@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import {
   View,
   Text,
@@ -10,6 +10,8 @@ import {
   KeyboardAvoidingView,
   Platform,
   Alert,
+  FlatList,
+  Modal,
 } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import DateTimePicker, { type DateTimePickerEvent } from '@react-native-community/datetimepicker';
@@ -20,6 +22,8 @@ import { Colors } from '@/constants/Colors';
 import { Input, Button } from '@/components/ui';
 import { spacing, radius } from '@/constants/ThemeTokens';
 import { appointmentService } from '../services/appointment.service';
+import { doctorService } from '@/features/doctors/services/doctor.service';
+import type { Doctor } from '@/shared/types';
 
 export default function BookAppointmentScreen() {
   const { doctorId: paramDoctorId } = useLocalSearchParams<{ doctorId?: string }>();
@@ -27,13 +31,48 @@ export default function BookAppointmentScreen() {
   const colorScheme = useColorScheme() ?? 'light';
   const colors = Colors[colorScheme];
 
-  const [doctorId] = useState(paramDoctorId ?? '');
+  const [doctorId, setDoctorId] = useState(paramDoctorId ?? '');
+  const [selectedDoctor, setSelectedDoctor] = useState<Doctor | null>(null);
+  const [showDoctorPicker, setShowDoctorPicker] = useState(false);
+  const [doctors, setDoctors] = useState<Doctor[]>([]);
+  const [loadingDoctors, setLoadingDoctors] = useState(false);
   const [date, setDate] = useState(new Date(Date.now() + 24 * 60 * 60 * 1000));
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [showTimePicker, setShowTimePicker] = useState(false);
   const [reason, setReason] = useState('');
   const [selectedFile, setSelectedFile] = useState<DocumentPicker.DocumentPickerAsset | null>(null);
   const [loading, setLoading] = useState(false);
+
+  // Fetch doctor details if doctorId is provided
+  useEffect(() => {
+    if (paramDoctorId) {
+      doctorService.getDoctorById(paramDoctorId).then(setSelectedDoctor).catch(() => {});
+    }
+  }, [paramDoctorId]);
+
+  // Fetch doctors for picker
+  const fetchDoctors = useCallback(async () => {
+    try {
+      setLoadingDoctors(true);
+      const data = await doctorService.getDoctors({ availability: 'Available' });
+      setDoctors(data);
+    } catch {
+      // Silently fail
+    } finally {
+      setLoadingDoctors(false);
+    }
+  }, []);
+
+  const handleOpenDoctorPicker = () => {
+    fetchDoctors();
+    setShowDoctorPicker(true);
+  };
+
+  const handleSelectDoctor = (doctor: Doctor) => {
+    setDoctorId(doctor._id);
+    setSelectedDoctor(doctor);
+    setShowDoctorPicker(false);
+  };
 
   const onDateChange = (_event: DateTimePickerEvent, selectedDate?: Date) => {
     setShowDatePicker(false);
@@ -136,17 +175,27 @@ export default function BookAppointmentScreen() {
 
         <View style={styles.form}>
           <View style={styles.fieldContainer}>
-            <Text style={[styles.label, { color: colors.text }]}>Doctor ID</Text>
-            <View
-              style={[
-                styles.readOnlyInput,
-                { backgroundColor: colors.inputDisabled, borderColor: colors.inputBorder }
-              ]}
-            >
-              <Text style={[styles.readOnlyText, { color: colors.inputDisabledText }]}>
-                {doctorId || 'Not specified'}
-              </Text>
-            </View>
+            <Text style={[styles.label, { color: colors.text }]}>Doctor *</Text>
+            {paramDoctorId && selectedDoctor ? (
+              <View style={[styles.readOnlyInput, { backgroundColor: colors.successBg, borderColor: colors.success }]}>
+                <Feather name="check-circle" size={16} color={colors.success} style={{ marginRight: 8 }} />
+                <Text style={[styles.readOnlyText, { color: colors.success }]}>
+                  Dr. {(selectedDoctor.userId as any)?.name || 'Selected'}
+                </Text>
+              </View>
+            ) : (
+              <TouchableOpacity
+                style={[styles.doctorPickerButton, { backgroundColor: colors.inputBackground, borderColor: colors.inputBorder }]}
+                onPress={handleOpenDoctorPicker}
+                disabled={loading}
+              >
+                <Feather name="search" size={16} color={colors.textTertiary} />
+                <Text style={[styles.doctorPickerText, { color: colors.textSecondary }]}>
+                  {selectedDoctor ? `Dr. ${(selectedDoctor.userId as any)?.name || 'Selected'}` : 'Select a doctor'}
+                </Text>
+                <Feather name="chevron-right" size={16} color={colors.textTertiary} style={{ marginLeft: 'auto' }} />
+              </TouchableOpacity>
+            )}
           </View>
 
           <View style={styles.fieldContainer}>
@@ -228,12 +277,63 @@ export default function BookAppointmentScreen() {
             title="Book Appointment"
             onPress={handleBook}
             loading={loading}
-            disabled={loading}
+            disabled={loading || !doctorId}
             fullWidth
             style={styles.button}
           />
         </View>
       </ScrollView>
+
+      <Modal visible={showDoctorPicker} animationType="slide" transparent>
+        <View style={styles.modalOverlay}>
+          <View style={[styles.modalContent, { backgroundColor: colors.surface }]}>
+            <View style={styles.modalHeader}>
+              <Text style={[styles.modalTitle, { color: colors.text }]}>Select Doctor</Text>
+              <TouchableOpacity onPress={() => setShowDoctorPicker(false)}>
+                <Feather name="x" size={24} color={colors.text} />
+              </TouchableOpacity>
+            </View>
+            {loadingDoctors ? (
+              <ActivityIndicator size="large" color={colors.primary} style={{ marginVertical: 32 }} />
+            ) : (
+              <FlatList
+                data={doctors}
+                keyExtractor={(item) => item._id}
+                renderItem={({ item }) => {
+                  const doctorName = (item.userId as any)?.name || 'Unknown';
+                  const isSelected = item._id === doctorId;
+                  return (
+                    <TouchableOpacity
+                      style={[
+                        styles.doctorOption,
+                        { borderColor: isSelected ? colors.primary : colors.border },
+                        isSelected && { backgroundColor: colors.primaryMuted },
+                      ]}
+                      onPress={() => handleSelectDoctor(item)}
+                    >
+                      <View style={[styles.doctorAvatar, { backgroundColor: colors.primary }]}>
+                        <Text style={styles.doctorAvatarText}>
+                          {doctorName.split(' ').map((n: string) => n[0]).slice(0, 2).join('')}
+                        </Text>
+                      </View>
+                      <View style={styles.doctorInfo}>
+                        <Text style={[styles.doctorName, { color: colors.text }]}>{doctorName}</Text>
+                        <Text style={[styles.doctorSpecialty, { color: colors.primary }]}>{item.specialization}</Text>
+                      </View>
+                      {isSelected && <Feather name="check-circle" size={20} color={colors.primary} />}
+                    </TouchableOpacity>
+                  );
+                }}
+                ItemSeparatorComponent={() => <View style={{ height: 8 }} />}
+                ListEmptyComponent={
+                  <Text style={[styles.emptyText, { color: colors.textSecondary }]}>No available doctors found.</Text>
+                }
+                contentContainerStyle={{ paddingVertical: 8 }}
+              />
+            )}
+          </View>
+        </View>
+      </Modal>
     </KeyboardAvoidingView>
   );
 }
@@ -314,5 +414,77 @@ const styles = StyleSheet.create({
   },
   button: {
     marginTop: spacing.md,
+  },
+  doctorPickerButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    borderWidth: 1.5,
+    borderRadius: radius.md,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.md,
+  },
+  doctorPickerText: {
+    fontSize: 16,
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    justifyContent: 'flex-end',
+  },
+  modalContent: {
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    maxHeight: '80%',
+    paddingBottom: 34,
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: spacing.lg,
+    borderBottomWidth: 1,
+    borderBottomColor: '#e5e7eb',
+  },
+  modalTitle: {
+    fontSize: 20,
+    fontWeight: '700',
+  },
+  doctorOption: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.md,
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.md,
+    marginHorizontal: spacing.md,
+    borderRadius: radius.md,
+    borderWidth: 1.5,
+  },
+  doctorAvatar: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  doctorAvatarText: {
+    color: '#fff',
+    fontWeight: '700',
+    fontSize: 16,
+  },
+  doctorInfo: {
+    flex: 1,
+  },
+  doctorName: {
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  doctorSpecialty: {
+    fontSize: 13,
+    fontWeight: '500',
+  },
+  emptyText: {
+    textAlign: 'center',
+    marginTop: spacing.xl,
   },
 });

@@ -1,6 +1,8 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import { useFocusEffect } from 'expo-router';
 import {
   ActivityIndicator,
+  Alert,
   FlatList,
   Image,
   RefreshControl,
@@ -9,6 +11,7 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import Colors from '@/constants/Colors';
 import { useColorScheme } from '@/components/useColorScheme';
@@ -139,6 +142,35 @@ const makeStyles = (colorScheme: 'light' | 'dark') => StyleSheet.create({
     color: Colors[colorScheme].textTertiary,
     fontSize: 14,
   },
+  actionRow: {
+    flexDirection: 'row',
+    gap: 8,
+    marginTop: 8,
+  },
+  editButton: {
+    flex: 1,
+    backgroundColor: Colors[colorScheme].primary,
+    borderRadius: 6,
+    paddingVertical: 6,
+    alignItems: 'center',
+  },
+  editButtonText: {
+    color: '#ffffff',
+    fontSize: 12,
+    fontWeight: '700',
+  },
+  deleteButton: {
+    flex: 1,
+    backgroundColor: Colors[colorScheme].error,
+    borderRadius: 6,
+    paddingVertical: 6,
+    alignItems: 'center',
+  },
+  deleteButtonText: {
+    color: '#ffffff',
+    fontSize: 12,
+    fontWeight: '700',
+  },
 });
 
 export default function PharmacyInventoryScreen() {
@@ -167,15 +199,43 @@ export default function PharmacyInventoryScreen() {
     }
   }, []);
 
-  useEffect(() => {
-    setLoading(true);
-    fetchMedicines().finally(() => setLoading(false));
-  }, [fetchMedicines]);
+  useFocusEffect(
+    useCallback(() => {
+      setLoading(true);
+      fetchMedicines().finally(() => setLoading(false));
+    }, [fetchMedicines]),
+  );
 
   const onRefresh = async () => {
     setRefreshing(true);
     await fetchMedicines();
     setRefreshing(false);
+  };
+
+  const handleEditMedicine = (medicine: Medicine) => {
+    router.push(`/(admin)/pharmacy/edit-medicine?id=${medicine._id}`);
+  };
+
+  const handleDeleteMedicine = (medicine: Medicine) => {
+    Alert.alert(
+      'Delete Medication',
+      `Are you sure you want to delete "${medicine.name}"? This action cannot be undone.`,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Delete',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              await medicineService.deleteMedicine(medicine._id);
+              setMedicines((prev) => prev.filter((m) => m._id !== medicine._id));
+            } catch (err) {
+              Alert.alert('Error', err instanceof Error ? err.message : 'Failed to delete medication.');
+            }
+          },
+        },
+      ],
+    );
   };
 
   const renderItem = ({ item }: { item: Medicine }) => {
@@ -206,6 +266,22 @@ export default function PharmacyInventoryScreen() {
           <Text style={[styles.stockText, lowStock ? styles.stockTextLow : undefined]}>
             Stock: {item.stockQuantity}
           </Text>
+          {canAddMedicine ? (
+            <View style={styles.actionRow}>
+              <TouchableOpacity
+                style={styles.editButton}
+                onPress={() => handleEditMedicine(item)}
+              >
+                <Text style={styles.editButtonText}>Edit</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.deleteButton}
+                onPress={() => handleDeleteMedicine(item)}
+              >
+                <Text style={styles.deleteButtonText}>Delete</Text>
+              </TouchableOpacity>
+            </View>
+          ) : null}
         </View>
       </View>
     );
@@ -231,7 +307,7 @@ export default function PharmacyInventoryScreen() {
   }
 
   return (
-    <View style={styles.container}>
+    <SafeAreaView edges={['top', 'bottom']} style={[styles.container, { backgroundColor: Colors[colorScheme].surfaceTertiary }]}>
       {canAddMedicine ? (
         <TouchableOpacity
           style={styles.addButton}
@@ -249,6 +325,6 @@ export default function PharmacyInventoryScreen() {
         contentContainerStyle={medicines.length === 0 ? styles.emptyList : styles.list}
         ListEmptyComponent={<Text style={styles.emptyText}>No medicines in inventory.</Text>}
       />
-    </View>
+    </SafeAreaView>
   );
 }

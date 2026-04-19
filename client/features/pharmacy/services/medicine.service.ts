@@ -22,6 +22,7 @@ export interface UpdateMedicinePayload {
   name?: string;
   category?: string;
   price?: number;
+  stockQuantity?: number;
   expiryDate?: string;
 }
 

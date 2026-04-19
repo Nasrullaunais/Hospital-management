@@ -1,0 +1,40 @@
+- generic [ref=e43]:
+  - generic [ref=e50]:
+    - generic [ref=e51]: Admin Dashboard
+    - generic [ref=e52]: Control users, finance operations, and inventory governance.
+    - generic [ref=e53]:
+      - generic [ref=e56] [cursor=pointer]:
+        - generic [ref=e58]: New
+        - generic [ref=e59]: Add Doctor
+        - generic [ref=e60]: Create a new doctor profile
+      - generic [ref=e63] [cursor=pointer]:
+        - generic [ref=e65]: Queue
+        - generic [ref=e66]: Finance Queue
+        - generic [ref=e67]: Verify pending invoice payments
+    - generic [ref=e68]:
+      - generic [ref=e70]: Operations
+      - generic [ref=e71]:
+        - generic [ref=e73] [cursor=pointer]: Manage Doctor Directory
+        - generic [ref=e75] [cursor=pointer]: Review Inventory Actions
+  - generic [ref=e76]:
+    - generic [ref=e77] [cursor=pointer]:
+      - generic [ref=e79]: ⚙️
+      - generic [ref=e81]: System
+    - generic [ref=e82] [cursor=pointer]:
+      - generic [ref=e84]: 👥
+      - generic [ref=e85]: Users
+    - generic [ref=e86] [cursor=pointer]:
+      - generic [ref=e88]: 💳
+      - generic [ref=e89]: Finances
+    - generic [ref=e90] [cursor=pointer]:
+      - generic [ref=e92]: 💊
+      - generic [ref=e93]: Inventory
+    - generic [ref=e94] [cursor=pointer]:
+      - generic [ref=e96]: 🏥
+      - generic [ref=e97]: Depts
+    - generic [ref=e98] [cursor=pointer]:
+      - generic [ref=e100]: 🛏️
+      - generic [ref=e101]: Wards
+    - generic [ref=e102] [cursor=pointer]:
+      - generic [ref=e104]: 👤
+      - generic [ref=e105]: Profile

@@ -25,10 +25,7 @@ app.use(
 
 app.use(
   cors({
-    origin:
-      env.NODE_ENV === 'production'
-        ? (process.env['CORS_ORIGINS'] ?? '').split(',').filter(Boolean)
-        : ['http://localhost:8082', 'http://localhost:8081'],
+    origin: (process.env['CORS_ORIGINS'] ?? 'http://localhost:8082,http://localhost:8081').split(',').filter(Boolean),
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization'],

@@ -21,8 +21,8 @@ export default function PrescriptionDetailScreen() {
   if (error) return <View style={styles.center}><Text style={styles.error}>{error}</Text></View>;
   if (!prescription) return <View style={styles.center}><Text>Prescription not found</Text></View>;
 
-  const doctorName = typeof prescription.doctorId === 'object' ? prescription.doctorId?.userId?.name : 'Doctor';
-  const doctorSpec = typeof prescription.doctorId === 'object' ? prescription.doctorId?.specialization : '';
+  const doctorName = prescription.doctorId && typeof prescription.doctorId === 'object' ? prescription.doctorId?.userId?.name : 'Doctor';
+  const doctorSpec = prescription.doctorId && typeof prescription.doctorId === 'object' ? prescription.doctorId?.specialization : '';
 
   return (
     <ScrollView style={styles.container}>

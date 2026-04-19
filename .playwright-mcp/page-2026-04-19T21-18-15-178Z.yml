@@ -1,0 +1,49 @@
+- generic [ref=e43]:
+  - generic [ref=e221]:
+    - generic:
+      - generic:
+        - generic:
+          - link "doctors/index, back" [ref=e223] [cursor=pointer]:
+            - /url: /doctors
+          - heading "User Details" [level=1] [ref=e226]
+    - generic [ref=e230]:
+      - generic [ref=e231]:
+        - generic [ref=e232]: Dr. Sarah Mitchell
+        - generic [ref=e233]: cardiology
+        - generic [ref=e235]: Available
+      - generic [ref=e236]:
+        - generic [ref=e237]:
+          - generic [ref=e238]: Experience
+          - generic [ref=e239]: 18 years
+        - generic [ref=e240]:
+          - generic [ref=e241]: Consultation Fee
+          - generic [ref=e242]: $300
+        - generic [ref=e243]:
+          - generic [ref=e244]: License Document
+          - generic [ref=e245]: On file ✓
+      - generic [ref=e246]:
+        - generic [ref=e247]: Admin Actions
+        - generic [ref=e249] [cursor=pointer]: Edit Doctor
+        - generic [ref=e251] [cursor=pointer]: Delete Doctor
+  - generic [ref=e76]:
+    - generic [ref=e77] [cursor=pointer]:
+      - generic [ref=e79]: ⚙️
+      - generic [ref=e81]: System
+    - generic [ref=e82] [cursor=pointer]:
+      - generic [ref=e84]: 👥
+      - generic [ref=e85]: Users
+    - generic [ref=e86] [cursor=pointer]:
+      - generic [ref=e88]: 💳
+      - generic [ref=e89]: Finances
+    - generic [ref=e90] [cursor=pointer]:
+      - generic [ref=e92]: 💊
+      - generic [ref=e93]: Inventory
+    - generic [ref=e94] [cursor=pointer]:
+      - generic [ref=e96]: 🏥
+      - generic [ref=e97]: Depts
+    - generic [ref=e98] [cursor=pointer]:
+      - generic [ref=e100]: 🛏️
+      - generic [ref=e101]: Wards
+    - generic [ref=e102] [cursor=pointer]:
+      - generic [ref=e104]: 👤
+      - generic [ref=e105]: Profile

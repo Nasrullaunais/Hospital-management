@@ -11,6 +11,7 @@ import {
   Image,
   KeyboardAvoidingView,
   Platform,
+  Linking,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import DateTimePicker, { type DateTimePickerEvent } from '@react-native-community/datetimepicker';
@@ -83,8 +84,23 @@ export default function AddMedicineScreen() {
 
   const pickPackagingImage = async () => {
     const permission = await ImagePicker.requestCameraPermissionsAsync();
+
     if (!permission.granted) {
-      Alert.alert('Permission Required', 'Camera permission is required to capture packaging images.');
+      if (!permission.canAskAgain) {
+        Alert.alert(
+          'Permission Denied',
+          'Camera permission has been permanently denied. Please enable camera access in your device settings to capture packaging photos.',
+          [
+            { text: 'Cancel', style: 'cancel' },
+            { text: 'Open Settings', onPress: () => Linking.openSettings() },
+          ],
+        );
+      } else {
+        Alert.alert(
+          'Permission Required',
+          'Camera permission is required to capture packaging images. Please grant camera access.',
+        );
+      }
       return;
     }
 

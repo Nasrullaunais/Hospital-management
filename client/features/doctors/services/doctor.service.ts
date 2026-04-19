@@ -75,4 +75,14 @@ export const doctorService = {
   deleteDoctor: async (id: string): Promise<void> => {
     await apiClient.delete(ENDPOINTS.DOCTORS.BY_ID(id));
   },
+
+  /**
+   * Fetch the authenticated doctor's own doctor profile (uses JWT to look up by userId server-side).
+   */
+  getMyDoctorProfile: async (): Promise<Doctor> => {
+    const res = await apiClient.get<ApiSuccessResponse<{ doctor: Doctor }>>(
+      ENDPOINTS.DOCTORS.ME,
+    );
+    return res.data.data.doctor;
+  },
 };
