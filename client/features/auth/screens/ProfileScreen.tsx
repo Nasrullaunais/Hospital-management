@@ -23,6 +23,17 @@ import { useColorScheme } from '@/components/useColorScheme';
 const TAB_BAR_HEIGHT = 70;
 
 /**
+ * Minimal file-like object accepted by React Native's FormData.append.
+ * Matches the shape returned by expo-document-picker with the additional
+ * Blob properties required by the FormData spec.
+ */
+interface FileLike extends Blob {
+  uri: string;
+  name: string;
+  mimeType?: string;
+}
+
+/**
  * ProfileScreen — Member 1
  * Displays the current user's profile and allows editing name/phone/dateOfBirth.
  * Supports uploading an ID document (image or PDF) via expo-document-picker.
@@ -82,7 +93,7 @@ export default function ProfileScreen() {
           uri: selectedFile.uri,
           name: selectedFile.name,
           type: selectedFile.mimeType ?? 'application/octet-stream',
-        } as any);
+        } as FileLike);
 
         await authService.updateProfile(formData);
       } else {
@@ -235,7 +246,7 @@ return (
         </TouchableOpacity>
       )}
 
-      <TouchableOpacity style={[styles.button, styles.danger, { marginTop: 12 }]} onPress={handleLogout} activeOpacity={0.8}>
+      <TouchableOpacity style={[styles.button, styles.danger, { marginTop: 12, backgroundColor: theme.error }]} onPress={handleLogout} activeOpacity={0.8}>
         <Feather name="log-out" size={16} color="#fff" style={{ marginRight: 8 }} />
         <Text style={styles.buttonText}>Sign Out</Text>
       </TouchableOpacity>
@@ -277,7 +288,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   outline: { backgroundColor: '#ffffff', borderWidth: 1 },
-  danger: { backgroundColor: '#ef4444' },
+  danger: {},
   buttonDisabled: { opacity: 0.6 },
   buttonText: { color: '#fff', fontSize: 15, fontWeight: '600' },
   pickButton: {

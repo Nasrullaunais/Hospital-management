@@ -7,8 +7,17 @@ import Colors from '@/constants/Colors';
 import { useColorScheme } from '@/components/useColorScheme';
 import { spacing, radius, shadows } from '@/constants/ThemeTokens';
 
+interface PendingPrescription {
+  _id: string;
+  patientId: string | { _id: string; name?: string };
+  doctorId: string | { _id: string; userId?: { name?: string } };
+  items: Array<{ medicineId: string | { _id: string; name?: string }; medicineName: string; dosage: string; quantity: number }>;
+  status: string;
+  createdAt: string;
+}
+
 export default function PendingPrescriptionsScreen() {
-  const [pending, setPending] = useState<any[]>([]);
+  const [pending, setPending] = useState<PendingPrescription[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -21,8 +30,8 @@ export default function PendingPrescriptionsScreen() {
       setError(null);
       const data = await dispensingService.getPendingPrescriptions();
       setPending(data);
-    } catch (e: any) {
-      setError(e.message);
+    } catch (e: unknown) {
+      setError(e instanceof Error ? e.message : 'Failed to load prescriptions');
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -36,14 +45,14 @@ export default function PendingPrescriptionsScreen() {
     loadPending();
   }, [loadPending]);
 
-  const renderItem = useCallback(({ item }: { item: any }) => {
-    const patientName = typeof item.patientId === 'object' ? item.patientId?.name : 'Patient';
-    const doctorName = typeof item.doctorId === 'object' ? item.doctorId?.userId?.name : 'Doctor';
+  const renderItem = useCallback(({ item }: { item: PendingPrescription }) => {
+    const patientName = item.patientId && typeof item.patientId === 'object' ? item.patientId?.name : 'Patient';
+    const doctorName = item.doctorId && typeof item.doctorId === 'object' ? item.doctorId?.userId?.name : 'Doctor';
 
     return (
       <TouchableOpacity
         style={[styles.card, { backgroundColor: theme.surface, borderColor: theme.border }]}
-        onPress={() => router.push(`/dispense/${item._id}`)}
+        onPress={() => router.push(`/(pharmacist)/dispense/${item._id}`)}
         activeOpacity={0.7}
       >
         <View style={styles.cardTop}>
@@ -63,7 +72,7 @@ export default function PendingPrescriptionsScreen() {
     );
   }, [theme, router]);
 
-  const keyExtractor = useCallback((item: any) => item._id, []);
+  const keyExtractor = useCallback((item: PendingPrescription) => item._id, []);
 
   const ListHeaderComponent = useMemo(() => (
     <View style={[styles.headerBar, { backgroundColor: theme.surface, borderBottomColor: theme.border }]}>

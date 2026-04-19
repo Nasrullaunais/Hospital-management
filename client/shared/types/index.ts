@@ -96,6 +96,8 @@ export interface Medicine {
   stockQuantity: number;
   expiryDate: string;
   packagingImageUrl: string;
+  createdAt: string;
+  updatedAt: string;
 }
 
 // ── Invoice ────────────────────────────────────────────────────────────────────

@@ -7,7 +7,7 @@ import { useAuth } from '@/shared/context/AuthContext';
 import { getRoleHomeRoute } from '@/shared/constants/roleRoutes';
 import { CustomTabBar, TabItem } from '@/components/ui/CustomTabBar';
 
-const TAB_SCREENS = ['index', 'pharmacy', 'profile'];
+const TAB_SCREENS = ['index', 'pharmacy', 'dispense', 'profile'];
 
 export default function PharmacistLayout() {
   const colorScheme = useColorScheme() ?? 'light';
@@ -20,6 +20,7 @@ export default function PharmacistLayout() {
   const tabs: TabItem[] = [
     { key: 'index', title: 'Home', icon: '🏠' },
     { key: 'pharmacy', title: 'Inventory', icon: '💊' },
+    { key: 'dispense', title: 'Dispense', icon: '📦' },
     { key: 'profile', title: 'Profile', icon: '👤' },
   ];
 
@@ -34,7 +35,7 @@ export default function PharmacistLayout() {
   const handleTabPress = (tabKey: string) => {
     setActiveTab(tabKey);
     const path = tabKey === 'index' ? '/(pharmacist)' : `/(pharmacist)/${tabKey}`;
-    router.push(path as any);
+    router.push(path as `/(${string})` | `/${string}`);
   };
 
   if (isLoading) {
@@ -85,6 +86,16 @@ export default function PharmacistLayout() {
           options={{
             headerShown: true,
             title: 'Dispense Details',
+            headerStyle: { backgroundColor: theme.surface },
+            headerTintColor: theme.text,
+            headerShadowVisible: false,
+          }}
+        />
+        <Stack.Screen
+          name="pharmacy/[id]"
+          options={{
+            headerShown: true,
+            title: 'Medicine Details',
             headerStyle: { backgroundColor: theme.surface },
             headerTintColor: theme.text,
             headerShadowVisible: false,

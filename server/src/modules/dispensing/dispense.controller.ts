@@ -20,60 +20,75 @@ export const dispensePrescription = async (req: Request, res: Response) => {
   }
 
   // Validate each dispensed item and deduct stock
-  for (const item of dispensedItems) {
-    if (
-      !item.medicineId ||
-      typeof item.quantityDispensed !== 'number' ||
-      item.quantityDispensed <= 0
-    ) {
-      throw new ApiError(400, 'Each dispensed item must have medicineId and quantityDispensed > 0');
-    }
+  const session = await mongoose.startSession();
+  session.startTransaction();
 
-    const medicine = await Medicine.findById(item.medicineId);
-    if (!medicine) throw new ApiError(404, `Medicine ${item.medicineId} not found`);
+  try {
+    for (const item of dispensedItems) {
+      if (
+        !item.medicineId ||
+        typeof item.quantityDispensed !== 'number' ||
+        item.quantityDispensed <= 0
+      ) {
+        throw new ApiError(400, 'Each dispensed item must have medicineId and quantityDispensed > 0');
+      }
 
-    if (medicine.stockQuantity < item.quantityDispensed) {
-      throw new ApiError(
-        400,
-        `Insufficient stock for ${medicine.name}: available ${medicine.stockQuantity}, requested ${item.quantityDispensed}`,
+      // Atomic check-and-decrement in a single operation to prevent race conditions
+      const medicine = await Medicine.findOneAndUpdate(
+        { _id: item.medicineId, stockQuantity: { $gte: item.quantityDispensed } },
+        { $inc: { stockQuantity: -item.quantityDispensed } },
+        { new: true, session },
       );
+
+      if (!medicine) {
+        const current = await Medicine.findById(item.medicineId).session(session);
+        if (!current) {
+          throw new ApiError(404, `Medicine ${item.medicineId} not found`);
+        }
+        throw new ApiError(
+          400,
+          `Insufficient stock for ${current.name}: available ${current.stockQuantity}, requested ${item.quantityDispensed}`,
+        );
+      }
     }
 
-    // Atomic stock deduction
-    await Medicine.findByIdAndUpdate(item.medicineId, {
-      $inc: { stockQuantity: -item.quantityDispensed },
+    // Build dispensedItems with full details from prescription
+    const fullDispensedItems = dispensedItems.map((item: any) => {
+      const rxItem = prescription.items.find(
+        (pi: any) => pi.medicineId.toString() === item.medicineId,
+      );
+      return {
+        medicineId: item.medicineId,
+        medicineName: rxItem?.medicineName || '',
+        dosage: rxItem?.dosage || '',
+        quantityPrescribed: rxItem?.quantity || 0,
+        quantityDispensed: item.quantityDispensed,
+        instructions: rxItem?.instructions || '',
+      };
     });
+
+    // Create dispense record
+    const dispense = await Dispense.create([{
+      prescriptionId,
+      patientId: prescription.patientId,
+      pharmacistId,
+      dispensedItems: fullDispensedItems,
+      status: 'fulfilled',
+    }], { session });
+
+    // Mark prescription as fulfilled
+    prescription.status = 'fulfilled';
+    await prescription.save({ session });
+
+    await session.commitTransaction();
+    session.endSession();
+
+    res.status(201).json({ success: true, data: dispense[0] });
+  } catch (err) {
+    await session.abortTransaction();
+    session.endSession();
+    throw err;
   }
-
-  // Build dispensedItems with full details from prescription
-  const fullDispensedItems = dispensedItems.map((item: any) => {
-    const rxItem = prescription.items.find(
-      (pi: any) => pi.medicineId.toString() === item.medicineId,
-    );
-    return {
-      medicineId: item.medicineId,
-      medicineName: rxItem?.medicineName || '',
-      dosage: rxItem?.dosage || '',
-      quantityPrescribed: rxItem?.quantity || 0,
-      quantityDispensed: item.quantityDispensed,
-      instructions: rxItem?.instructions || '',
-    };
-  });
-
-  // Create dispense record
-  const dispense = await Dispense.create({
-    prescriptionId,
-    patientId: prescription.patientId,
-    pharmacistId,
-    dispensedItems: fullDispensedItems,
-    status: 'fulfilled',
-  });
-
-  // Mark prescription as fulfilled
-  prescription.status = 'fulfilled';
-  await prescription.save();
-
-  res.status(201).json({ success: true, data: dispense });
 };
 
 export const getDispensesByPatient = async (req: Request, res: Response) => {
