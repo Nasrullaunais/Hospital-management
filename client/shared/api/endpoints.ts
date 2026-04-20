@@ -81,4 +81,14 @@ export const ENDPOINTS = {
     BY_ID: (id: string) => `/wards/${id}`,
     UPDATE_BEDS: (id: string) => `/wards/${id}/beds`,
   },
+
+  WARD_RECEPTIONIST: {
+    STATS: '/wardAssignments/stats',
+    BED_STATUSES: '/wardAssignments/bed-statuses',
+    ASSIGNMENTS_BASE: '/wardAssignments',
+    ASSIGNMENTS: (wardId: string) => `/wardAssignments/ward/${wardId}`,
+    UNASSIGN: (assignmentId: string) => `/wardAssignments/${assignmentId}`,
+    PATIENT_MEDICATIONS: (patientId: string) => `/wardMedications/patient/${patientId}`,
+    PATIENTS: (wardId: string) => `/wardAssignments/ward/${wardId}/patients`,
+  },
 } as const;

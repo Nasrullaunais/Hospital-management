@@ -19,7 +19,7 @@ export interface ApiErrorResponse {
 
 // ── User / Auth ────────────────────────────────────────────────────────────────
 
-export type UserRole = 'patient' | 'doctor' | 'admin' | 'pharmacist';
+export type UserRole = 'patient' | 'doctor' | 'admin' | 'pharmacist' | 'receptionist';
 
 export interface User {
   _id: string;

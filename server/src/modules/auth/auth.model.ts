@@ -8,7 +8,7 @@ export interface IUser extends Document {
   name: string;
   email: string;
   password: string;
-  role: 'patient' | 'doctor' | 'admin' | 'pharmacist';
+  role: 'patient' | 'doctor' | 'admin' | 'pharmacist' | 'receptionist';
   phone?: string;
   dateOfBirth?: Date;
   idDocumentUrl?: string;
@@ -50,8 +50,8 @@ const userSchema = new Schema<IUser>(
     role: {
       type: String,
       enum: {
-        values: ['patient', 'doctor', 'admin', 'pharmacist'],
-        message: 'Role must be patient, doctor, admin, or pharmacist',
+        values: ['patient', 'doctor', 'admin', 'pharmacist', 'receptionist'],
+        message: 'Role must be patient, doctor, admin, pharmacist, or receptionist',
       },
       default: 'patient',
     },
