@@ -4,8 +4,10 @@ import { User } from '../modules/auth/auth.model.js';
 import { Doctor } from '../modules/doctors/doctor.model.js';
 import { Medicine } from '../modules/pharmacy/medicine.model.js';
 import { Prescription } from '../modules/prescriptions/prescription.model.js';
-import { Dispense } from '../modules/dispensing/dispense.model.js';
 import { env } from '../config/env.js';
+import { Department } from '../modules/departments/department.model.js';
+import { Ward } from '../modules/wards/ward.model.js';
+import { WardAssignment } from '../modules/wardAssignments/wardAssignment.model.js';
 
 interface TestUser {
   _id: mongoose.Types.ObjectId;
@@ -35,6 +37,20 @@ interface TestPrescription {
   items: Array<{ medicineId: mongoose.Types.ObjectId; medicineName: string; dosage: string; quantity: number; instructions?: string }>;
   status: string;
 }
+
+interface TestDepartment {
+  _id: mongoose.Types.ObjectId;
+  name: string;
+}
+
+interface TestWard {
+  _id: mongoose.Types.ObjectId;
+  name: string;
+  departmentId: mongoose.Types.ObjectId;
+  totalBeds: number;
+}
+
+type TestWardAssignment = InstanceType<typeof WardAssignment>;
 
 function getToken(user: { _id: { toString: () => string }; email: string; role: string }): string {
   return jwt.sign(
@@ -94,7 +110,40 @@ async function createPrescription(params: {
   }) as Promise<TestPrescription>;
 }
 
-interface TestHelper {
+async function createDepartment(params?: { name?: string }): Promise<TestDepartment> {
+  return Department.create({
+    name: params?.name ?? `Dept-${Date.now()}`,
+    description: 'Test department description',
+    location: 'Test Building, Floor 1',
+    phone: '555-0001',
+  }) as Promise<TestDepartment>;
+}
+
+async function createWard(params: { departmentId: mongoose.Types.ObjectId; name?: string; type?: string; totalBeds?: number }): Promise<TestWard> {
+  return Ward.create({
+    departmentId: params.departmentId,
+    name: params.name ?? `Ward-${Date.now()}`,
+    type: params.type ?? 'general',
+    totalBeds: params.totalBeds ?? 20,
+  }) as Promise<TestWard>;
+}
+
+async function createWardAssignment(params: {
+  wardId: mongoose.Types.ObjectId;
+  patientId: mongoose.Types.ObjectId;
+  bedNumber: number;
+  status?: string;
+}): Promise<TestWardAssignment> {
+  return WardAssignment.create({
+    wardId: params.wardId,
+    patientId: params.patientId,
+    bedNumber: params.bedNumber,
+    admissionDate: new Date(),
+    status: params.status ?? 'active',
+  });
+}
+
+export interface TestHelper {
   createUser: (params: { name?: string; email?: string; role: string }) => Promise<TestUser>;
   createDoctor: (params: { userId: mongoose.Types.ObjectId; specialization?: string }) => Promise<TestDoctor>;
   createMedicine: (params?: { name?: string; category?: string; stockQuantity?: number }) => Promise<TestMedicine>;
@@ -105,6 +154,14 @@ interface TestHelper {
     status?: string;
   }) => Promise<TestPrescription>;
   getToken: (user: { _id: { toString: () => string }; email: string; role: string }) => string;
+  createDepartment: (params?: { name?: string }) => Promise<TestDepartment>;
+  createWard: (params: { departmentId: mongoose.Types.ObjectId; name?: string; type?: string; totalBeds?: number }) => Promise<TestWard>;
+  createWardAssignment: (params: {
+    wardId: mongoose.Types.ObjectId;
+    patientId: mongoose.Types.ObjectId;
+    bedNumber: number;
+    status?: string;
+  }) => Promise<TestWardAssignment>;
 }
 
 const testHelper: TestHelper = {
@@ -113,8 +170,13 @@ const testHelper: TestHelper = {
   createMedicine,
   createPrescription,
   getToken,
+  createDepartment,
+  createWard,
+  createWardAssignment,
 };
 
-export type { TestUser, TestDoctor, TestMedicine, TestPrescription, TestHelper };
+export type { TestUser, TestDoctor, TestMedicine, TestPrescription, TestDepartment, TestWard, TestWardAssignment };
 
-(global as typeof global & { testHelper: TestHelper }).testHelper = testHelper;
+// Attach to global in a way that works with strict TypeScript
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+(globalThis as any).testHelper = testHelper;

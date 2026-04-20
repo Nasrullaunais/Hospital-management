@@ -502,7 +502,7 @@ Max Concurrent: 6 (T1-T6 in parallel)
   - `client/tests/e2e/` - Existing E2E test structure
   - Playwright skill loaded above
 
-- [ ] 18. **Backend unit tests for new controllers**
+- [x] 18. **Backend unit tests for new controllers**
 
   **What to do**:
   - Test wardAssignment controller methods
