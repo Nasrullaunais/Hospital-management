@@ -147,7 +147,7 @@ export default function PatientsListScreen() {
           />
         }
       />
-    </SafeView>
+    </SafeAreaView>
   );
 }
 

@@ -407,7 +407,7 @@ export default function AssignPatientScreen() {
                       setErrors(prev => ({ ...prev, bed: undefined }));
                     }}
                   >
-                    <View style={[styles.listItemIcon, { backgroundColor: theme.successBg }}>
+                    <View style={[styles.listItemIcon, { backgroundColor: theme.successBg }]}>
                       <Feather name="check-circle" size={18} color={theme.success} />
                     </View>
                     <View style={styles.listItemContent}>

@@ -29,8 +29,15 @@ export default function BedDetailScreen() {
   useEffect(() => {
     if (bedData) {
       try {
-        setBed(JSON.parse(bedData));
+        const parsed = JSON.parse(bedData) as BedStatus;
+        if (parsed) {
+          setBed(parsed);
+          setLoading(false);
+          return;
+        }
       } catch {
+        // silent — fall through to API fetch below
+      }
     }
     wardReceptionistService.getBedStatuses()
       .then(beds => beds.find(b => b._id === id))
