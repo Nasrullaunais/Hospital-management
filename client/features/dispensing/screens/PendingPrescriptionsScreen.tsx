@@ -93,23 +93,27 @@ export default function PendingPrescriptionsScreen() {
   ), [theme]);
 
   if (loading) return (
-    <View style={[styles.center, { backgroundColor: theme.background }]}>
-      <ActivityIndicator size="large" color={theme.primary} />
-    </View>
+    <SafeAreaView style={[styles.safeArea, { backgroundColor: theme.background }]}>
+      <View style={[styles.center, { backgroundColor: theme.background }]}>
+        <ActivityIndicator size="large" color={theme.primary} />
+      </View>
+    </SafeAreaView>
   );
 
   if (error) return (
-    <View style={[styles.center, { backgroundColor: theme.background }]}>
-      <Feather name="alert-circle" size={48} color={theme.error} />
-      <Text style={[styles.error, { color: theme.error }]}>{error}</Text>
-      <TouchableOpacity onPress={loadPending} style={[styles.retryBtn, { backgroundColor: theme.primary }]}>
-        <Text style={styles.retryBtnText}>Retry</Text>
-      </TouchableOpacity>
-    </View>
+    <SafeAreaView style={[styles.safeArea, { backgroundColor: theme.background }]}>
+      <View style={[styles.center, { backgroundColor: theme.background }]}>
+        <Feather name="alert-circle" size={48} color={theme.error} />
+        <Text style={[styles.error, { color: theme.error }]}>{error}</Text>
+        <TouchableOpacity onPress={loadPending} style={[styles.retryBtn, { backgroundColor: theme.primary }]}>
+          <Text style={styles.retryBtnText}>Retry</Text>
+        </TouchableOpacity>
+      </View>
+    </SafeAreaView>
   );
 
   return (
-    <SafeAreaView style={[styles.container, { backgroundColor: theme.background }]} edges={['bottom']}>
+    <SafeAreaView style={[styles.safeArea, { backgroundColor: theme.background }]} edges={['left', 'right', 'top']}>
       <FlatList
         data={pending}
         keyExtractor={keyExtractor}
@@ -125,6 +129,7 @@ export default function PendingPrescriptionsScreen() {
 }
 
 const styles = StyleSheet.create({
+  safeArea: { flex: 1 },
   container: { flex: 1 },
   center: { flex: 1, justifyContent: 'center', alignItems: 'center' },
   list: { padding: spacing.md, paddingTop: spacing.sm },
