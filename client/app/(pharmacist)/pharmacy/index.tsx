@@ -40,11 +40,22 @@ export default function PharmacyInventoryScreen() {
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [categoryFilter, setCategoryFilter] = useState('');
+  const [searchQuery, setSearchQuery] = useState('');
 
   const canAddMedicine = useMemo(
     () => user?.role === 'admin' || user?.role === 'pharmacist',
     [user?.role],
   );
+
+  const filteredMedicines = useMemo(() => {
+    if (!searchQuery.trim()) return medicines;
+    const q = searchQuery.toLowerCase();
+    return medicines.filter(
+      (m) =>
+        m.name.toLowerCase().includes(q) ||
+        m.category.toLowerCase().includes(q),
+    );
+  }, [medicines, searchQuery]);
 
   const fetchMedicines = useCallback(async () => {
     try {
@@ -160,14 +171,31 @@ export default function PharmacyInventoryScreen() {
 
   return (
     <SafeAreaView style={[styles.safeArea, { backgroundColor: theme.background }]} edges={['left', 'right', 'top']}>
-      <View style={[styles.filterRow, { backgroundColor: theme.surface }]}>
-        <TextInput
-          style={[styles.filterInput, { backgroundColor: theme.inputBackground, borderColor: theme.inputBorder, color: theme.text }]}
-          placeholder="Filter by category..."
-          placeholderTextColor={theme.inputPlaceholder}
-          value={categoryFilter}
-          onChangeText={setCategoryFilter}
-        />
+      <View style={[styles.searchContainer, { backgroundColor: theme.surface }]}>
+        <View style={[styles.searchBar, { backgroundColor: theme.inputBackground, borderColor: theme.inputBorder }]}>
+          <Feather name="search" size={16} color={theme.textTertiary} style={styles.searchIcon} />
+          <TextInput
+            style={[styles.searchInput, { color: theme.text }]}
+            placeholder="Search medicines..."
+            placeholderTextColor={theme.inputPlaceholder}
+            value={searchQuery}
+            onChangeText={setSearchQuery}
+          />
+          {searchQuery.length > 0 && (
+            <TouchableOpacity onPress={() => setSearchQuery('')} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+              <Feather name="x" size={16} color={theme.textTertiary} />
+            </TouchableOpacity>
+          )}
+        </View>
+        <TouchableOpacity
+          style={[styles.filterChip, { borderColor: theme.border }]}
+          onPress={() => setCategoryFilter(categoryFilter ? '' : 'Antibiotic')}
+        >
+          <Feather name="filter" size={14} color={categoryFilter ? theme.primary : theme.textTertiary} />
+          <Text style={[styles.filterChipText, { color: categoryFilter ? theme.primary : theme.textTertiary }]}>
+            {categoryFilter || 'Category'}
+          </Text>
+        </TouchableOpacity>
       </View>
 
       {canAddMedicine ? (
@@ -181,15 +209,15 @@ export default function PharmacyInventoryScreen() {
       ) : null}
 
       <FlatList
-        data={medicines}
+        data={filteredMedicines}
         keyExtractor={(item) => item._id}
         renderItem={renderItem}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={theme.primary} />}
-        contentContainerStyle={medicines.length === 0 ? styles.emptyList : styles.list}
+        contentContainerStyle={filteredMedicines.length === 0 ? styles.emptyList : styles.list}
         ListEmptyComponent={
           <View style={styles.emptyContainer}>
             <Feather name="package" size={48} color={theme.textTertiary} />
-            <Text style={[styles.emptyText, { color: theme.textSecondary }]}>No medicines in inventory.</Text>
+            <Text style={[styles.emptyText, { color: theme.textSecondary }]}>No medicines found.</Text>
           </View>
         }
       />
@@ -200,14 +228,12 @@ export default function PharmacyInventoryScreen() {
 const styles = StyleSheet.create({
   safeArea: { flex: 1 },
   container: { flex: 1 },
-  filterRow: { paddingHorizontal: spacing.md, paddingVertical: spacing.sm },
-  filterInput: {
-    borderWidth: 1,
-    borderRadius: radius.md,
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm,
-    fontSize: 15,
-  },
+  searchContainer: { paddingHorizontal: spacing.md, paddingVertical: spacing.sm, gap: spacing.sm, flexDirection: 'row', alignItems: 'center' },
+  searchBar: { flex: 1, flexDirection: 'row', alignItems: 'center', borderWidth: 1, borderRadius: radius.lg, paddingHorizontal: spacing.md, height: 42 },
+  searchIcon: { marginRight: spacing.sm },
+  searchInput: { flex: 1, fontSize: 15 },
+  filterChip: { flexDirection: 'row', alignItems: 'center', borderWidth: 1, borderRadius: radius.lg, paddingHorizontal: spacing.md, height: 42, gap: spacing.xs },
+  filterChipText: { fontSize: 13, fontWeight: '600' },
   list: { padding: spacing.md },
   emptyList: { flex: 1 },
   emptyContainer: { flexGrow: 1, justifyContent: 'center', alignItems: 'center' },

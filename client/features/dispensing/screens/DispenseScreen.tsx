@@ -151,25 +151,29 @@ export default function DispenseScreen() {
 
   if (loading) {
     return (
-      <View style={[styles.center, { backgroundColor: theme.background }]}>
-        <ActivityIndicator size="large" color={theme.primary} />
-        <Text style={[styles.loadingText, { color: theme.textSecondary }]}>Loading prescription...</Text>
-      </View>
+      <SafeAreaView style={[styles.safeArea, { backgroundColor: theme.background }]}>
+        <View style={[styles.center, { backgroundColor: theme.background }]}>
+          <ActivityIndicator size="large" color={theme.primary} />
+          <Text style={[styles.loadingText, { color: theme.textSecondary }]}>Loading prescription...</Text>
+        </View>
+      </SafeAreaView>
     );
   }
 
   if (!prescription) {
     return (
-      <View style={[styles.center, { backgroundColor: theme.background }]}>
-        <Feather name="alert-circle" size={48} color={theme.error} />
-        <Text style={[styles.errorText, { color: theme.error }]}>Prescription not found</Text>
-        <TouchableOpacity
-          style={[styles.retryBtn, { backgroundColor: theme.primary }]}
-          onPress={() => router.back()}
-        >
-          <Text style={styles.retryBtnText}>Go Back</Text>
-        </TouchableOpacity>
-      </View>
+      <SafeAreaView style={[styles.safeArea, { backgroundColor: theme.background }]}>
+        <View style={[styles.center, { backgroundColor: theme.background }]}>
+          <Feather name="alert-circle" size={48} color={theme.error} />
+          <Text style={[styles.errorText, { color: theme.error }]}>Prescription not found</Text>
+          <TouchableOpacity
+            style={[styles.retryBtn, { backgroundColor: theme.primary }]}
+            onPress={() => router.back()}
+          >
+            <Text style={styles.retryBtnText}>Go Back</Text>
+          </TouchableOpacity>
+        </View>
+      </SafeAreaView>
     );
   }
 
@@ -177,7 +181,7 @@ export default function DispenseScreen() {
     typeof prescription.patientId === 'object' ? prescription.patientId?.name : 'Patient';
 
   return (
-    <SafeAreaView style={[styles.container, { backgroundColor: theme.background }]} edges={['bottom']}>
+    <SafeAreaView style={[styles.safeArea, { backgroundColor: theme.background }]} edges={['left', 'right', 'top']}>
       <ScrollView
         style={styles.container}
         contentContainerStyle={styles.content}
@@ -220,7 +224,7 @@ export default function DispenseScreen() {
           <Text style={[styles.emptyText, { color: theme.textSecondary }]}>No items in this prescription</Text>
         </View>
       ) : (
-        prescription.items.map((item: DispenseItem) => {
+        prescription.items.map((item: DispenseItem, index: number) => {
           const medId = typeof item.medicineId === 'object' ? item.medicineId._id : item.medicineId;
           const stock = medicineStocks[medId] ?? 0;
           const currentDispensed = dispensed[medId] || 0;
@@ -229,7 +233,7 @@ export default function DispenseScreen() {
 
           return (
             <View
-              key={medId}
+              key={`${medId}-${index}`}
               style={[
                 styles.itemCard,
                 { backgroundColor: theme.surface, borderColor: isOverStock ? theme.error : theme.border },
@@ -321,6 +325,7 @@ export default function DispenseScreen() {
 }
 
 const styles = StyleSheet.create({
+  safeArea: { flex: 1 },
   container: { flex: 1 },
   content: { paddingBottom: spacing.xl },
   center: { flex: 1, justifyContent: 'center', alignItems: 'center' },
