@@ -58,7 +58,4 @@ const wardMedicationSchema = new Schema<IWardMedication>(
   { timestamps: true },
 );
 
-wardMedicationSchema.index({ wardAssignmentId: 1 });
-wardMedicationSchema.index({ medicationId: 1 });
-
 export const WardMedication = mongoose.model<IWardMedication>('WardMedication', wardMedicationSchema);
