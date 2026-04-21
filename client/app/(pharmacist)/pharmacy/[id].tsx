@@ -16,11 +16,12 @@ import type { Medicine } from '@/shared/types';
 import Colors from '@/constants/Colors';
 import { useColorScheme } from '@/components/useColorScheme';
 import { spacing, radius, shadows } from '@/constants/ThemeTokens';
+import { Config } from '@/shared/constants/Config';
 
 function getImageUrl(url: string): string {
   if (!url) return '';
   if (url.startsWith('http://') || url.startsWith('https://')) return url;
-  const base = 'http://localhost:5000/api';
+  const base = Config.API_URL;
   const path = url.startsWith('/') ? url : `/${url}`;
   return `${base}${path}`;
 }

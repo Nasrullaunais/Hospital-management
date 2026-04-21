@@ -53,61 +53,60 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           '@hospital_user',
         ]);
 
-        const tokenFromStorage = storedToken[1];
-
-        if (!tokenFromStorage) {
+        if (!storedToken[1]) {
+          // No token — not authenticated
           if (storedUser[1]) {
             await AsyncStorage.removeItem('@hospital_user');
           }
+          setIsLoading(false);
           return;
         }
 
-        setToken(tokenFromStorage);
+        setToken(storedToken[1]);
 
-        try {
-          const response = await apiClient.get<{ success: boolean; data: { user: User } }>(
-            ENDPOINTS.PATIENTS.ME,
-          );
-          const validatedUser = response.data.data.user;
-          await AsyncStorage.setItem('@hospital_user', JSON.stringify(validatedUser));
-          setUser(validatedUser);
-        } catch (err) {
-          const is401 =
-            err &&
-            typeof err === 'object' &&
-            (err as { response?: { status?: number } }).response?.status === 401;
+        if (storedUser[1]) {
+          try {
+            const cachedUser = JSON.parse(storedUser[1]) as User;
 
-          if (is401 && storedUser[1]) {
-            const parsedUser = JSON.parse(storedUser[1]) as User;
-            setUser(parsedUser);
-          } else {
+            // NON-PATIENTS: Use cached user, skip /patients/me
+            // (Backend has no /pharmacists/me or /receptionists/me endpoint)
+            if (cachedUser.role !== 'patient') {
+              setUser(cachedUser);
+              setIsLoading(false);
+              return;
+            }
+
+            // PATIENTS: Validate via /patients/me
+            const response = await apiClient.get<{ success: boolean; data: { user: User } }>(
+              ENDPOINTS.PATIENTS.ME,
+            );
+            const validatedUser = response.data.data.user;
+            await AsyncStorage.setItem('@hospital_user', JSON.stringify(validatedUser));
+            setUser(validatedUser);
+          } catch {
+            // Cache read failed or /patients/me failed for patient
+            await AsyncStorage.multiRemove([AUTH_TOKEN_KEY, '@hospital_user']);
+            setToken(null);
+            setUser(null);
+          }
+        } else {
+          // No cached user — try /patients/me as fallback
+          try {
+            const response = await apiClient.get<{ success: boolean; data: { user: User } }>(
+              ENDPOINTS.PATIENTS.ME,
+            );
+            const validatedUser = response.data.data.user;
+            await AsyncStorage.setItem('@hospital_user', JSON.stringify(validatedUser));
+            setUser(validatedUser);
+          } catch {
+            // /patients/me failed — clear token
             await AsyncStorage.multiRemove([AUTH_TOKEN_KEY, '@hospital_user']);
             setToken(null);
             setUser(null);
           }
         }
-          } catch {
-            // Corrupted cached user — fall through to /patients/me validation
-          }
-        }
-
-        // For patients (or when no cache), validate via /patients/me
-        try {
-          const response = await apiClient.get<{ success: boolean; data: { user: User } }>(
-            ENDPOINTS.PATIENTS.ME,
-          );
-          const validatedUser = response.data.data.user;
-          await AsyncStorage.setItem('@hospital_user', JSON.stringify(validatedUser));
-          setUser(validatedUser);
-        } catch {
-          // /patients/me failed — for patients this means token expired, wipe.
-          // (Non-patients are handled above via early return.)
-          await AsyncStorage.multiRemove([AUTH_TOKEN_KEY, '@hospital_user']);
-          setToken(null);
-          setUser(null);
-        }
       } catch {
-        // Corrupted storage — clear and start fresh
+        // Corrupted storage
         await AsyncStorage.multiRemove([AUTH_TOKEN_KEY, '@hospital_user']);
         setToken(null);
         setUser(null);

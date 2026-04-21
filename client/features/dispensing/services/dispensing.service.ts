@@ -10,6 +10,12 @@ export interface DispensePayload {
   quantityDispensed: number;
 }
 
+export interface DispenseResponse {
+  prescriptionId: string;
+  dispensedAt: string;
+  dispensedItems: Array<{ medicineId: string; quantityDispensed: number }>;
+}
+
 export const dispensingService = {
   getPendingPrescriptions: async () => {
     const res = await apiClient.get<ApiSuccessResponse<PendingPrescription[]>>(ENDPOINTS.PRESCRIPTIONS.PENDING);
@@ -17,7 +23,7 @@ export const dispensingService = {
   },
 
   dispensePrescription: async (prescriptionId: string, dispensedItems: DispensePayload[]) => {
-    const res = await apiClient.post<ApiSuccessResponse<any>>(
+    const res = await apiClient.post<ApiSuccessResponse<DispenseResponse>>(
       ENDPOINTS.DISPENSE.BASE,
       { prescriptionId, dispensedItems }
     );

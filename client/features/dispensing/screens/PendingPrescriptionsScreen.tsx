@@ -1,5 +1,6 @@
 import React, { useEffect, useState, useCallback, useMemo } from 'react';
 import { View, Text, FlatList, StyleSheet, ActivityIndicator, TouchableOpacity, RefreshControl } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { Feather } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { dispensingService } from '../services/dispensing.service';
@@ -108,7 +109,7 @@ export default function PendingPrescriptionsScreen() {
   );
 
   return (
-    <View style={[styles.container, { backgroundColor: theme.background }]}>
+    <SafeAreaView style={[styles.container, { backgroundColor: theme.background }]} edges={['bottom']}>
       <FlatList
         data={pending}
         keyExtractor={keyExtractor}
@@ -119,7 +120,7 @@ export default function PendingPrescriptionsScreen() {
         contentContainerStyle={pending.length === 0 ? styles.emptyList : styles.list}
         showsVerticalScrollIndicator={false}
       />
-    </View>
+    </SafeAreaView>
   );
 }
 

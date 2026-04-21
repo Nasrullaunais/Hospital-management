@@ -1,5 +1,6 @@
 import React, { useEffect, useState, useCallback, useMemo } from 'react';
 import { View, Text, StyleSheet, ActivityIndicator, ScrollView, TouchableOpacity, Alert } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { Feather } from '@expo/vector-icons';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { dispensingService } from '../services/dispensing.service';
@@ -176,11 +177,12 @@ export default function DispenseScreen() {
     typeof prescription.patientId === 'object' ? prescription.patientId?.name : 'Patient';
 
   return (
-    <ScrollView
-      style={[styles.container, { backgroundColor: theme.background }]}
-      contentContainerStyle={styles.content}
-      showsVerticalScrollIndicator={false}
-    >
+    <SafeAreaView style={[styles.container, { backgroundColor: theme.background }]} edges={['bottom']}>
+      <ScrollView
+        style={styles.container}
+        contentContainerStyle={styles.content}
+        showsVerticalScrollIndicator={false}
+      >
       {/* Patient Info Card */}
       <View style={[styles.patientCard, { backgroundColor: theme.surface, borderColor: theme.border }]}>
         <View style={styles.patientHeader}>
@@ -314,6 +316,7 @@ export default function DispenseScreen() {
         )}
       </TouchableOpacity>
     </ScrollView>
+    </SafeAreaView>
   );
 }
 
