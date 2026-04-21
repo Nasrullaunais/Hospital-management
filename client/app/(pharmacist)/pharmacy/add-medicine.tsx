@@ -19,7 +19,7 @@ import * as ImagePicker from 'expo-image-picker';
 import { useRouter } from 'expo-router';
 import { useAuth } from '@/shared/context/AuthContext';
 import { medicineService } from '@/features/pharmacy/services/medicine.service';
-import Colors, { gray } from '@/constants/Colors';
+import Colors from '@/constants/Colors';
 import { useColorScheme } from '@/components/useColorScheme';
 
 interface PickedImage {
@@ -28,38 +28,11 @@ interface PickedImage {
   type: string;
 }
 
-// Destructure for convenience - useMemo ensures stable reference
-const useColors = (colorScheme: 'light' | 'dark' | null) => useMemo(() => {
-  const c = Colors[colorScheme ?? 'light'];
-  return {
-    gray50: gray[50],
-    gray100: gray[100],
-    gray200: gray[200],
-    gray300: gray[300],
-    gray400: gray[400],
-    gray500: gray[500],
-    gray600: gray[600],
-    gray700: gray[700],
-    gray800: gray[800],
-    gray900: gray[900],
-    text: c.text,
-    textMuted: c.textSecondary,
-    textSecondary: c.textSecondary,
-    surface: c.surface,
-    primary: c.primary,
-    success: c.success,
-    successBg: c.successBg,
-    error: c.error,
-    errorBg: c.errorBg,
-    infoBg: c.infoBg,
-  };
-}, [colorScheme]);
-
 export default function AddMedicineScreen() {
   const router = useRouter();
   const { user } = useAuth();
-  const colorScheme = useColorScheme();
-  const c = useColors(colorScheme);
+  const colorScheme = useColorScheme() ?? 'light';
+  const theme = Colors[colorScheme];
 
   const [name, setName] = useState('');
   const [category, setCategory] = useState('');
@@ -174,59 +147,59 @@ export default function AddMedicineScreen() {
         style={styles.flex}
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       >
-        <ScrollView style={[styles.container, { backgroundColor: c.gray50 }]} contentContainerStyle={styles.content}>
-        <Text style={[styles.title, { color: c.gray900 }]}>Add Medication</Text>
-        <Text style={[styles.subtitle, { color: c.gray500 }]}>Capture packaging and register medicine inventory.</Text>
+        <ScrollView style={[styles.container, { backgroundColor: theme.background }]} contentContainerStyle={styles.content}>
+        <Text style={[styles.title, { color: theme.text }]}>Add Medication</Text>
+        <Text style={[styles.subtitle, { color: theme.textSecondary }]}>Capture packaging and register medicine inventory.</Text>
 
-        <Text style={[styles.label, { color: c.gray700 }]}>Medicine Name</Text>
+        <Text style={[styles.label, { color: theme.text }]}>Medicine Name</Text>
         <TextInput
           value={name}
           onChangeText={setName}
-          style={[styles.input, { backgroundColor: c.surface, borderColor: c.gray300, color: c.text }]}
+          style={[styles.input, { backgroundColor: theme.surface, borderColor: theme.border, color: theme.text }]}
           placeholder="e.g. Amoxicillin"
-          placeholderTextColor={c.textMuted}
+          placeholderTextColor={theme.textSecondary}
           editable={!submitting}
         />
 
-        <Text style={[styles.label, { color: c.gray700 }]}>Category</Text>
+        <Text style={[styles.label, { color: theme.text }]}>Category</Text>
         <TextInput
           value={category}
           onChangeText={setCategory}
-          style={[styles.input, { backgroundColor: c.surface, borderColor: c.gray300, color: c.text }]}
+          style={[styles.input, { backgroundColor: theme.surface, borderColor: theme.border, color: theme.text }]}
           placeholder="e.g. Antibiotic"
-          placeholderTextColor={c.textMuted}
+          placeholderTextColor={theme.textSecondary}
           editable={!submitting}
         />
 
-        <Text style={[styles.label, { color: c.gray700 }]}>Price ($)</Text>
+        <Text style={[styles.label, { color: theme.text }]}>Price ($)</Text>
         <TextInput
           value={price}
           onChangeText={setPrice}
-          style={[styles.input, { backgroundColor: c.surface, borderColor: c.gray300, color: c.text }]}
+          style={[styles.input, { backgroundColor: theme.surface, borderColor: theme.border, color: theme.text }]}
           placeholder="e.g. 12.50"
-          placeholderTextColor={c.textMuted}
+          placeholderTextColor={theme.textSecondary}
           keyboardType="decimal-pad"
           editable={!submitting}
         />
 
-        <Text style={[styles.label, { color: c.gray700 }]}>Stock Quantity</Text>
+        <Text style={[styles.label, { color: theme.text }]}>Stock Quantity</Text>
         <TextInput
           value={stockQuantity}
           onChangeText={setStockQuantity}
-          style={[styles.input, { backgroundColor: c.surface, borderColor: c.gray300, color: c.text }]}
+          style={[styles.input, { backgroundColor: theme.surface, borderColor: theme.border, color: theme.text }]}
           placeholder="e.g. 100"
-          placeholderTextColor={c.textMuted}
+          placeholderTextColor={theme.textSecondary}
           keyboardType="number-pad"
           editable={!submitting}
         />
 
-        <Text style={[styles.label, { color: c.gray700 }]}>Expiry Date</Text>
+        <Text style={[styles.label, { color: theme.text }]}>Expiry Date</Text>
         <TouchableOpacity
           onPress={() => setShowDatePicker(true)}
-          style={[styles.dateButton, { backgroundColor: c.surface, borderColor: c.gray300 }]}
+          style={[styles.dateButton, { backgroundColor: theme.surface, borderColor: theme.border }]}
           disabled={submitting}
         >
-          <Text style={[styles.dateButtonText, { color: c.text }]}>{expiryDate.toLocaleDateString()}</Text>
+          <Text style={[styles.dateButtonText, { color: theme.text }]}>{expiryDate.toLocaleDateString()}</Text>
         </TouchableOpacity>
 
         {showDatePicker ? (
@@ -239,13 +212,13 @@ export default function AddMedicineScreen() {
           />
         ) : null}
 
-        <Text style={[styles.label, { color: c.gray700 }]}>Packaging Image</Text>
+        <Text style={[styles.label, { color: theme.text }]}>Packaging Image</Text>
         <TouchableOpacity
           onPress={pickPackagingImage}
-          style={[styles.imageButton, { borderColor: c.primary }]}
+          style={[styles.imageButton, { borderColor: theme.primary, backgroundColor: theme.infoBg }]}
           disabled={submitting}
         >
-          <Text style={[styles.imageButtonText, { color: c.primary }]}>
+          <Text style={[styles.imageButtonText, { color: theme.primary }]}>
             {packagingImage ? 'Retake Packaging Photo' : 'Capture Packaging Photo'}
           </Text>
         </TouchableOpacity>
@@ -253,12 +226,12 @@ export default function AddMedicineScreen() {
         {packagingImage ? (
           <View style={styles.previewWrap}>
             <Image source={{ uri: packagingImage.uri }} style={styles.previewImage} />
-            <Text style={[styles.previewLabel, { color: c.gray500 }]}>{packagingImage.name}</Text>
+            <Text style={[styles.previewLabel, { color: theme.textSecondary }]}>{packagingImage.name}</Text>
           </View>
         ) : null}
 
         <TouchableOpacity
-          style={[styles.submitButton, { backgroundColor: c.primary }, submitting && { opacity: 0.6 }]}
+          style={[styles.submitButton, { backgroundColor: theme.primary }, submitting && { opacity: 0.6 }]}
           onPress={handleSubmit}
           disabled={submitting}
         >
@@ -297,11 +270,10 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     paddingVertical: 14,
     alignItems: 'center',
-    backgroundColor: Colors.light.infoBg,
   },
   imageButtonText: { fontSize: 14, fontWeight: '600' },
   previewWrap: { marginTop: 10, alignItems: 'center' },
-  previewImage: { width: 160, height: 160, borderRadius: 10, backgroundColor: gray[200] },
+  previewImage: { width: 160, height: 160, borderRadius: 10, backgroundColor: '#e5e7eb' },
   previewLabel: { marginTop: 8, fontSize: 12 },
   submitButton: {
     marginTop: 24,

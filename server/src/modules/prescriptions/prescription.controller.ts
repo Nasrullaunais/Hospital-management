@@ -71,7 +71,10 @@ export const getPrescriptionById = async (req: Request, res: Response) => {
       ? prescription.doctorId._id.toString()
       : prescription.doctorId.toString();
   const isAuthorized =
-    req.user.id === patientIdStr || req.user.id === doctorIdStr || req.user.role === ROLES.ADMIN;
+    req.user.id === patientIdStr ||
+    req.user.id === doctorIdStr ||
+    req.user.role === ROLES.ADMIN ||
+    req.user.role === ROLES.PHARMACIST;
   if (!isAuthorized) {
     throw new ApiError(403, 'You are not authorized to view this prescription');
   }

@@ -10,6 +10,7 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { Feather } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { useAuth } from '@/shared/context/AuthContext';
@@ -135,26 +136,30 @@ export default function PharmacyInventoryScreen() {
 
   if (loading) {
     return (
-      <View style={[styles.center, { backgroundColor: theme.background }]}>
-        <ActivityIndicator size="large" color={theme.primary} />
-      </View>
+      <SafeAreaView style={[styles.safeArea, { backgroundColor: theme.background }]}>
+        <View style={[styles.center, { backgroundColor: theme.background }]}>
+          <ActivityIndicator size="large" color={theme.primary} />
+        </View>
+      </SafeAreaView>
     );
   }
 
   if (error) {
     return (
-      <View style={[styles.center, { backgroundColor: theme.background }]}>
-        <Feather name="alert-circle" size={48} color={theme.error} />
-        <Text style={[styles.errorText, { color: theme.error }]}>{error}</Text>
-        <TouchableOpacity onPress={fetchMedicines} style={[styles.retryButton, { backgroundColor: theme.primary }]}>
-          <Text style={styles.retryButtonText}>Retry</Text>
-        </TouchableOpacity>
-      </View>
+      <SafeAreaView style={[styles.safeArea, { backgroundColor: theme.background }]}>
+        <View style={[styles.center, { backgroundColor: theme.background }]}>
+          <Feather name="alert-circle" size={48} color={theme.error} />
+          <Text style={[styles.errorText, { color: theme.error }]}>{error}</Text>
+          <TouchableOpacity onPress={fetchMedicines} style={[styles.retryButton, { backgroundColor: theme.primary }]}>
+            <Text style={styles.retryButtonText}>Retry</Text>
+          </TouchableOpacity>
+        </View>
+      </SafeAreaView>
     );
   }
 
   return (
-    <View style={[styles.container, { backgroundColor: theme.background }]}>
+    <SafeAreaView style={[styles.safeArea, { backgroundColor: theme.background }]} edges={['left', 'right', 'top']}>
       <View style={[styles.filterRow, { backgroundColor: theme.surface }]}>
         <TextInput
           style={[styles.filterInput, { backgroundColor: theme.inputBackground, borderColor: theme.inputBorder, color: theme.text }]}
@@ -188,11 +193,12 @@ export default function PharmacyInventoryScreen() {
           </View>
         }
       />
-    </View>
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
+  safeArea: { flex: 1 },
   container: { flex: 1 },
   filterRow: { paddingHorizontal: spacing.md, paddingVertical: spacing.sm },
   filterInput: {

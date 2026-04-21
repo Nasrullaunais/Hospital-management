@@ -21,7 +21,7 @@ import { Config } from '@/shared/constants/Config';
 function getImageUrl(url: string): string {
   if (!url) return '';
   if (url.startsWith('http://') || url.startsWith('https://')) return url;
-  const base = Config.API_URL;
+  const base = Config.BASE_URL;
   const path = url.startsWith('/') ? url : `/${url}`;
   return `${base}${path}`;
 }
