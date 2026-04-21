@@ -198,6 +198,8 @@ export default function DoctorProfileScreen() {
 
         {doctorProfile && (
           <>
+            <View style={[styles.divider, { backgroundColor: colors.border }]} />
+
             <Text style={[styles.sectionTitle, { color: colors.textSecondary }]}>Professional Information</Text>
 
             <View style={styles.field}>
@@ -293,7 +295,7 @@ export default function DoctorProfileScreen() {
 
         {!doctorProfile && (
           <View style={[styles.noDoctorProfile, { backgroundColor: colors.surfaceTertiary }]}>
-            <SymbolView name={{ ios: 'person.crop.circle.badge.exclamationmark', android: 'person', web: 'person' }} tintColor={colors.warning} size={28} />
+            <SymbolView name={{ ios: 'person.crop.circle.badge.exclamationmark', android: 'person', web: 'person' }} tintColor={colors.warning} size={32} />
             <Text style={[styles.noDoctorText, { color: colors.textSecondary }]}>
               Doctor profile not found. Contact admin to set up your professional profile.
             </Text>
@@ -328,21 +330,21 @@ const styles = StyleSheet.create({
   },
   roleText: { fontSize: 12, fontWeight: '600' },
   sectionTitle: {
-    fontSize: 11,
+    fontSize: 13,
     fontWeight: '700',
     textTransform: 'uppercase',
     letterSpacing: 0.8,
     marginTop: 8,
-    marginBottom: 16,
+    marginBottom: 12,
   },
-  field: { marginBottom: 20 },
+  field: { marginBottom: 16 },
   label: { fontSize: 12, fontWeight: '600', marginBottom: 4, textTransform: 'uppercase' },
-  value: { fontSize: 16 },
+  value: { fontSize: 16, fontWeight: '500' },
   input: {
     borderWidth: 1,
     borderRadius: 8,
     paddingHorizontal: 12,
-    paddingVertical: 10,
+    paddingVertical: 12,
     fontSize: 16,
   },
   row: { flexDirection: 'row', marginTop: 8 },
@@ -358,14 +360,15 @@ const styles = StyleSheet.create({
   buttonText: { color: '#fff', fontSize: 15, fontWeight: '600' },
   availabilityPicker: { flexDirection: 'row', gap: 8, flexWrap: 'wrap', marginTop: 4 },
   availBadge: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  availDot: { width: 10, height: 10, borderRadius: 5 },
+  availDot: { width: 12, height: 12, borderRadius: 6 },
   availPill: {
-    paddingHorizontal: 14,
-    paddingVertical: 7,
+    paddingHorizontal: 16,
+    paddingVertical: 10,
     borderRadius: 20,
     borderWidth: 1.5,
   },
   availPillText: { fontSize: 13, fontWeight: '600' },
+  divider: { height: 1, marginVertical: 16 },
   noDoctorProfile: {
     flexDirection: 'row',
     alignItems: 'center',

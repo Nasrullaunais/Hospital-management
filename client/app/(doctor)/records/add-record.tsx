@@ -21,15 +21,20 @@ import Colors from '@/constants/Colors';
 import { useColorScheme } from '@/components/useColorScheme';
 import { apiClient } from '@/shared/api/client';
 import { ENDPOINTS } from '@/shared/api/endpoints';
+import { APPOINTMENT_STATUS } from '@/shared/constants/appointmentStatus';
 import { recordService } from '@/features/records/services/record.service';
 import { prescriptionService, type PrescriptionItem } from '@/features/prescriptions/services/prescription.service';
 import { medicineService } from '@/features/pharmacy/services/medicine.service';
 import type { ApiSuccessResponse, Appointment, User, Medicine } from '@/shared/types';
 
+const TAB_BAR_HEIGHT = 70;
+
 type PatientOption = {
   appointmentId: string;
   patientId: string;
   patientName: string;
+  appointmentDate: string;
+  status: string;
 };
 
 export default function AddRecordScreen() {
@@ -64,7 +69,7 @@ export default function AddRecordScreen() {
         const options: PatientOption[] = [];
 
         for (const appt of appointments) {
-          if (appt.status !== 'Confirmed' && appt.status !== 'Completed') continue;
+          if (appt.status === APPOINTMENT_STATUS.CANCELLED) continue;
           const patient = appt.patientId as User;
           if (seen.has(patient._id)) continue;
           seen.add(patient._id);
@@ -72,6 +77,8 @@ export default function AddRecordScreen() {
             appointmentId: appt._id,
             patientId: patient._id,
             patientName: patient.name,
+            appointmentDate: appt.appointmentDate,
+            status: appt.status,
           });
         }
 
@@ -190,47 +197,72 @@ export default function AddRecordScreen() {
         <ScrollView contentContainerStyle={styles.container} keyboardShouldPersistTaps="handled">
 
         {/* Patient Selector */}
-        <Text style={[styles.label, { color: colors.text }]}>Patient *</Text>
+        <Text style={[styles.label, { color: colors.text }]}>Select Patient</Text>
         {patients.length === 0 ? (
           <View style={[styles.hintBox, { backgroundColor: colors.surfaceTertiary }]}>
             <SymbolView name={{ ios: 'calendar.badge.exclamationmark', android: 'event', web: 'event' }} tintColor={colors.warning} size={20} />
             <View style={styles.hintContent}>
               <Text style={[styles.hintTitle, { color: colors.text }]}>No patients available</Text>
               <Text style={[styles.hint, { color: colors.textSecondary }]}>
-                You need confirmed or completed appointments before creating medical records. Patients must book and confirm appointments first.
+                You need pending or confirmed appointments before creating medical records. Patients must book appointments first.
               </Text>
             </View>
           </View>
         ) : (
-          <View style={styles.patientList}>
-            {patients.map((p) => (
-              <TouchableOpacity
-                key={p.patientId}
-                style={[
-                  styles.patientChip,
-                  selectedPatient?.patientId === p.patientId
-                    ? { backgroundColor: colors.primaryMuted, borderColor: colors.primary }
-                    : { backgroundColor: colors.surface, borderColor: colors.border },
-                ]}
-                onPress={() => setSelectedPatient(p)}
-              >
-                <SymbolView
-                  name={{ ios: 'person', android: 'person', web: 'person' }}
-                  tintColor={selectedPatient?.patientId === p.patientId ? colors.primary : colors.textSecondary}
-                  size={14}
-                />
-                <Text
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.patientScrollView} contentContainerStyle={styles.patientScrollContent}>
+            {patients.map((p) => {
+              const isSelected = selectedPatient?.patientId === p.patientId;
+              const statusColor =
+                p.status === APPOINTMENT_STATUS.CONFIRMED ? colors.success :
+                p.status === APPOINTMENT_STATUS.COMPLETED ? colors.textSecondary :
+                p.status === APPOINTMENT_STATUS.PENDING ? colors.warning :
+                colors.textSecondary;
+              const formattedDate = new Date(p.appointmentDate).toLocaleDateString('en-US', {
+                month: 'short',
+                day: 'numeric',
+                hour: '2-digit',
+                minute: '2-digit',
+              });
+              return (
+                <TouchableOpacity
+                  key={p.patientId}
                   style={[
-                    styles.patientChipText,
-                    { color: selectedPatient?.patientId === p.patientId ? colors.primary : colors.text },
+                    styles.patientChip,
+                    isSelected
+                      ? { backgroundColor: colors.primaryMuted, borderColor: colors.primary }
+                      : { backgroundColor: colors.surface, borderColor: colors.border },
                   ]}
+                  onPress={() => setSelectedPatient(p)}
                 >
-                  {p.patientName}
-                </Text>
-              </TouchableOpacity>
-            ))}
-          </View>
+                  <SymbolView
+                    name={{ ios: 'person', android: 'person', web: 'person' }}
+                    tintColor={isSelected ? colors.primary : colors.textSecondary}
+                    size={14}
+                  />
+                  <View style={styles.patientChipContent}>
+                    <Text
+                      style={[
+                        styles.patientChipText,
+                        { color: isSelected ? colors.primary : colors.text },
+                      ]}
+                    >
+                      {p.patientName}
+                    </Text>
+                    <View style={styles.patientChipMeta}>
+                      <View style={[styles.statusBadge, { backgroundColor: statusColor + '20' }]}>
+                        <Text style={[styles.statusBadgeText, { color: statusColor }]}>{p.status}</Text>
+                      </View>
+                      <Text style={[styles.appointmentDate, { color: colors.textSecondary }]}>{formattedDate}</Text>
+                    </View>
+                  </View>
+                </TouchableOpacity>
+              );
+            })}
+          </ScrollView>
         )}
+
+        {/* Section Separator */}
+        <View style={styles.sectionSeparator} />
 
         {/* Diagnosis */}
         <Text style={[styles.label, { color: colors.text }]}>Diagnosis *</Text>
@@ -256,7 +288,7 @@ export default function AddRecordScreen() {
         />
 
         {/* Prescription Items */}
-        <Text style={[styles.label, { color: colors.text }]}>Prescription Items</Text>
+        <Text style={styles.sectionHeader}>Prescription Items</Text>
         {rxItems.length > 0 && (
           <View style={styles.rxItemList}>
             {rxItems.map((item, idx) => (
@@ -297,7 +329,7 @@ export default function AddRecordScreen() {
             size={18}
           />
           <Text style={[styles.uploadButtonText, { color: labFile ? colors.primary : colors.textSecondary }]}>
-            {labFile ? `📎 ${labFile.name}` : 'Attach PDF or Image (optional)'}
+            {labFile ? `📎 ${labFile.name}` : 'Upload Lab Report (PDF or Image)'}
           </Text>
         </TouchableOpacity>
         {labFile ? (
@@ -326,6 +358,7 @@ export default function AddRecordScreen() {
       <Modal visible={medicineModalOpen} animationType="slide" transparent>
         <View style={styles.modalOverlay}>
           <View style={[styles.modalContent, { backgroundColor: colors.surface }]}>
+            <View style={styles.modalDragHandle} />
             <Text style={[styles.modalTitle, { color: colors.text }]}>Select Medicine</Text>
             {loadingMedicines ? (
               <ActivityIndicator size="large" color={colors.primary} />
@@ -416,55 +449,84 @@ const styles = StyleSheet.create({
   flex: { flex: 1 },
   centered: { flex: 1, justifyContent: 'center', alignItems: 'center', gap: 12 },
   loadingText: { fontSize: 15 },
-  container: { padding: 20, paddingBottom: 48 },
+  container: { padding: 20, paddingBottom: TAB_BAR_HEIGHT + 24 },
   label: {
     fontSize: 13,
     fontWeight: '600',
     marginBottom: 8,
-    marginTop: 16,
+    marginTop: 20,
     textTransform: 'uppercase',
     letterSpacing: 0.4,
+  },
+  sectionHeader: {
+    fontSize: 15,
+    fontWeight: '700',
+    marginBottom: 8,
+    marginTop: 20,
+    color: '#374151',
   },
   hintBox: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 12,
-    borderRadius: 8,
-    padding: 12,
+    borderRadius: 12,
+    padding: 16,
     marginBottom: 4,
+    backgroundColor: '#FEF3C7',
   },
   hintContent: { flex: 1 },
   hintTitle: { fontSize: 15, fontWeight: '600', marginBottom: 4 },
   hint: { fontSize: 14, lineHeight: 20 },
   patientList: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 4 },
+  patientScrollView: { marginBottom: 4 },
+  patientScrollContent: { gap: 8, paddingRight: 8 },
+  sectionSeparator: {
+    height: 1,
+    backgroundColor: '#E5E7EB',
+    marginVertical: 16,
+  },
   patientChip: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 6,
+    gap: 8,
     paddingHorizontal: 14,
-    paddingVertical: 8,
+    paddingVertical: 10,
     borderRadius: 20,
     borderWidth: 1.5,
   },
-  patientChipText: { fontSize: 14, fontWeight: '500' },
+  patientChipContent: { gap: 4 },
+  patientChipText: { fontSize: 14, fontWeight: '600' },
+  patientChipMeta: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  statusBadge: {
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 6,
+  },
+  statusBadgeText: { fontSize: 10, fontWeight: '600' },
+  appointmentDate: { fontSize: 11 },
   input: {
     borderWidth: 1,
     borderRadius: 10,
     paddingHorizontal: 14,
     paddingVertical: 12,
-    fontSize: 15,
+    fontSize: 16,
   },
-  multiline: { minHeight: 100 },
-  rxItemList: { gap: 8, marginBottom: 8 },
+  multiline: { minHeight: 120 },
+  rxItemList: { gap: 10, marginBottom: 8 },
   rxItemRow: {
     flexDirection: 'row',
-    borderRadius: 10,
-    padding: 12,
+    borderRadius: 12,
+    padding: 14,
     borderWidth: 1,
     alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.08,
+    shadowRadius: 4,
+    elevation: 2,
   },
   rxItemInfo: { flex: 1 },
-  rxItemName: { fontSize: 15, fontWeight: '600' },
+  rxItemName: { fontSize: 16, fontWeight: '600' },
   rxItemDetail: { fontSize: 13, marginTop: 2 },
   rxItemInstructions: { fontSize: 12, fontStyle: 'italic', marginTop: 2 },
   addMedicineButton: {
@@ -493,12 +555,18 @@ const styles = StyleSheet.create({
   removeFile: { fontSize: 13, marginTop: 6, textAlign: 'right' },
   submitButton: {
     marginTop: 32,
+    marginBottom: 16,
     borderRadius: 12,
     paddingVertical: 16,
     alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.15,
+    shadowRadius: 8,
+    elevation: 4,
   },
   submitButtonDisabled: { opacity: 0.6 },
-  submitButtonText: { color: '#fff', fontSize: 16, fontWeight: '700' },
+  submitButtonText: { color: '#fff', fontSize: 17, fontWeight: '700' },
   modalOverlay: {
     flex: 1,
     backgroundColor: 'rgba(0,0,0,0.5)',
@@ -508,7 +576,16 @@ const styles = StyleSheet.create({
     borderTopLeftRadius: 24,
     borderTopRightRadius: 24,
     padding: 24,
+    paddingTop: 12,
     maxHeight: '80%',
+  },
+  modalDragHandle: {
+    width: 40,
+    height: 4,
+    borderRadius: 2,
+    backgroundColor: '#D1D5DB',
+    alignSelf: 'center',
+    marginBottom: 8,
   },
   modalTitle: { fontSize: 18, fontWeight: '700', marginBottom: 16 },
   medicineList: { maxHeight: 300 },

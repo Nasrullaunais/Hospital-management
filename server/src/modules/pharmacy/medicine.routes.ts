@@ -34,7 +34,7 @@ router.get('/', authMiddleware, getAllMedicines);
 router.get('/:id', authMiddleware, getMedicineById);
 
 /** PATCH /api/medicines/:id/stock — Protected */
-router.patch('/:id/stock', authMiddleware, adjustStockValidation, adjustStock);
+router.patch('/:id/stock', authMiddleware, requireRole('pharmacist', 'admin'), adjustStockValidation, adjustStock);
 
 /** PUT /api/medicines/:id — Admin only */
 router.put('/:id', authMiddleware, requireRole('admin'), updateMedicineValidation, updateMedicine);

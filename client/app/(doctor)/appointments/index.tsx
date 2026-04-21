@@ -10,23 +10,18 @@ import {
   ActivityIndicator,
   Alert,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { SymbolView } from 'expo-symbols';
 import Colors from '@/constants/Colors';
 import { useColorScheme } from '@/components/useColorScheme';
 import { apiClient } from '@/shared/api/client';
 import { ENDPOINTS } from '@/shared/api/endpoints';
+import { APPOINTMENT_STATUS, APPOINTMENT_STATUS_VARIANTS } from '@/shared/constants/appointmentStatus';
 import { appointmentService } from '@/features/appointments/services/appointment.service';
-import type { ApiSuccessResponse, Appointment, User, AppointmentStatus } from '@/shared/types';
+import type { ApiSuccessResponse, Appointment, User } from '@/shared/types';
 import { ListCard, EmptyState, LoadingState, ErrorState } from '@/components/ui';
 
-const STATUS_VARIANTS = {
-  Pending: 'warning' as const,
-  Confirmed: 'info' as const,
-  Completed: 'success' as const,
-  Cancelled: 'error' as const,
-};
-
-const STATUS_OPTIONS: AppointmentStatus[] = ['Pending', 'Confirmed', 'Completed', 'Cancelled'];
+const TAB_BAR_HEIGHT = 70;
 
 export default function DoctorScheduleScreen() {
   const [appointments, setAppointments] = useState<Appointment[]>([]);
@@ -67,10 +62,13 @@ export default function DoctorScheduleScreen() {
       ? (item.patientId as User).name
       : 'Unknown Patient';
 
-    const statusVariant = STATUS_VARIANTS[item.status] ?? 'neutral';
+    const statusVariant = APPOINTMENT_STATUS_VARIANTS[item.status] ?? 'neutral';
 
     return (
-      <TouchableOpacity onPress={() => { setSelectedAppt(item); setModalOpen(true); }}>
+      <TouchableOpacity
+        style={styles.cardWrapper}
+        onPress={() => { setSelectedAppt(item); setModalOpen(true); }}
+      >
         <ListCard
           title={patientName}
           subtitle={new Date(item.appointmentDate).toLocaleString()}
@@ -113,7 +111,14 @@ export default function DoctorScheduleScreen() {
   }
 
   return (
-    <View style={[styles.root, { backgroundColor: colors.background }]}>
+    <SafeAreaView edges={['top', 'bottom']} style={[styles.safeArea, { backgroundColor: colors.background }]}>
+      <View style={styles.screenHeader}>
+        <Text style={[styles.headerTitle, { color: colors.text }]}>My Schedule</Text>
+        <Text style={[styles.headerSub, { color: colors.textSecondary }]}>
+          {appointments.length} appointment{appointments.length !== 1 ? 's' : ''}
+        </Text>
+      </View>
+
       <FlatList
         data={appointments}
         keyExtractor={(item) => item._id}
@@ -126,14 +131,6 @@ export default function DoctorScheduleScreen() {
           />
         }
         contentContainerStyle={appointments.length === 0 ? styles.emptyContainer : styles.listContainer}
-        ListHeaderComponent={
-          <View style={styles.header}>
-            <Text style={[styles.headerTitle, { color: colors.text }]}>My Schedule</Text>
-            <Text style={[styles.headerSub, { color: colors.textSecondary }]}>
-              {appointments.length} appointment{appointments.length !== 1 ? 's' : ''}
-            </Text>
-          </View>
-        }
         ListEmptyComponent={
           <EmptyState
             title="No Appointments"
@@ -161,7 +158,7 @@ export default function DoctorScheduleScreen() {
                   </Text>
                 </View>
                 <View style={styles.statusPicker}>
-                  {STATUS_OPTIONS.map((status) => (
+                  {ALL_APPOINTMENT_STATUSES.map((status) => (
                     <TouchableOpacity
                       key={status}
                       style={[
@@ -230,21 +227,31 @@ export default function DoctorScheduleScreen() {
           </View>
         </View>
       </Modal>
-    </View>
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  root: { flex: 1 },
-  listContainer: { padding: 12 },
-  emptyContainer: { flex: 1 },
-  header: {
-    marginBottom: 12,
-    paddingTop: 4,
-    gap: 2,
+  safeArea: { flex: 1 },
+  screenHeader: {
+    paddingHorizontal: 16,
+    paddingTop: 16,
+    paddingBottom: 12,
+    gap: 4,
+  },
+  listContainer: {
+    paddingHorizontal: 16,
+    paddingBottom: TAB_BAR_HEIGHT + 16,
+  },
+  emptyContainer: {
+    flex: 1,
+    paddingBottom: TAB_BAR_HEIGHT + 16,
   },
   headerTitle: { fontSize: 22, fontWeight: '700' },
   headerSub: { fontSize: 13 },
+  cardWrapper: {
+    marginBottom: 12,
+  },
   reasonRow: {
     flexDirection: 'row',
     alignItems: 'flex-start',

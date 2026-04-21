@@ -79,6 +79,16 @@ export default function DoctorLayout() {
             headerShadowVisible: false,
           }}
         />
+        <Stack.Screen
+          name="records/[id]"
+          options={{
+            headerShown: true,
+            title: 'Record Details',
+            headerStyle: { backgroundColor: theme.surface },
+            headerTintColor: theme.text,
+            headerShadowVisible: false,
+          }}
+        />
       </Stack>
 
       {/* Custom Tab Bar */}

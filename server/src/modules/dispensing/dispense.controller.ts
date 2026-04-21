@@ -4,6 +4,8 @@ import { Dispense } from './dispense.model.js';
 import { Medicine } from '../pharmacy/medicine.model.js';
 import { Prescription } from '../prescriptions/prescription.model.js';
 import { ApiError } from '../../shared/utils/ApiError.js';
+import { ROLES } from '../../shared/constants/roles.js';
+import { PRESCRIPTION_STATUS } from '../../shared/constants/prescriptionStatus.js';
 
 export const dispensePrescription = async (req: Request, res: Response) => {
   const { prescriptionId, dispensedItems } = req.body;
@@ -15,11 +17,10 @@ export const dispensePrescription = async (req: Request, res: Response) => {
 
   const prescription = await Prescription.findById(prescriptionId);
   if (!prescription) throw new ApiError(404, 'Prescription not found');
-  if (prescription.status !== 'active') {
+  if (prescription.status !== PRESCRIPTION_STATUS.ACTIVE) {
     throw new ApiError(400, `Cannot dispense a prescription with status '${prescription.status}'`);
   }
 
-  // Validate each dispensed item and deduct stock
   const session = await mongoose.startSession();
   session.startTransaction();
 
@@ -33,7 +34,6 @@ export const dispensePrescription = async (req: Request, res: Response) => {
         throw new ApiError(400, 'Each dispensed item must have medicineId and quantityDispensed > 0');
       }
 
-      // Atomic check-and-decrement in a single operation to prevent race conditions
       const medicine = await Medicine.findOneAndUpdate(
         { _id: item.medicineId, stockQuantity: { $gte: item.quantityDispensed } },
         { $inc: { stockQuantity: -item.quantityDispensed } },
@@ -52,7 +52,6 @@ export const dispensePrescription = async (req: Request, res: Response) => {
       }
     }
 
-    // Build dispensedItems with full details from prescription
     const fullDispensedItems = dispensedItems.map((item: any) => {
       const rxItem = prescription.items.find(
         (pi: any) => pi.medicineId.toString() === item.medicineId,
@@ -67,7 +66,6 @@ export const dispensePrescription = async (req: Request, res: Response) => {
       };
     });
 
-    // Create dispense record
     const dispense = await Dispense.create([{
       prescriptionId,
       patientId: prescription.patientId,
@@ -76,8 +74,7 @@ export const dispensePrescription = async (req: Request, res: Response) => {
       status: 'fulfilled',
     }], { session });
 
-    // Mark prescription as fulfilled
-    prescription.status = 'fulfilled';
+    prescription.status = PRESCRIPTION_STATUS.FULFILLED;
     await prescription.save({ session });
 
     await session.commitTransaction();
@@ -94,8 +91,7 @@ export const dispensePrescription = async (req: Request, res: Response) => {
 export const getDispensesByPatient = async (req: Request, res: Response) => {
   const { patientId } = req.params;
 
-  // Ownership check: only the patient themselves or admin can view
-  const isOwner = req.user!.id === patientId || req.user!.role === 'admin';
+  const isOwner = req.user!.id === patientId || req.user!.role === ROLES.ADMIN;
   if (!isOwner) {
     throw new ApiError(403, 'You are not authorized to view these dispense records');
   }

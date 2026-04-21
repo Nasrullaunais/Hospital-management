@@ -1,16 +1,17 @@
 import type { Request, Response, NextFunction } from 'express';
 import { validationResult } from 'express-validator';
 import { MedicalRecord } from './record.model.js';
-import { Doctor } from '../doctors/doctor.model.js';
 import { ApiError } from '../../shared/utils/ApiError.js';
+import { findDoctorProfileByUserId } from '../../shared/utils/doctorLookup.js';
+import { ROLES } from '../../shared/constants/roles.js';
 
 /** POST /api/records — Create a medical record (Doctor only) */
 export const createRecord = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   const errors = validationResult(req);
   if (!errors.isEmpty()) return next(new ApiError(422, 'Validation failed'));
   try {
-    // Resolve the Doctor document from the authenticated user — never trust doctorId from body
-    const doctor = await Doctor.findOne({ userId: req.user!.id });
+    const userId = req.user!.id as string;
+    const doctor = await findDoctorProfileByUserId(userId);
     if (!doctor) return next(ApiError.notFound('Doctor profile not found for this account'));
 
     const record = await MedicalRecord.create({
@@ -34,7 +35,7 @@ export const getPatientRecords = async (req: Request, res: Response, next: NextF
     // Patients can only view their own records
     const requesterId = req.user!.id;
     const targetId = req.params.patientId;
-    if (req.user!.role === 'patient' && requesterId !== targetId) {
+    if (req.user!.role === ROLES.PATIENT && requesterId !== targetId) {
       return next(ApiError.forbidden('You can only view your own medical records'));
     }
 
@@ -55,7 +56,8 @@ export const getPatientRecords = async (req: Request, res: Response, next: NextF
 /** GET /api/records/doctor-logs — Get all records created by the authenticated doctor */
 export const getDoctorRecords = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   try {
-    const doctor = await Doctor.findOne({ userId: req.user!.id });
+    const userId = req.user!.id as string;
+    const doctor = await findDoctorProfileByUserId(userId);
     if (!doctor) return next(ApiError.notFound('Doctor profile not found for this account'));
 
     const records = await MedicalRecord.find({ doctorId: doctor._id })
@@ -78,7 +80,7 @@ export const getRecordById = async (req: Request, res: Response, next: NextFunct
     if (!record) return next(ApiError.notFound('Medical record not found'));
 
     // Patients can only see their own records
-    if (req.user!.role === 'patient' && record.patientId.toString() !== req.user!.id) {
+    if (req.user!.role === ROLES.PATIENT && record.patientId.toString() !== req.user!.id) {
       return next(ApiError.forbidden());
     }
 

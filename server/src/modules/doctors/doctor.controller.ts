@@ -5,6 +5,8 @@ import { validationResult } from 'express-validator';
 import { Doctor } from './doctor.model.js';
 import { User } from '../auth/auth.model.js';
 import { ApiError } from '../../shared/utils/ApiError.js';
+import { ROLES } from '../../shared/constants/roles.js';
+import { findDoctorProfileByUserId } from '../../shared/utils/doctorLookup.js';
 
 // ── Controllers ────────────────────────────────────────────────────────────────
 
@@ -32,7 +34,7 @@ export const createDoctor = async (req: Request, res: Response, next: NextFuncti
       await cleanupUploadedFile(req.file);
       return next(ApiError.badRequest('Linked user not found'));
     }
-    if (linkedUser.role !== 'doctor') {
+    if (linkedUser.role !== ROLES.DOCTOR) {
       await cleanupUploadedFile(req.file);
       return next(ApiError.badRequest('Linked user must have role doctor'));
     }
@@ -68,7 +70,8 @@ export const getDoctors = async (req: Request, res: Response, next: NextFunction
 /** GET /api/doctors/me — Get authenticated doctor's own profile */
 export const getMyDoctorProfile = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   try {
-    const doctor = await Doctor.findOne({ userId: req.user!.id }).populate('userId', 'name email phone dateOfBirth');
+    const userId = req.user!.id as string;
+    const doctor = await findDoctorProfileByUserId(userId);
     if (!doctor) return next(ApiError.notFound('Doctor profile not found for this account'));
     res.json({ success: true, data: { doctor } });
   } catch (err) {
@@ -111,7 +114,7 @@ export const updateDoctor = async (req: Request, res: Response, next: NextFuncti
     const existingDoctor = await Doctor.findById(doctorId);
     if (!existingDoctor) return next(ApiError.notFound('Doctor not found'));
 
-    if (req.user?.role === 'doctor' && existingDoctor.userId.toString() !== req.user.id) {
+    if (req.user?.role === ROLES.DOCTOR && existingDoctor.userId.toString() !== req.user.id) {
       return next(ApiError.forbidden('Doctors can only update their own profile'));
     }
 

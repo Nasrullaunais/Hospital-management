@@ -8,6 +8,7 @@ import { useColorScheme } from '@/components/useColorScheme';
 import { useAuth } from '@/shared/context/AuthContext';
 import { apiClient } from '@/shared/api/client';
 import { ENDPOINTS } from '@/shared/api/endpoints';
+import { APPOINTMENT_STATUS } from '@/shared/constants/appointmentStatus';
 import type { ApiSuccessResponse, Appointment } from '@/shared/types';
 
 const TAB_BAR_HEIGHT = 70;
@@ -35,13 +36,13 @@ export default function DoctorDashboard() {
 
       const todayCount = allAppointments.filter((appt) => {
         const apptDate = new Date(appt.appointmentDate);
-        return apptDate >= today && apptDate < tomorrow && appt.status !== 'Cancelled';
+        return apptDate >= today && apptDate < tomorrow && appt.status !== APPOINTMENT_STATUS.CANCELLED;
       }).length;
 
       // Unique patients
       const uniquePatients = new Set(
         allAppointments
-          .filter((appt) => appt.status === 'Completed' || appt.status === 'Confirmed')
+          .filter((appt) => appt.status === APPOINTMENT_STATUS.COMPLETED || appt.status === APPOINTMENT_STATUS.CONFIRMED)
           .map((appt) => {
             if (typeof appt.patientId === 'object') return (appt.patientId as any)._id;
             return appt.patientId;
@@ -183,10 +184,10 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     padding: 18,
     gap: 8,
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.25,
-    shadowRadius: 8,
-    elevation: 4,
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.3,
+    shadowRadius: 12,
+    elevation: 6,
   },
   todayHeader: {
     flexDirection: 'row',
@@ -241,9 +242,14 @@ const styles = StyleSheet.create({
     padding: 14,
     alignItems: 'center',
     gap: 6,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.08,
+    shadowRadius: 6,
+    elevation: 2,
   },
   statValue: {
-    fontSize: 24,
+    fontSize: 28,
     fontWeight: '700',
     marginTop: 4,
   },
@@ -272,6 +278,11 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 12,
     minHeight: 90,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.06,
+    shadowRadius: 6,
+    elevation: 2,
   },
   tileIconWrap: {
     width: 44,
@@ -290,7 +301,7 @@ const styles = StyleSheet.create({
     marginBottom: 2,
   },
   tileSub: {
-    fontSize: 11,
+    fontSize: 12,
     lineHeight: 15,
   },
 });

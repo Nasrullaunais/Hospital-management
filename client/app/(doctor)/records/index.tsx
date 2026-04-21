@@ -20,6 +20,8 @@ import { useAuth } from '@/shared/context/AuthContext';
 import { Config } from '@/shared/constants/Config';
 import type { PopulatedMedicalRecord } from '@/shared/types';
 
+const TAB_BAR_HEIGHT = 70;
+
 export default function RecordsScreen() {
   const { user } = useAuth();
   const router = useRouter();
@@ -77,54 +79,59 @@ export default function RecordsScreen() {
     });
 
     return (
-      <View style={[styles.card, { backgroundColor: colors.surface }]}>
-        <View style={styles.cardHeader}>
-          <View style={styles.dateRow}>
-            <SymbolView name={{ ios: 'calendar', android: 'event', web: 'event' }} tintColor={colors.textSecondary} size={13} />
-            <Text style={[styles.dateText, { color: colors.textSecondary }]}>{displayDate}</Text>
+      <TouchableOpacity
+        activeOpacity={0.7}
+        onPress={() => router.push(`/(doctor)/records/${item._id}`)}
+      >
+        <View style={[styles.card, { backgroundColor: colors.surface }]}>
+          <View style={styles.cardHeader}>
+            <View style={styles.dateRow}>
+              <SymbolView name={{ ios: 'calendar', android: 'event', web: 'event' }} tintColor={colors.textSecondary} size={13} />
+              <Text style={[styles.dateText, { color: colors.textSecondary }]}>{displayDate}</Text>
+            </View>
           </View>
+
+          {isPatientView ? (
+            <View style={styles.subLabelRow}>
+              <SymbolView name={{ ios: 'stethoscope', android: 'medical_services', web: 'medical_services' }} tintColor={colors.primary} size={16} />
+              <Text style={[styles.subLabel, { color: colors.primary }]}>
+                Dr. {item.doctorId.userId.name} · {item.doctorId.specialization}
+              </Text>
+            </View>
+          ) : (
+            <View style={styles.subLabelRow}>
+              <SymbolView name={{ ios: 'person', android: 'person', web: 'person' }} tintColor={colors.primary} size={16} />
+              <Text style={[styles.subLabel, { color: colors.primary }]}>
+                {item.patientId.name}
+              </Text>
+            </View>
+          )}
+
+          <View style={[styles.divider, { backgroundColor: colors.divider }]} />
+
+          <View style={styles.diagnosisSection}>
+            <Text style={[styles.diagnosisLabel, { color: colors.textSecondary }]}>Diagnosis</Text>
+            <Text style={[styles.diagnosisValue, { color: colors.text }]}>{item.diagnosis}</Text>
+          </View>
+
+          {item.prescription ? (
+            <View style={styles.prescriptionSection}>
+              <Text style={[styles.prescriptionLabel, { color: colors.textSecondary }]}>Prescription</Text>
+              <Text style={[styles.prescriptionValue, { color: colors.text }]}>{item.prescription}</Text>
+            </View>
+          ) : null}
+
+          {item.labReportUrl ? (
+            <TouchableOpacity
+              style={[styles.reportButton, { backgroundColor: colors.infoBg, borderColor: colors.info }]}
+              onPress={() => void openLabReport(item.labReportUrl!)}
+            >
+              <SymbolView name={{ ios: 'doc.text', android: 'description', web: 'description' }} tintColor={colors.info} size={16} />
+              <Text style={[styles.reportButtonText, { color: colors.info }]}>View Lab Report</Text>
+            </TouchableOpacity>
+          ) : null}
         </View>
-
-        {isPatientView ? (
-          <View style={styles.subLabelRow}>
-            <SymbolView name={{ ios: 'stethoscope', android: 'medical_services', web: 'medical_services' }} tintColor={colors.primary} size={14} />
-            <Text style={[styles.subLabel, { color: colors.primary }]}>
-              Dr. {item.doctorId.userId.name} · {item.doctorId.specialization}
-            </Text>
-          </View>
-        ) : (
-          <View style={styles.subLabelRow}>
-            <SymbolView name={{ ios: 'person', android: 'person', web: 'person' }} tintColor={colors.primary} size={14} />
-            <Text style={[styles.subLabel, { color: colors.primary }]}>
-              {item.patientId.name}
-            </Text>
-          </View>
-        )}
-
-        <View style={[styles.divider, { backgroundColor: colors.divider }]} />
-
-        <View style={styles.diagnosisSection}>
-          <Text style={[styles.diagnosisLabel, { color: colors.textSecondary }]}>Diagnosis</Text>
-          <Text style={[styles.diagnosisValue, { color: colors.text }]}>{item.diagnosis}</Text>
-        </View>
-
-        {item.prescription ? (
-          <View style={styles.prescriptionSection}>
-            <Text style={[styles.prescriptionLabel, { color: colors.textSecondary }]}>Prescription</Text>
-            <Text style={[styles.prescriptionValue, { color: colors.text }]}>{item.prescription}</Text>
-          </View>
-        ) : null}
-
-        {item.labReportUrl ? (
-          <TouchableOpacity
-            style={[styles.reportButton, { backgroundColor: colors.infoBg, borderColor: colors.info }]}
-            onPress={() => void openLabReport(item.labReportUrl!)}
-          >
-            <SymbolView name={{ ios: 'doc.text', android: 'description', web: 'description' }} tintColor={colors.info} size={16} />
-            <Text style={[styles.reportButtonText, { color: colors.info }]}>View Lab Report</Text>
-          </TouchableOpacity>
-        ) : null}
-      </View>
+      </TouchableOpacity>
     );
   };
 
@@ -215,6 +222,7 @@ const styles = StyleSheet.create({
   },
   list: {
     padding: 16,
+    paddingBottom: TAB_BAR_HEIGHT + 16,
     gap: 12,
   },
   emptyContainer: {
@@ -222,6 +230,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     padding: 40,
+    paddingBottom: TAB_BAR_HEIGHT + 16,
   },
   emptyState: {
     alignItems: 'center',
@@ -256,19 +265,19 @@ const styles = StyleSheet.create({
   subLabelRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 6,
-    marginBottom: 10,
+    gap: 8,
+    marginBottom: 12,
   },
   subLabel: {
     fontSize: 14,
-    fontWeight: '600',
+    fontWeight: '700',
   },
   divider: {
     height: 1,
     marginBottom: 12,
   },
   diagnosisSection: {
-    marginBottom: 8,
+    marginBottom: 12,
   },
   diagnosisLabel: {
     fontSize: 11,
@@ -278,11 +287,11 @@ const styles = StyleSheet.create({
     marginBottom: 4,
   },
   diagnosisValue: {
-    fontSize: 15,
+    fontSize: 16,
     lineHeight: 22,
   },
   prescriptionSection: {
-    marginBottom: 8,
+    marginBottom: 12,
   },
   prescriptionLabel: {
     fontSize: 11,
@@ -292,8 +301,8 @@ const styles = StyleSheet.create({
     marginBottom: 4,
   },
   prescriptionValue: {
-    fontSize: 14,
-    lineHeight: 20,
+    fontSize: 16,
+    lineHeight: 22,
   },
   reportButton: {
     flexDirection: 'row',

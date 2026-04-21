@@ -9,6 +9,7 @@ import {
 } from './doctor.controller.js';
 import { authMiddleware, requireRole } from '../../shared/middlewares/authMiddleware.js';
 import { uploadSingle } from '../../shared/middlewares/uploadMiddleware.js';
+import { ROLES } from '../../shared/constants/roles.js';
 import {
   createDoctorValidation,
   updateDoctorValidation,
@@ -17,29 +18,23 @@ import {
 
 const router = Router();
 
-/** POST /api/doctors — Admin only, requires license doc upload */
 router.post(
   '/',
   authMiddleware,
-  requireRole('admin'),
+  requireRole(ROLES.ADMIN),
   uploadSingle('licenseDocument'),
   createDoctorValidation,
   createDoctor,
 );
 
-/** GET /api/doctors — Public, supports ?specialization= and ?availability= filters */
 router.get('/', listDoctorsValidation, getDoctors);
 
-/** GET /api/doctors/me — Authenticated doctor fetches their own profile */
-router.get('/me', authMiddleware, requireRole('doctor'), getMyDoctorProfile);
+router.get('/me', authMiddleware, requireRole(ROLES.DOCTOR), getMyDoctorProfile);
 
-/** GET /api/doctors/:id — Public */
 router.get('/:id', getDoctorById);
 
-/** PUT /api/doctors/:id — Admin or Doctor */
-router.put('/:id', authMiddleware, requireRole('admin', 'doctor'), updateDoctorValidation, updateDoctor);
+router.put('/:id', authMiddleware, requireRole(ROLES.ADMIN, ROLES.DOCTOR), updateDoctorValidation, updateDoctor);
 
-/** DELETE /api/doctors/:id — Admin only */
-router.delete('/:id', authMiddleware, requireRole('admin'), deleteDoctor);
+router.delete('/:id', authMiddleware, requireRole(ROLES.ADMIN), deleteDoctor);
 
 export default router;

@@ -3,7 +3,7 @@
  */
 import { apiClient } from '@/shared/api/client';
 import { ENDPOINTS } from '@/shared/api/endpoints';
-import type { ApiSuccessResponse } from '@/shared/types';
+import type { PendingPrescription, ApiSuccessResponse } from '@/shared/types';
 
 export interface DispensePayload {
   medicineId: string;
@@ -12,7 +12,7 @@ export interface DispensePayload {
 
 export const dispensingService = {
   getPendingPrescriptions: async () => {
-    const res = await apiClient.get<ApiSuccessResponse<any[]>>(ENDPOINTS.PRESCRIPTIONS.PENDING);
+    const res = await apiClient.get<ApiSuccessResponse<PendingPrescription[]>>(ENDPOINTS.PRESCRIPTIONS.PENDING);
     return res.data.data;
   },
 

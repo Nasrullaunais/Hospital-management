@@ -1,9 +1,11 @@
 import type { Request, Response, NextFunction } from 'express';
 import { validationResult } from 'express-validator';
 import { Appointment } from './appointment.model.js';
-import { Doctor } from '../doctors/doctor.model.js';
 import { ApiError } from '../../shared/utils/ApiError.js';
 import { getRequestContext, logger } from '../../shared/utils/logger.js';
+import { APPOINTMENT_STATUS } from '../../shared/constants/appointmentStatus.js';
+import { ROLES } from '../../shared/constants/roles.js';
+import { findDoctorProfileByUserId } from '../../shared/utils/doctorLookup.js';
 
 /** POST /api/appointments — Book an appointment */
 export const bookAppointment = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
@@ -78,10 +80,10 @@ export const getMyDoctorSchedule = async (req: Request, res: Response, next: Nex
     const userId = req.user?.id;
     if (!userId) return next(ApiError.unauthorized());
 
-    const doctorProfile = await Doctor.findOne({ userId });
-    if (!doctorProfile) return next(ApiError.notFound('Doctor profile not found for this user'));
+    let doctor = await findDoctorProfileByUserId(userId);
+    if (!doctor) return next(ApiError.notFound('Doctor profile not found for this user'));
 
-    const appointments = await Appointment.find({ doctorId: doctorProfile._id })
+    const appointments = await Appointment.find({ doctorId: (doctor as any)._id })
       .populate('patientId', 'name email phone dateOfBirth')
       .sort({ appointmentDate: 1 });
 
@@ -137,7 +139,7 @@ export const cancelAppointment = async (req: Request, res: Response, next: NextF
       return next(ApiError.badRequest('Cannot cancel a past appointment'));
     }
 
-    appointment.status = 'Cancelled';
+    appointment.status = APPOINTMENT_STATUS.CANCELLED;
     await appointment.save();
 
     logger.info(

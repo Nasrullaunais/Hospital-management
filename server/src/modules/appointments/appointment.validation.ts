@@ -1,4 +1,5 @@
 import { body, param } from 'express-validator';
+import { APPOINTMENT_STATUS } from '../../shared/constants/appointmentStatus.js';
 
 export const bookAppointmentValidation = [
   body('doctorId').isMongoId().withMessage('A valid doctorId is required'),
@@ -21,6 +22,11 @@ export const bookAppointmentValidation = [
 export const updateStatusValidation = [
   param('id').isMongoId().withMessage('Invalid appointment ID'),
   body('status')
-    .isIn(['Pending', 'Confirmed', 'Completed', 'Cancelled'])
+    .isIn([
+      APPOINTMENT_STATUS.PENDING,
+      APPOINTMENT_STATUS.CONFIRMED,
+      APPOINTMENT_STATUS.COMPLETED,
+      APPOINTMENT_STATUS.CANCELLED,
+    ])
     .withMessage('Status must be: Pending, Confirmed, Completed, or Cancelled'),
 ];

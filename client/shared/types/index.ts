@@ -128,6 +128,24 @@ export interface Department {
   updatedAt: string;
 }
 
+// ── Prescription ─────────────────────────────────────────────────────────────────
+
+export interface PrescriptionItem {
+  medicineId: string | { _id: string; name?: string };
+  medicineName: string;
+  dosage: string;
+  quantity: number;
+}
+
+export interface PendingPrescription {
+  _id: string;
+  patientId: string | { _id: string; name?: string };
+  doctorId: string | { _id: string; userId?: { name?: string } };
+  items: PrescriptionItem[];
+  status: string;
+  createdAt: string;
+}
+
 // ── Ward ────────────────────────────────────────────────────────────────────────
 
 export type WardType = 'general' | 'private' | 'icu' | 'emergency';
