@@ -86,6 +86,26 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             setUser(null);
           }
         }
+          } catch {
+            // Corrupted cached user — fall through to /patients/me validation
+          }
+        }
+
+        // For patients (or when no cache), validate via /patients/me
+        try {
+          const response = await apiClient.get<{ success: boolean; data: { user: User } }>(
+            ENDPOINTS.PATIENTS.ME,
+          );
+          const validatedUser = response.data.data.user;
+          await AsyncStorage.setItem('@hospital_user', JSON.stringify(validatedUser));
+          setUser(validatedUser);
+        } catch {
+          // /patients/me failed — for patients this means token expired, wipe.
+          // (Non-patients are handled above via early return.)
+          await AsyncStorage.multiRemove([AUTH_TOKEN_KEY, '@hospital_user']);
+          setToken(null);
+          setUser(null);
+        }
       } catch {
         // Corrupted storage — clear and start fresh
         await AsyncStorage.multiRemove([AUTH_TOKEN_KEY, '@hospital_user']);
