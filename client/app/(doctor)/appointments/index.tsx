@@ -16,7 +16,7 @@ import Colors from '@/constants/Colors';
 import { useColorScheme } from '@/components/useColorScheme';
 import { apiClient } from '@/shared/api/client';
 import { ENDPOINTS } from '@/shared/api/endpoints';
-import { APPOINTMENT_STATUS, APPOINTMENT_STATUS_VARIANTS } from '@/shared/constants/appointmentStatus';
+import { APPOINTMENT_STATUS, APPOINTMENT_STATUS_VARIANTS, ALL_APPOINTMENT_STATUSES } from '@/shared/constants/appointmentStatus';
 import { appointmentService } from '@/features/appointments/services/appointment.service';
 import type { ApiSuccessResponse, Appointment, User } from '@/shared/types';
 import { ListCard, EmptyState, LoadingState, ErrorState } from '@/components/ui';
@@ -197,8 +197,9 @@ export default function DoctorScheduleScreen() {
                       updating && styles.modalConfirmBtnDisabled,
                     ]}
                     onPress={async () => {
-                      if (!selectedAppt || selectedAppt.status === appointments.find(a => a._id === selectedAppt._id)?.status) {
-                        setModalOpen(false);
+                      const currentStatus = appointments.find(a => a._id === selectedAppt._id)?.status;
+                      if (!selectedAppt || selectedAppt.status === currentStatus) {
+                        Alert.alert('No Change', `Status is already "${currentStatus}".`);
                         return;
                       }
                       setUpdating(true);

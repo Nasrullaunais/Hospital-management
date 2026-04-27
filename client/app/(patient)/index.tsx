@@ -7,8 +7,7 @@ import Colors from '@/constants/Colors';
 import { useColorScheme } from '@/components/useColorScheme';
 import { Card, Button, Badge } from '@/components/ui';
 import { spacing, radius, shadows } from '@/constants/ThemeTokens';
-
-const TAB_BAR_HEIGHT = 70;
+import { TAB_BAR_HEIGHT } from '@/shared/constants/Config';
 
 export default function PatientDashboard() {
   const router = useRouter();

@@ -10,6 +10,7 @@ import {
   TouchableOpacity,
   StyleSheet,
 } from 'react-native';
+import { Feather } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useColorScheme } from '@/components/useColorScheme';
 import { Colors } from '@/constants/Colors';
@@ -18,7 +19,7 @@ import { spacing, radius } from '@/constants/ThemeTokens';
 export interface TabItem {
   key: string;
   title: string;
-  icon: string; // emoji or SF Symbol name for web
+  icon: keyof typeof Feather.glyphMap;
 }
 
 interface CustomTabBarProps {
@@ -53,14 +54,11 @@ export function CustomTabBar({ activeTab, onTabPress, tabs }: CustomTabBarProps)
             activeOpacity={0.7}
           >
             <View style={styles.iconWrapper}>
-              <Text
-                style={[
-                  styles.tabIcon,
-                  { color: isActive ? theme.tabBarActive : theme.tabBarInactive },
-                ]}
-              >
-                {tab.icon}
-              </Text>
+              <Feather
+                name={tab.icon}
+                size={22}
+                color={isActive ? theme.tabBarActive : theme.tabBarInactive}
+              />
               {isActive && (
                 <View style={[styles.activeIndicator, { backgroundColor: theme.tabBarActive }]} />
               )}
@@ -98,9 +96,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     height: 28,
-  },
-  tabIcon: {
-    fontSize: 20,
   },
   activeIndicator: {
     position: 'absolute',

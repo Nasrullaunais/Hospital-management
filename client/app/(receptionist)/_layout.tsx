@@ -18,11 +18,11 @@ export default function ReceptionistLayout() {
   const [activeTab, setActiveTab] = useState('index');
 
   const tabs: TabItem[] = [
-    { key: 'index', title: 'Dashboard', icon: '🏠' },
-    { key: 'beds', title: 'Beds', icon: '🛏️' },
-    { key: 'patients', title: 'Patients', icon: '👥' },
-    { key: 'medications', title: 'Medications', icon: '💊' },
-    { key: 'profile', title: 'Profile', icon: '👤' },
+    { key: 'index', title: 'Dashboard', icon: 'home' },
+    { key: 'beds', title: 'Beds', icon: 'home' },
+    { key: 'patients', title: 'Patients', icon: 'users' },
+    { key: 'medications', title: 'Medications', icon: 'package' },
+    { key: 'profile', title: 'Profile', icon: 'user' },
   ];
 
   useEffect(() => {
@@ -35,8 +35,8 @@ export default function ReceptionistLayout() {
 
   const handleTabPress = (tabKey: string) => {
     setActiveTab(tabKey);
-    const path = tabKey === 'index' ? '/(receptionist)' : `/(receptionist)/${tabKey}`;
-    router.push(path as any);
+    const path: string = tabKey === 'index' ? '/(receptionist)' : `/(receptionist)/${tabKey}`;
+    router.push(path);
   };
 
   if (isLoading) {
@@ -65,9 +65,9 @@ export default function ReceptionistLayout() {
       >
         {/* Main tab screens */}
         <Stack.Screen name="index" options={{ headerShown: false }} />
-        <Stack.Screen name="beds" options={{ headerShown: false }} />
-        <Stack.Screen name="patients" options={{ headerShown: false }} />
-        <Stack.Screen name="medications" options={{ headerShown: false }} />
+        <Stack.Screen name="beds/index" options={{ headerShown: false }} />
+        <Stack.Screen name="patients/index" options={{ headerShown: false }} />
+        <Stack.Screen name="medications/index" options={{ headerShown: false }} />
         <Stack.Screen name="profile" options={{ headerShown: false }} />
 
         {/* Detail pages with headers */}

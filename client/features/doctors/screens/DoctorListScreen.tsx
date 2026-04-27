@@ -18,6 +18,7 @@ import { useAuth } from '@/shared/context/AuthContext';
 import Colors from '@/constants/Colors';
 import { useColorScheme } from '@/components/useColorScheme';
 import { spacing, radius, shadows } from '@/constants/ThemeTokens';
+import { SkeletonCard } from '@/components/ui/Skeleton';
 
 const TAB_BAR_HEIGHT = 70;
 
@@ -124,6 +125,36 @@ export default function DoctorListScreen() {
     </View>
   ), [theme]);
 
+  if (loading) {
+    return (
+      <SafeAreaView edges={['top', 'bottom']} style={[styles.container, { backgroundColor: theme.background }]}>
+        {user?.role === 'admin' && (
+          <TouchableOpacity
+            style={[styles.addButton, { backgroundColor: theme.primary }]}
+            onPress={() => router.push('/(admin)/doctors/add')}
+          >
+            <Text style={styles.addButtonText}>+ Add Doctor</Text>
+          </TouchableOpacity>
+        )}
+        <View style={[styles.searchContainer, { backgroundColor: theme.surface, borderColor: theme.border }]}>
+          <Feather name="search" size={18} color={theme.textTertiary} />
+          <TextInput
+            style={[styles.searchInput, { color: theme.text }]}
+            placeholder="Search by specialization..."
+            placeholderTextColor={theme.inputPlaceholder}
+            value={search}
+            onChangeText={setSearch}
+          />
+        </View>
+        <View style={styles.skeletonList}>
+          {[1, 2, 3].map((i) => (
+            <SkeletonCard key={i} />
+          ))}
+        </View>
+      </SafeAreaView>
+    );
+  }
+
   return (
     <SafeAreaView edges={['top', 'bottom']} style={[styles.container, { backgroundColor: theme.background }]}>
       {user?.role === 'admin' && (
@@ -224,4 +255,5 @@ const styles = StyleSheet.create({
   addButtonText: { color: '#fff', fontSize: 15, fontWeight: '600' },
   errorText: { fontSize: 15, marginBottom: spacing.sm },
   retryText: { fontWeight: '600', fontSize: 15 },
+  skeletonList: { padding: spacing.md, paddingTop: spacing.xs },
 });

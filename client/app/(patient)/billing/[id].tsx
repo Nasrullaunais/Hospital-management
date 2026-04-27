@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import {
   View,
   Text,
@@ -12,6 +12,7 @@ import { invoiceService } from '@/features/billing/services/invoice.service';
 import type { Invoice } from '@/shared/types';
 import Colors from '@/constants/Colors';
 import { useColorScheme } from '@/components/useColorScheme';
+import { getPaymentStatusStyle } from '@/shared/utils/statusStyles';
 
 export default function PatientInvoiceDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -22,39 +23,24 @@ export default function PatientInvoiceDetailScreen() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    const fetchInvoice = async () => {
-      if (!id) return;
-      try {
-        const myBills = await invoiceService.getMyBills();
-        const found = myBills.find((inv) => inv._id === id);
-        if (found) {
-          setInvoice(found);
-        } else {
-          setError('Invoice not found');
-        }
-      } catch (err) {
-        setError(err instanceof Error ? err.message : 'Failed to load invoice');
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchInvoice();
+  const fetchInvoice = useCallback(async () => {
+    if (!id) return;
+    try {
+      setError(null);
+      const data = await invoiceService.getInvoiceById(id);
+      setInvoice(data);
+    } catch (err: unknown) {
+      console.error('fetchInvoice failed:', err);
+      setError(err instanceof Error ? err.message : 'Failed to load invoice');
+    } finally {
+      setLoading(false);
+    }
   }, [id]);
 
-  const getStatusStyle = (status: string) => {
-    switch (status) {
-      case 'Unpaid':
-        return { bg: theme.errorBg, text: theme.error };
-      case 'Pending Verification':
-        return { bg: theme.warningBg, text: theme.warning };
-      case 'Paid':
-        return { bg: theme.successBg, text: theme.success };
-      default:
-        return { bg: theme.surfaceTertiary, text: theme.textSecondary };
-    }
-  };
+  useEffect(() => {
+    setLoading(true);
+    void fetchInvoice();
+  }, [fetchInvoice]);
 
   if (loading) {
     return (
@@ -72,13 +58,15 @@ export default function PatientInvoiceDetailScreen() {
     );
   }
 
-  const statusStyle = getStatusStyle(invoice.paymentStatus);
+  const statusStyle = getPaymentStatusStyle(invoice.paymentStatus, theme);
 
   return (
     <ScrollView style={[styles.container, { backgroundColor: theme.background }]}>
       <View style={[styles.card, { backgroundColor: theme.surface, borderColor: theme.border }]}>
         <View style={[styles.header, { borderBottomColor: theme.divider }]}>
-          <Text style={[styles.amount, { color: theme.text }]}>${invoice.totalAmount.toFixed(2)}</Text>
+          <Text style={[styles.amount, { color: theme.text }]}>
+            {new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(invoice.totalAmount)}
+          </Text>
           <View style={[styles.badge, { backgroundColor: statusStyle.bg }]}>
             <Text style={[styles.badgeText, { color: statusStyle.text }]}>
               {invoice.paymentStatus}
@@ -88,7 +76,7 @@ export default function PatientInvoiceDetailScreen() {
 
         <View style={styles.section}>
           <Text style={[styles.label, { color: theme.textTertiary }]}>Invoice ID</Text>
-          <Text style={[styles.value, { color: theme.text }]}>{invoice._id}</Text>
+          <Text style={[styles.value, { color: theme.text }]}>{invoice.invoiceNumber ?? invoice._id}</Text>
         </View>
 
         <View style={styles.section}>

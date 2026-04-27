@@ -16,15 +16,8 @@ import type { Medicine } from '@/shared/types';
 import Colors from '@/constants/Colors';
 import { useColorScheme } from '@/components/useColorScheme';
 import { spacing, radius, shadows } from '@/constants/ThemeTokens';
-import { Config } from '@/shared/constants/Config';
-
-function getImageUrl(url: string): string {
-  if (!url) return '';
-  if (url.startsWith('http://') || url.startsWith('https://')) return url;
-  const base = Config.BASE_URL;
-  const path = url.startsWith('/') ? url : `/${url}`;
-  return `${base}${path}`;
-}
+import { LOW_STOCK_THRESHOLD, EXPIRY_WARNING_DAYS } from '@/shared/constants/pharmacy';
+import { getImageUrl } from '@/shared/utils/getImageUrl';
 
 export default function MedicineDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -46,10 +39,10 @@ export default function MedicineDetailScreen() {
 
   const isExpiringSoon = (dateStr: string) => {
     const daysUntil = (new Date(dateStr).getTime() - Date.now()) / (1000 * 60 * 60 * 24);
-    return daysUntil <= 60;
+    return daysUntil <= EXPIRY_WARNING_DAYS;
   };
 
-  const isLowStock = (qty: number) => qty < 10;
+  const isLowStock = (qty: number) => qty < LOW_STOCK_THRESHOLD;
 
   if (loading) {
     return (

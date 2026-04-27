@@ -8,6 +8,8 @@ import {
   getWardStats,
   getBedStatuses,
   getWardPatients,
+  getPatientById,
+  getAllPatients,
 } from './wardAssignment.controller.js';
 import { authMiddleware, requireRole } from '../../shared/middlewares/authMiddleware.js';
 import {
@@ -16,6 +18,7 @@ import {
   updateAssignmentValidation,
   wardIdParamValidation,
   wardIdQueryValidation,
+  patientIdParamValidation,
 } from './wardAssignment.validation.js';
 
 const router = Router();
@@ -90,6 +93,24 @@ router.get(
   requireRole('receptionist'),
   wardIdParamValidation,
   getWardPatients,
+);
+
+/** GET /api/assignments/patient/:patientId — Receptionist only */
+router.get(
+  '/patient/:patientId',
+  authMiddleware,
+  requireRole('receptionist'),
+  patientIdParamValidation,
+  getPatientById,
+);
+
+/** GET /api/assignments/patients — Receptionist only */
+router.get(
+  '/patients',
+  authMiddleware,
+  requireRole('receptionist'),
+  wardIdQueryValidation,
+  getAllPatients,
 );
 
 export default router;

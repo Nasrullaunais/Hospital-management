@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
   FlatList,
@@ -12,22 +12,15 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Feather } from '@expo/vector-icons';
-import { useRouter } from 'expo-router';
+import { useFocusEffect, useRouter } from 'expo-router';
 import { useAuth } from '@/shared/context/AuthContext';
-import { Config } from '@/shared/constants/Config';
 import type { Medicine } from '@/shared/types';
 import { medicineService } from '@/features/pharmacy/services/medicine.service';
 import Colors from '@/constants/Colors';
 import { useColorScheme } from '@/components/useColorScheme';
 import { spacing, radius, shadows } from '@/constants/ThemeTokens';
-
-function getImageUrl(url: string): string {
-  if (!url) return '';
-  if (url.startsWith('http://') || url.startsWith('https://')) return url;
-  const base = Config.BASE_URL.endsWith('/') ? Config.BASE_URL.slice(0, -1) : Config.BASE_URL;
-  const path = url.startsWith('/') ? url : `/${url}`;
-  return `${base}${path}`;
-}
+import { LOW_STOCK_THRESHOLD, EXPIRY_WARNING_DAYS } from '@/shared/constants/pharmacy';
+import { getImageUrl } from '@/shared/utils/getImageUrl';
 
 export default function PharmacyInventoryScreen() {
   const { user } = useAuth();
@@ -41,7 +34,7 @@ export default function PharmacyInventoryScreen() {
   const [error, setError] = useState<string | null>(null);
   const [categoryFilter, setCategoryFilter] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
-
+  const [showCategoryPicker, setShowCategoryPicker] = useState(false);
   const canAddMedicine = useMemo(
     () => user?.role === 'admin' || user?.role === 'pharmacist',
     [user?.role],
@@ -57,6 +50,12 @@ export default function PharmacyInventoryScreen() {
     );
   }, [medicines, searchQuery]);
 
+  const availableCategories = useMemo(() => {
+    const cats = new Set<string>();
+    medicines.forEach((m) => { if (m.category) cats.add(m.category); });
+    return Array.from(cats).sort();
+  }, [medicines]);
+
   const fetchMedicines = useCallback(async () => {
     try {
       setError(null);
@@ -68,10 +67,12 @@ export default function PharmacyInventoryScreen() {
     }
   }, [categoryFilter]);
 
-  useEffect(() => {
-    setLoading(true);
-    fetchMedicines().finally(() => setLoading(false));
-  }, [fetchMedicines]);
+  useFocusEffect(
+    useCallback(() => {
+      setLoading(true);
+      fetchMedicines().finally(() => setLoading(false));
+    }, [fetchMedicines]),
+  );
 
   const onRefresh = useCallback(async () => {
     setRefreshing(true);
@@ -81,10 +82,10 @@ export default function PharmacyInventoryScreen() {
 
   const isExpiringSoon = useCallback((dateStr: string) => {
     const daysUntil = (new Date(dateStr).getTime() - Date.now()) / (1000 * 60 * 60 * 24);
-    return daysUntil <= 60;
+    return daysUntil <= EXPIRY_WARNING_DAYS;
   }, []);
 
-  const isLowStock = useCallback((qty: number) => qty < 10, []);
+  const isLowStock = useCallback((qty: number) => qty < LOW_STOCK_THRESHOLD, []);
 
   const getBadgeStyle = useCallback((lowStock: boolean, expiringSoon: boolean) => {
     if (lowStock) return { bg: theme.errorBg, border: theme.error, text: theme.error };
@@ -189,7 +190,19 @@ export default function PharmacyInventoryScreen() {
         </View>
         <TouchableOpacity
           style={[styles.filterChip, { borderColor: theme.border }]}
-          onPress={() => setCategoryFilter(categoryFilter ? '' : 'Antibiotic')}
+          onPress={() => {
+            if (availableCategories.length === 0) return;
+            if (!categoryFilter && availableCategories.length > 0) {
+              setCategoryFilter(availableCategories[0]);
+            } else {
+              const idx = availableCategories.indexOf(categoryFilter);
+              if (idx >= 0 && idx < availableCategories.length - 1) {
+                setCategoryFilter(availableCategories[idx + 1]);
+              } else {
+                setCategoryFilter('');
+              }
+            }
+          }}
         >
           <Feather name="filter" size={14} color={categoryFilter ? theme.primary : theme.textTertiary} />
           <Text style={[styles.filterChipText, { color: categoryFilter ? theme.primary : theme.textTertiary }]}>
@@ -220,6 +233,9 @@ export default function PharmacyInventoryScreen() {
             <Text style={[styles.emptyText, { color: theme.textSecondary }]}>No medicines found.</Text>
           </View>
         }
+        windowSize={5}
+        maxToRenderPerBatch={10}
+        initialNumToRender={8}
       />
     </SafeAreaView>
   );

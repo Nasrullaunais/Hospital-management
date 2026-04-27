@@ -4,6 +4,13 @@ import { validationResult } from 'express-validator';
 import { Department } from './department.model.js';
 import { Ward } from '../wards/ward.model.js';
 import { ApiError } from '../../shared/utils/ApiError.js';
+import { isMongoDuplicateKeyError } from '../../shared/utils/mongoHelpers.js';
+
+// ── Helpers ───────────────────────────────────────────────────────────────────────
+
+function isDuplicateKeyError(err: unknown): boolean {
+  return isMongoDuplicateKeyError(err);
+}
 
 // ── Controllers ────────────────────────────────────────────────────────────────
 
@@ -15,6 +22,9 @@ export const createDepartment = async (req: Request, res: Response, next: NextFu
     const department = await Department.create(req.body);
     res.status(201).json({ success: true, message: 'Department created', data: { department } });
   } catch (err) {
+    if (isDuplicateKeyError(err)) {
+      return next(new ApiError(409, 'A department with this name already exists'));
+    }
     next(err);
   }
 };
@@ -27,10 +37,26 @@ export const getDepartments = async (req: Request, res: Response, next: NextFunc
     const filter: Record<string, unknown> = {};
     if (req.query.status) filter.status = req.query.status;
 
-    const departments = await Department.find(filter)
-      .populate('headDoctorId', 'userId')
-      .sort({ name: 1 });
-    res.json({ success: true, data: { departments, count: departments.length } });
+    const page = Math.max(1, parseInt(req.query.page as string) || 1);
+    const limit = Math.min(100, Math.max(1, parseInt(req.query.limit as string) || 20));
+    const skip = (page - 1) * limit;
+
+    const [departments, total] = await Promise.all([
+      Department.find(filter)
+        .populate('headDoctorId', 'userId')
+        .sort({ name: 1 })
+        .skip(skip)
+        .limit(limit),
+      Department.countDocuments(filter),
+    ]);
+    res.json({
+      success: true,
+      data: {
+        departments,
+        count: departments.length,
+        pagination: { total, page, limit, pages: Math.ceil(total / limit) },
+      },
+    });
   } catch (err) {
     next(err);
   }

@@ -1,4 +1,5 @@
 import React, { useMemo, useState } from 'react';
+import { ROLES } from '@/shared/constants/roles';
 import {
   View,
   Text,
@@ -15,11 +16,14 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import DateTimePicker, { type DateTimePickerEvent } from '@react-native-community/datetimepicker';
 import * as ImagePicker from 'expo-image-picker';
+import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import Colors from '@/constants/Colors';
 import { useColorScheme } from '@/components/useColorScheme';
 import { useAuth } from '@/shared/context/AuthContext';
+import { MS_PER_DAY } from '@/shared/constants/Config';
 import { medicineService } from '@/features/pharmacy/services/medicine.service';
+import { toFormDataFile } from '@/shared/utils/formData';
 
 interface PickedImage {
   uri: string;
@@ -63,6 +67,14 @@ const makeStyles = (colorScheme: 'light' | 'dark') => StyleSheet.create({
     paddingHorizontal: 12,
     paddingVertical: 11,
     fontSize: 15,
+  },
+  inputError: {
+    borderColor: Colors[colorScheme].error,
+  },
+  errorText: {
+    color: Colors[colorScheme].error,
+    fontSize: 12,
+    marginTop: 4,
   },
   dateButton: {
     borderWidth: 1,
@@ -132,13 +144,14 @@ export default function AddMedicineScreen() {
   const [category, setCategory] = useState('');
   const [price, setPrice] = useState('');
   const [stockQuantity, setStockQuantity] = useState('');
-  const [expiryDate, setExpiryDate] = useState(new Date(Date.now() + 24 * 60 * 60 * 1000));
+  const [expiryDate, setExpiryDate] = useState(new Date(Date.now() + MS_PER_DAY));
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [packagingImage, setPackagingImage] = useState<PickedImage | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const [errors, setErrors] = useState<Record<string, string>>({});
 
   const canSubmit = useMemo(
-    () => user?.role === 'admin' || user?.role === 'pharmacist',
+    () => user?.role === ROLES.ADMIN || user?.role === ROLES.PHARMACIST,
     [user?.role],
   );
 
@@ -172,30 +185,59 @@ export default function AddMedicineScreen() {
     }
   };
 
-  const validate = (): string | null => {
-    if (!canSubmit) return 'You are not allowed to add medications.';
-    if (!name.trim()) return 'Medicine name is required.';
-    if (!category.trim()) return 'Category is required.';
+  const pickFromGallery = async () => {
+    try {
+      const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      if (!permission.granted) {
+        Alert.alert('Permission Required', 'Gallery permission is required to select packaging images.');
+        return;
+      }
+
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ['images'],
+        quality: 0.8,
+      });
+
+      if (!result.canceled && result.assets.length > 0) {
+        const asset = result.assets[0];
+        const extension = asset.uri.split('.').pop() ?? 'jpg';
+        setPackagingImage({
+          uri: asset.uri,
+          name: `packaging-${Date.now()}.${extension}`,
+          type: asset.mimeType ?? 'image/jpeg',
+        });
+      }
+    } catch (err) {
+      Alert.alert('Error', 'Failed to open image gallery.');
+    }
+  };
+
+  const validate = (): boolean => {
+    const newErrors: Record<string, string> = {};
+
+    if (!canSubmit) {
+      newErrors.general = 'You are not allowed to add medications.';
+    }
+    if (!name.trim()) newErrors.name = 'Medicine name is required.';
+    if (!category.trim()) newErrors.category = 'Category is required.';
 
     const parsedPrice = Number(price);
-    if (!Number.isFinite(parsedPrice) || parsedPrice < 0) return 'Price must be a non-negative number.';
+    if (!Number.isFinite(parsedPrice) || parsedPrice < 0) newErrors.price = 'Price must be a non-negative number.';
 
     const parsedStock = Number(stockQuantity);
     if (!Number.isInteger(parsedStock) || parsedStock < 0) {
-      return 'Stock quantity must be a non-negative integer.';
+      newErrors.stockQuantity = 'Stock quantity must be a non-negative integer.';
     }
 
-    if (expiryDate <= new Date()) return 'Expiry date must be in the future.';
-    if (!packagingImage) return 'Packaging image is required.';
-    return null;
+    if (expiryDate <= new Date()) newErrors.expiryDate = 'Expiry date must be in the future.';
+    if (!packagingImage) newErrors.packagingImage = 'Packaging image is required.';
+
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
   };
 
   const handleSubmit = async () => {
-    const validationError = validate();
-    if (validationError) {
-      Alert.alert('Validation Error', validationError);
-      return;
-    }
+    if (!validate()) return;
 
     try {
       setSubmitting(true);
@@ -205,11 +247,13 @@ export default function AddMedicineScreen() {
       formData.append('price', String(Number(price)));
       formData.append('stockQuantity', String(Number(stockQuantity)));
       formData.append('expiryDate', expiryDate.toISOString());
-      formData.append('packagingImage', {
+      const file = toFormDataFile({
         uri: packagingImage!.uri,
         name: packagingImage!.name,
-        type: packagingImage!.type,
-      } as unknown as Blob);
+        mimeType: packagingImage!.type,
+      });
+
+      formData.append('packagingImage', file!);
 
       await medicineService.createMedicine(formData);
       Alert.alert('Success', 'Medication added successfully.', [{ text: 'OK', onPress: () => router.back() }]);
@@ -233,40 +277,56 @@ export default function AddMedicineScreen() {
         <Text style={styles.label}>Medicine Name</Text>
         <TextInput
           value={name}
-          onChangeText={setName}
-          style={styles.input}
+          onChangeText={(text) => {
+            setName(text);
+            if (errors.name) setErrors((prev) => ({ ...prev, name: undefined }));
+          }}
+          style={[styles.input, errors.name && styles.inputError]}
           placeholder="e.g. Amoxicillin"
           editable={!submitting}
         />
+        {errors.name && <Text style={styles.errorText}>{errors.name}</Text>}
 
         <Text style={styles.label}>Category</Text>
         <TextInput
           value={category}
-          onChangeText={setCategory}
-          style={styles.input}
+          onChangeText={(text) => {
+            setCategory(text);
+            if (errors.category) setErrors((prev) => ({ ...prev, category: undefined }));
+          }}
+          style={[styles.input, errors.category && styles.inputError]}
           placeholder="e.g. Antibiotic"
           editable={!submitting}
         />
+        {errors.category && <Text style={styles.errorText}>{errors.category}</Text>}
 
         <Text style={styles.label}>Price</Text>
         <TextInput
           value={price}
-          onChangeText={setPrice}
-          style={styles.input}
+          onChangeText={(text) => {
+            setPrice(text);
+            if (errors.price) setErrors((prev) => ({ ...prev, price: undefined }));
+          }}
+          style={[styles.input, errors.price && styles.inputError]}
           placeholder="e.g. 12.5"
           keyboardType="decimal-pad"
           editable={!submitting}
         />
+        {errors.price && <Text style={styles.errorText}>{errors.price}</Text>}
 
         <Text style={styles.label}>Stock Quantity</Text>
         <TextInput
           value={stockQuantity}
-          onChangeText={setStockQuantity}
-          style={styles.input}
+          onChangeText={(text) => {
+            setStockQuantity(text);
+            if (errors.stockQuantity) setErrors((prev) => ({ ...prev, stockQuantity: undefined }));
+          }}
+          style={[styles.input, errors.stockQuantity && styles.inputError]}
           placeholder="e.g. 100"
           keyboardType="number-pad"
           editable={!submitting}
         />
+        {errors.stockQuantity && <Text style={styles.errorText}>{errors.stockQuantity}</Text>}
 
         <Text style={styles.label}>Expiry Date</Text>
         <TouchableOpacity
@@ -282,21 +342,34 @@ export default function AddMedicineScreen() {
             value={expiryDate}
             mode="date"
             display={Platform.OS === 'ios' ? 'inline' : 'default'}
-            minimumDate={new Date(Date.now() + 24 * 60 * 60 * 1000)}
+            minimumDate={new Date(Date.now() + MS_PER_DAY)}
             onChange={onDateChange}
           />
         ) : null}
+        {errors.expiryDate && <Text style={styles.errorText}>{errors.expiryDate}</Text>}
 
         <Text style={styles.label}>Packaging Image</Text>
-        <TouchableOpacity
-          onPress={pickPackagingImage}
-          style={styles.imageButton}
-          disabled={submitting}
-        >
-          <Text style={styles.imageButtonText}>
-            {packagingImage ? 'Retake Packaging Photo' : 'Capture Packaging Photo'}
-          </Text>
-        </TouchableOpacity>
+        <View style={{ flexDirection: 'row', gap: 12, marginTop: 10 }}>
+          <TouchableOpacity
+            onPress={pickPackagingImage}
+            style={[styles.imageButton, errors.packagingImage && styles.inputError, { flex: 1 }]}
+            disabled={submitting}
+            activeOpacity={0.7}
+          >
+            <Ionicons name="camera-outline" size={20} color={Colors[colorScheme].primary} />
+            <Text style={styles.imageButtonText}>Camera</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            onPress={pickFromGallery}
+            style={[styles.imageButton, errors.packagingImage && styles.inputError, { flex: 1 }]}
+            disabled={submitting}
+            activeOpacity={0.7}
+          >
+            <Ionicons name="images-outline" size={20} color={Colors[colorScheme].primary} />
+            <Text style={styles.imageButtonText}>Gallery</Text>
+          </TouchableOpacity>
+        </View>
+        {errors.packagingImage && <Text style={styles.errorText}>{errors.packagingImage}</Text>}
 
         {packagingImage ? (
           <View style={styles.previewWrap}>

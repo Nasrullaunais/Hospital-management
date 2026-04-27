@@ -31,6 +31,8 @@ jest.mock('@react-native-community/datetimepicker', () => {
 jest.mock('expo-image-picker', () => ({
   requestCameraPermissionsAsync: jest.fn(),
   launchCameraAsync: jest.fn(),
+  requestMediaLibraryPermissionsAsync: jest.fn(),
+  launchImageLibraryAsync: jest.fn(),
 }));
 
 const mockedUseAuth = useAuth as jest.Mock;

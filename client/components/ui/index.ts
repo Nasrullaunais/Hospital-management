@@ -18,6 +18,7 @@ export { EmptyState } from './EmptyState';
 export { LoadingState } from './LoadingState';
 
 export { ErrorState } from './ErrorState';
+export { ErrorBoundary } from './ErrorBoundary';
 
 export { ListCard, Avatar } from './ListCard';
 

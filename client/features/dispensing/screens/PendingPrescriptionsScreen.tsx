@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useCallback, useMemo } from 'react';
+import React, { useEffect, useState, useCallback, useMemo, useRef } from 'react';
 import { View, Text, FlatList, StyleSheet, ActivityIndicator, TouchableOpacity, RefreshControl } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Feather } from '@expo/vector-icons';
@@ -22,33 +22,55 @@ export default function PendingPrescriptionsScreen() {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [page, setPage] = useState(1);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [hasMore, setHasMore] = useState(true);
   const router = useRouter();
   const colorScheme = useColorScheme() ?? 'light';
   const theme = Colors[colorScheme];
 
-  const loadPending = useCallback(async () => {
+  const loadPending = useCallback(async (pageNum = 1, isRefresh = false) => {
     try {
       setError(null);
-      const data = await dispensingService.getPendingPrescriptions();
-      setPending(data);
+      if (isRefresh) {
+        setRefreshing(true);
+      } else if (pageNum > 1) {
+        setLoadingMore(true);
+      }
+      const data = await dispensingService.getPendingPrescriptions((pageNum - 1) * 20, 20);
+      if (pageNum === 1) {
+        setPending(data);
+      } else {
+        setPending((prev) => [...prev, ...data]);
+      }
+      setHasMore(data.length === 20);
     } catch (e: unknown) {
       setError(e instanceof Error ? e.message : 'Failed to load prescriptions');
     } finally {
       setLoading(false);
       setRefreshing(false);
+      setLoadingMore(false);
     }
   }, []);
 
   useEffect(() => { loadPending(); }, [loadPending]);
 
   const onRefresh = useCallback(() => {
-    setRefreshing(true);
-    loadPending();
+    setPage(1);
+    loadPending(1, true);
   }, [loadPending]);
 
+  const onEndReached = useCallback(() => {
+    if (!loadingMore && hasMore) {
+      const nextPage = page + 1;
+      setPage(nextPage);
+      loadPending(nextPage);
+    }
+  }, [loadingMore, hasMore, page, loadPending]);
+
   const renderItem = useCallback(({ item }: { item: PendingPrescription }) => {
-    const patientName = item.patientId && typeof item.patientId === 'object' ? item.patientId?.name : 'Patient';
-    const doctorName = item.doctorId && typeof item.doctorId === 'object' ? item.doctorId?.userId?.name : 'Doctor';
+    const patientName = item.patientId && typeof item.patientId === 'object' ? item.patientId?.name ?? 'Patient' : 'Patient';
+    const doctorName = item.doctorId && typeof item.doctorId === 'object' ? item.doctorId?.userId?.name ?? 'Doctor' : 'Doctor';
 
     return (
       <TouchableOpacity
@@ -96,6 +118,7 @@ export default function PendingPrescriptionsScreen() {
     <SafeAreaView style={[styles.safeArea, { backgroundColor: theme.background }]}>
       <View style={[styles.center, { backgroundColor: theme.background }]}>
         <ActivityIndicator size="large" color={theme.primary} />
+        <Text style={[styles.loadingText, { color: theme.textSecondary }]}>Loading prescriptions...</Text>
       </View>
     </SafeAreaView>
   );
@@ -123,6 +146,14 @@ export default function PendingPrescriptionsScreen() {
         ListEmptyComponent={ListEmptyComponent}
         contentContainerStyle={pending.length === 0 ? styles.emptyList : styles.list}
         showsVerticalScrollIndicator={false}
+        onEndReached={onEndReached}
+        onEndReachedThreshold={0.5}
+        ListFooterComponent={loadingMore ? (
+          <View style={styles.footerLoader}>
+            <ActivityIndicator size="small" color={theme.primary} />
+            <Text style={[styles.loadingMoreText, { color: theme.textTertiary }]}>Loading more...</Text>
+          </View>
+        ) : null}
       />
     </SafeAreaView>
   );
@@ -164,6 +195,9 @@ const styles = StyleSheet.create({
   medicineCount: { fontSize: 13, fontWeight: '600' },
   empty: { fontSize: 16, fontWeight: '600', marginTop: spacing.sm },
   emptySub: { fontSize: 14, marginTop: spacing.xs },
+  loadingText: { fontSize: 14, marginTop: spacing.sm },
+  footerLoader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', paddingVertical: spacing.md, gap: spacing.sm },
+  loadingMoreText: { fontSize: 13 },
   error: { fontSize: 15, marginBottom: spacing.md },
   retryBtn: { borderRadius: radius.md, paddingHorizontal: spacing.md, paddingVertical: spacing.sm },
   retryBtnText: { color: '#fff', fontWeight: '600' },

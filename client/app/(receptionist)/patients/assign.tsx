@@ -118,6 +118,7 @@ export default function AssignPatientScreen() {
         wardId: selectedBed.wardId,
         bedNumber: selectedBed.bedNumber,
         admissionDate: admissionDate.toISOString(),
+        expectedDischarge: expectedDischarge ? expectedDischarge.toISOString() : undefined,
         notes: notes.trim() || undefined,
       });
       Alert.alert('Success', `Patient ${selectedPatient!.name} has been assigned to bed #${selectedBed!.bedNumber}.`, [

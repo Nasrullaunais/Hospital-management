@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useState, useMemo } from 'react';
+import { ROLES } from '@/shared/constants/roles';
 import {
   View,
   Text,
@@ -50,7 +51,7 @@ const makeStyles = (colorScheme: 'light' | 'dark') => StyleSheet.create({
 export default function BillingScreen() {
   const { user } = useAuth();
   const router = useRouter();
-  const isAdmin = user?.role === 'admin';
+  const isAdmin = user?.role === ROLES.ADMIN;
   const colorScheme = useColorScheme() ?? 'light';
   const styles = useMemo(() => makeStyles(colorScheme), [colorScheme]);
 
@@ -78,8 +79,11 @@ export default function BillingScreen() {
 
   const onRefresh = async () => {
     setRefreshing(true);
-    await fetchInvoices();
-    setRefreshing(false);
+    try {
+      await fetchInvoices();
+    } finally {
+      setRefreshing(false);
+    }
   };
 
   const handleInvoiceUpdate = (updated: Invoice & { _deleted?: boolean }) => {

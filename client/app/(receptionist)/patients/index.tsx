@@ -10,7 +10,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Feather } from '@expo/vector-icons';
-import { useRouter } from 'expo-router';
+import { useRouter, ErrorBoundary } from 'expo-router';
 import { Card, Badge, EmptyState, ErrorState } from '@/components/ui';
 import { wardReceptionistService, type BedStatus } from '@/features/wardReceptionist/services/wardReceptionist.service';
 import Colors from '@/constants/Colors';
@@ -60,7 +60,7 @@ export default function PatientsListScreen() {
   };
 
   const handlePatientPress = (patientId: string) => {
-    router.push(`/(receptionist)/patients/${patientId}` as any);
+    router.push(`/(receptionist)/patients/${patientId}`);
   };
 
   const renderPatientCard = ({ item }: { item: BedStatus }) => (
@@ -125,29 +125,31 @@ export default function PatientsListScreen() {
   }
 
   return (
-    <SafeAreaView edges={['top', 'bottom']} style={[styles.container, { backgroundColor: theme.background }]} testID="patients-screen">
-      <FlatList
-        data={patients}
-        keyExtractor={(item) => item._id}
-        renderItem={renderPatientCard}
-        contentContainerStyle={styles.listContent}
-        showsVerticalScrollIndicator={false}
-        refreshControl={
-          <RefreshControl
-            refreshing={refreshing}
-            onRefresh={onRefresh}
-            tintColor={theme.primary}
-          />
-        }
-        ListEmptyComponent={
-          <EmptyState
-            title="No patients in ward"
-            message="There are no patients currently assigned to beds in this ward."
-            icon="users"
-          />
-        }
-      />
-    </SafeAreaView>
+    <ErrorBoundary>
+      <SafeAreaView edges={['top', 'bottom']} style={[styles.container, { backgroundColor: theme.background }]} testID="patients-screen">
+        <FlatList
+          data={patients}
+          keyExtractor={(item) => item._id}
+          renderItem={renderPatientCard}
+          contentContainerStyle={styles.listContent}
+          showsVerticalScrollIndicator={false}
+          refreshControl={
+            <RefreshControl
+              refreshing={refreshing}
+              onRefresh={onRefresh}
+              tintColor={theme.primary}
+            />
+          }
+          ListEmptyComponent={
+            <EmptyState
+              title="No patients in ward"
+              message="There are no patients currently assigned to beds in this ward."
+              icon="users"
+            />
+          }
+        />
+      </SafeAreaView>
+    </ErrorBoundary>
   );
 }
 

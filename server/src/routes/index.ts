@@ -11,6 +11,7 @@ import departmentRoutes from '../modules/departments/department.routes.js';
 import wardRoutes from '../modules/wards/ward.routes.js';
 import wardAssignmentRoutes from '../modules/wardAssignments/wardAssignment.routes.js';
 import wardMedicationRoutes from '../modules/wardMedications/wardMedication.routes.js';
+import filesRoutes from '../modules/files/files.routes.js';
 
 const router = Router();
 
@@ -59,8 +60,11 @@ router.use('/api/dispense', dispenseRoutes);
 // Departments & Wards
 router.use('/api/departments', departmentRoutes);
 router.use('/api/wards', wardRoutes);
-router.use('/api/wardAssignments', wardAssignmentRoutes);
+router.use('/api/assignments', wardAssignmentRoutes);
 router.use('/api/wardMedications', wardMedicationRoutes);
+
+// Module 7: Files (S3 presigned URLs)
+router.use('/api/files', filesRoutes);
 
 // ── 404 Handler ───────────────────────────────────────────────────────────────
 router.use((_req: Request, res: Response) => {

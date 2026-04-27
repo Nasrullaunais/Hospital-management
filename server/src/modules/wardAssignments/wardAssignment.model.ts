@@ -11,7 +11,9 @@ export interface IWardAssignment extends Document {
   expectedDischarge?: Date;
   actualDischarge?: Date;
   notes?: string;
-  status: 'active' | 'discharged';
+  assignedBy: mongoose.Types.ObjectId;
+  assignedDate: Date;
+  status: 'active' | 'discharged' | 'transferred';
   createdAt: Date;
   updatedAt: Date;
 }
@@ -49,9 +51,18 @@ const wardAssignmentSchema = new Schema<IWardAssignment>(
       type: String,
       trim: true,
     },
+    assignedBy: {
+      type: Schema.Types.ObjectId,
+      ref: 'User',
+      required: [true, 'Assigned by is required'],
+    },
+    assignedDate: {
+      type: Date,
+      default: Date.now,
+    },
     status: {
       type: String,
-      enum: ['active', 'discharged'],
+      enum: ['active', 'discharged', 'transferred'],
       default: 'active',
     },
   },

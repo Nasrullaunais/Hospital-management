@@ -13,13 +13,13 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { SymbolView } from 'expo-symbols';
 import { useRouter, useLocalSearchParams, Stack } from 'expo-router';
+import { isAxiosError } from 'axios';
 import Colors from '@/constants/Colors';
 import { useColorScheme } from '@/components/useColorScheme';
 import { recordService } from '@/features/records/services/record.service';
+import { prescriptionService, type Prescription } from '@/features/prescriptions/services/prescription.service';
 import { Config } from '@/shared/constants/Config';
 import type { PopulatedMedicalRecord } from '@/shared/types';
-
-const TAB_BAR_HEIGHT = 70;
 
 export default function RecordDetailScreen() {
   const router = useRouter();
@@ -34,6 +34,8 @@ export default function RecordDetailScreen() {
   const [diagnosis, setDiagnosis] = useState('');
   const [prescription, setPrescription] = useState('');
   const [saving, setSaving] = useState(false);
+  const [prescriptions, setPrescriptions] = useState<Prescription[]>([]);
+  const [loadingPrescriptions, setLoadingPrescriptions] = useState(false);
 
   const fetchRecord = useCallback(async () => {
     if (!id) return;
@@ -41,14 +43,26 @@ export default function RecordDetailScreen() {
       setLoading(true);
       setError(null);
       const data = await recordService.getRecordById(id);
-      setRecord(data as unknown as PopulatedMedicalRecord);
+      setRecord(data);
       setDiagnosis(data.diagnosis ?? '');
       setPrescription(data.prescription ?? '');
-    } catch (err: any) {
-      if (err?.response?.status === 404) {
+
+      setLoadingPrescriptions(true);
+      try {
+        const rxData = await prescriptionService.getPrescriptionsByRecordId(id);
+        setPrescriptions(rxData);
+      } catch {
+        setPrescriptions([]);
+      } finally {
+        setLoadingPrescriptions(false);
+      }
+    } catch (err) {
+      if (isAxiosError(err) && err.response?.status === 404) {
         setError('Record not found.');
+      } else if (err instanceof Error) {
+        setError(err.message);
       } else {
-        setError(err?.message ?? 'Failed to load record.');
+        setError('Failed to load record.');
       }
     } finally {
       setLoading(false);
@@ -66,8 +80,12 @@ export default function RecordDetailScreen() {
       await recordService.updateRecord(id, { diagnosis, prescription });
       setEditing(false);
       await fetchRecord();
-    } catch (err: any) {
-      Alert.alert('Error', err?.message ?? 'Failed to save record.');
+    } catch (err) {
+      if (err instanceof Error) {
+        Alert.alert('Error', err.message);
+      } else {
+        Alert.alert('Error', 'Failed to save record.');
+      }
     } finally {
       setSaving(false);
     }
@@ -198,6 +216,27 @@ export default function RecordDetailScreen() {
               placeholderTextColor={colors.textTertiary}
               multiline
             />
+          ) : prescriptions.length > 0 ? (
+            <View style={styles.prescriptionList}>
+              {prescriptions.map((rx, rxIndex) => (
+                <View key={rx._id ?? rxIndex} style={rxIndex > 0 ? { marginTop: 16 } : undefined}>
+                  {rx.items.map((item, itemIndex) => (
+                    <View key={itemIndex} style={[styles.rxItem, { backgroundColor: colors.surfaceTertiary ?? colors.background }]}>
+                      <View style={styles.rxItemHeader}>
+                        <SymbolView name={{ ios: 'pills', android: 'medication', web: 'medication' }} tintColor={colors.primary} size={16} />
+                        <Text style={[styles.rxItemName, { color: colors.text }]}>{item.medicineName}</Text>
+                      </View>
+                      <Text style={[styles.rxItemDetail, { color: colors.textSecondary }]}>
+                        {item.dosage} — Qty: {item.quantity}
+                      </Text>
+                      {item.instructions ? (
+                        <Text style={[styles.rxItemInstructions, { color: colors.textTertiary }]}>{item.instructions}</Text>
+                      ) : null}
+                    </View>
+                  ))}
+                </View>
+              ))}
+            </View>
           ) : (
             <Text style={[styles.sectionValue, { color: colors.text }]}>
               {record.prescription ?? 'No prescription recorded.'}
@@ -253,6 +292,8 @@ export default function RecordDetailScreen() {
     </SafeAreaView>
   );
 }
+
+const TAB_BAR_HEIGHT = 70;
 
 const styles = StyleSheet.create({
   container: {
@@ -402,5 +443,32 @@ const styles = StyleSheet.create({
   },
   deleteHintText: {
     fontSize: 13,
+  },
+  prescriptionList: {
+    gap: 8,
+  },
+  rxItem: {
+    borderRadius: 10,
+    padding: 12,
+  },
+  rxItemHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginBottom: 4,
+  },
+  rxItemName: {
+    fontSize: 15,
+    fontWeight: '600',
+  },
+  rxItemDetail: {
+    fontSize: 13,
+    marginLeft: 24,
+  },
+  rxItemInstructions: {
+    fontSize: 12,
+    fontStyle: 'italic',
+    marginLeft: 24,
+    marginTop: 2,
   },
 });

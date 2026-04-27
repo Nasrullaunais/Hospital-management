@@ -16,13 +16,14 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import DateTimePicker, { type DateTimePickerEvent } from '@react-native-community/datetimepicker';
 import * as ImagePicker from 'expo-image-picker';
+import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { useAuth } from '@/shared/context/AuthContext';
 import { medicineService } from '@/features/pharmacy/services/medicine.service';
 import Colors from '@/constants/Colors';
 import { useColorScheme } from '@/components/useColorScheme';
 
-interface PickedImage {
+interface PackagingImage {
   uri: string;
   name: string;
   type: string;
@@ -34,13 +35,15 @@ export default function AddMedicineScreen() {
   const colorScheme = useColorScheme() ?? 'light';
   const theme = Colors[colorScheme];
 
+  const ONE_DAY_MS = 24 * 60 * 60 * 1000;
+
   const [name, setName] = useState('');
   const [category, setCategory] = useState('');
   const [price, setPrice] = useState('');
   const [stockQuantity, setStockQuantity] = useState('');
-  const [expiryDate, setExpiryDate] = useState(new Date(Date.now() + 24 * 60 * 60 * 1000));
+  const [expiryDate, setExpiryDate] = useState(new Date(Date.now() + ONE_DAY_MS));
   const [showDatePicker, setShowDatePicker] = useState(false);
-  const [packagingImage, setPackagingImage] = useState<PickedImage | null>(null);
+  const [packagingImage, setPackagingImage] = useState<PackagingImage | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
   const canSubmit = useMemo(
@@ -93,6 +96,33 @@ export default function AddMedicineScreen() {
     }
   };
 
+  const pickFromGallery = async () => {
+    try {
+      const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      if (!permission.granted) {
+        Alert.alert('Permission Required', 'Gallery permission is required to select packaging images.');
+        return;
+      }
+
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ['images'],
+        quality: 0.8,
+      });
+
+      if (!result.canceled && result.assets.length > 0) {
+        const asset = result.assets[0];
+        const extension = asset.uri.split('.').pop() ?? 'jpg';
+        setPackagingImage({
+          uri: asset.uri,
+          name: `packaging-${Date.now()}.${extension}`,
+          type: asset.mimeType ?? 'image/jpeg',
+        });
+      }
+    } catch (err) {
+      Alert.alert('Error', 'Failed to open image gallery.');
+    }
+  };
+
   const validate = (): string | null => {
     if (!canSubmit) return 'You are not allowed to add medications.';
     if (!name.trim()) return 'Medicine name is required.';
@@ -130,7 +160,7 @@ export default function AddMedicineScreen() {
         uri: packagingImage!.uri,
         name: packagingImage!.name,
         type: packagingImage!.type,
-      } as unknown as Blob);
+      } as PackagingImage);
 
       await medicineService.createMedicine(formData);
       Alert.alert('Success', 'Medication added successfully.', [{ text: 'OK', onPress: () => router.back() }]);
@@ -207,21 +237,32 @@ export default function AddMedicineScreen() {
             value={expiryDate}
             mode="date"
             display={Platform.OS === 'ios' ? 'inline' : 'default'}
-            minimumDate={new Date(Date.now() + 24 * 60 * 60 * 1000)}
+            minimumDate={new Date(Date.now() + ONE_DAY_MS)}
             onChange={onDateChange}
           />
         ) : null}
 
         <Text style={[styles.label, { color: theme.text }]}>Packaging Image</Text>
-        <TouchableOpacity
-          onPress={pickPackagingImage}
-          style={[styles.imageButton, { borderColor: theme.primary, backgroundColor: theme.infoBg }]}
-          disabled={submitting}
-        >
-          <Text style={[styles.imageButtonText, { color: theme.primary }]}>
-            {packagingImage ? 'Retake Packaging Photo' : 'Capture Packaging Photo'}
-          </Text>
-        </TouchableOpacity>
+        <View style={{ flexDirection: 'row', gap: 12, marginTop: 10 }}>
+          <TouchableOpacity
+            onPress={pickPackagingImage}
+            style={[styles.imageButton, { borderColor: theme.primary, backgroundColor: theme.infoBg, flex: 1 }]}
+            disabled={submitting}
+            activeOpacity={0.7}
+          >
+            <Ionicons name="camera-outline" size={20} color={theme.primary} />
+            <Text style={[styles.imageButtonText, { color: theme.primary }]}>Camera</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            onPress={pickFromGallery}
+            style={[styles.imageButton, { borderColor: theme.primary, backgroundColor: theme.infoBg, flex: 1 }]}
+            disabled={submitting}
+            activeOpacity={0.7}
+          >
+            <Ionicons name="images-outline" size={20} color={theme.primary} />
+            <Text style={[styles.imageButtonText, { color: theme.primary }]}>Gallery</Text>
+          </TouchableOpacity>
+        </View>
 
         {packagingImage ? (
           <View style={styles.previewWrap}>

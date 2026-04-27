@@ -1,5 +1,5 @@
-import React, { useEffect, useState, useCallback, useMemo } from 'react';
-import { View, Text, StyleSheet, ActivityIndicator, ScrollView, TouchableOpacity, Alert } from 'react-native';
+import React, { useEffect, useState, useCallback, useMemo, useRef } from 'react';
+import { View, Text, StyleSheet, ActivityIndicator, TouchableOpacity, Alert, ScrollView } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Feather } from '@expo/vector-icons';
 import { useLocalSearchParams, useRouter } from 'expo-router';
@@ -9,97 +9,131 @@ import { medicineService } from '@/features/pharmacy/services/medicine.service';
 import Colors from '@/constants/Colors';
 import { useColorScheme } from '@/components/useColorScheme';
 import { spacing, radius, shadows } from '@/constants/ThemeTokens';
+import { LOW_STOCK_THRESHOLD } from '@/shared/constants/pharmacy';
+import type { PendingPrescription, PrescriptionItem } from '@/shared/types';
 
-interface DispenseItem {
-  medicineId: string | { _id: string; stockQuantity?: number; name?: string };
-  medicineName: string;
-  dosage: string;
-  quantity: number;
-  instructions?: string;
-}
-
-interface Prescription {
-  _id: string;
-  patientId: string | { _id: string; name?: string };
-  doctorId: string | { _id: string; userId?: { name?: string } };
-  items: DispenseItem[];
-  status: string;
-  createdAt: string;
-}
+// Number of retry attempts for stock fetch failures
+// 2 retries = 3 total attempts (initial + 2 retries)
+const STOCK_FETCH_RETRIES = 2;
 
 export default function DispenseScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const colorScheme = useColorScheme() ?? 'light';
   const theme = Colors[colorScheme];
-  const [prescription, setPrescription] = useState<Prescription | null>(null);
+  const [prescription, setPrescription] = useState<PendingPrescription | null>(null);
   const [medicineStocks, setMedicineStocks] = useState<Record<string, number>>({});
+  const [stockFetchError, setStockFetchError] = useState(false);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [dispensed, setDispensed] = useState<Record<string, number>>({});
+  const [isMounted, setIsMounted] = useState(true);
   const router = useRouter();
+
+  // Ref to always access current medicineStocks without closure staleness
+  const medicineStocksRef = useRef(medicineStocks);
+  medicineStocksRef.current = medicineStocks;
+
+  useEffect(() => {
+    setIsMounted(true);
+    return () => setIsMounted(false);
+  }, []);
 
   useEffect(() => {
     if (!id) return;
     prescriptionService.getPrescriptionById(id)
-      .then((rx: Prescription) => {
+      .then((rx: PendingPrescription) => {
+        if (!isMounted) return;
         setPrescription(rx);
-        // Initialize dispensed quantities with prescribed amounts
         const init: Record<string, number> = {};
-        rx.items.forEach((item: DispenseItem) => {
+        rx.items.forEach((item: PrescriptionItem) => {
           const medId = typeof item.medicineId === 'object' ? item.medicineId._id : item.medicineId;
           init[medId] = item.quantity;
         });
         setDispensed(init);
       })
-      .catch(() => Alert.alert('Error', 'Failed to load prescription'))
-      .finally(() => setLoading(false));
-  }, [id]);
+      .catch(() => {
+        if (!isMounted) return;
+        Alert.alert('Error', 'Failed to load prescription');
+      })
+      .finally(() => {
+        if (!isMounted) return;
+        setLoading(false);
+      });
+  }, [id, prescriptionService, isMounted]);
 
-  // Fetch stock quantities for all medicines in the prescription
   useEffect(() => {
-    if (!prescription) return;
+    if (!prescription || !id) return;
 
-    const fetchStocks = async () => {
-      const stocks: Record<string, number> = {};
-      for (const item of prescription.items) {
-        const medId = typeof item.medicineId === 'object' ? item.medicineId._id : item.medicineId;
-        try {
-          // If medicineId is populated with stockQuantity, use that
-          if (typeof item.medicineId === 'object' && item.medicineId.stockQuantity !== undefined) {
-            stocks[medId] = item.medicineId.stockQuantity;
-          } else {
-            // Otherwise fetch medicine details from server
-            const med = await medicineService.getMedicineById(medId);
-            stocks[medId] = med.stockQuantity ?? 0;
+    const medIds = prescription.items.map((item: PrescriptionItem) =>
+      typeof item.medicineId === 'object' ? item.medicineId._id : item.medicineId,
+    );
+
+    let cancelled = false;
+
+    const fetchWithRetry = async (ids: string[], attempt = 0): Promise<Record<string, number>> => {
+      try {
+        const meds = await medicineService.getMedicinesByIds(ids);
+        if (cancelled) return {};
+        const stocks: Record<string, number> = {};
+        meds.forEach((med) => {
+          stocks[med._id] = med.stockQuantity ?? 0;
+        });
+        ids.forEach((id) => {
+          if (stocks[id] === undefined) {
+            stocks[id] = -1;
           }
-        } catch {
-          stocks[medId] = 0;
+        });
+        return stocks;
+      } catch {
+        if (cancelled) return {};
+        if (attempt < STOCK_FETCH_RETRIES) {
+          return fetchWithRetry(ids, attempt + 1);
         }
+        const failed: Record<string, number> = {};
+        ids.forEach((id) => { failed[id] = -1; });
+        return failed;
       }
-      setMedicineStocks(stocks);
     };
 
-    fetchStocks();
-  }, [prescription]);
+    fetchWithRetry(medIds)
+      .then((stocks) => {
+        if (cancelled || !isMounted) return;
+        setMedicineStocks(stocks);
+        const hasFailures = Object.values(stocks).some((s) => s === -1);
+        setStockFetchError(hasFailures);
+        if (hasFailures) {
+          Alert.alert('Stock Unavailable', 'Some medicine stock information could not be loaded. Please try again later.');
+        }
+      })
+      .catch(() => {
+        if (cancelled || !isMounted) return;
+        setStockFetchError(true);
+        Alert.alert('Stock Error', 'Failed to fetch stock information. Please try again.');
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [id, prescription]);
 
   const handleDispense = useCallback(() => {
     if (!prescription) return;
 
-    // Client-side validation: check if any item exceeds stock
-    const overStockItems = prescription.items.filter((item: DispenseItem) => {
+    const currentStocks = medicineStocksRef.current;
+    const overStockItems = prescription.items.filter((item: PrescriptionItem) => {
       const medId = typeof item.medicineId === 'object' ? item.medicineId._id : item.medicineId;
-      const stock = medicineStocks[medId] ?? 0;
+      const rawStock = currentStocks[medId] ?? 0;
+      if (rawStock === -1) return false;
       const toDispense = dispensed[medId] || 0;
-      return toDispense > stock;
+      return toDispense > rawStock;
     });
 
     if (overStockItems.length > 0) {
-      const names = overStockItems.map((i: DispenseItem) => i.medicineName).join(', ');
+      const names = overStockItems.map((i: PrescriptionItem) => i.medicineName).join(', ');
       Alert.alert('Insufficient Stock', `The following medicines exceed available stock: ${names}. Please adjust quantities.`);
       return;
     }
 
-    // Confirmation dialog before fulfilling
     Alert.alert(
       'Confirm Dispensing',
       'Are you sure you want to fulfill this prescription? This action cannot be undone.',
@@ -111,10 +145,11 @@ export default function DispenseScreen() {
           onPress: async () => {
             try {
               setSubmitting(true);
-              const items = prescription.items.map((item: DispenseItem) => {
+              const items = prescription.items.map((item: PrescriptionItem) => {
                 const medId = typeof item.medicineId === 'object' ? item.medicineId._id : item.medicineId;
                 return {
                   medicineId: medId,
+                  medicineName: item.medicineName,
                   quantityDispensed: dispensed[medId] || 0,
                 };
               });
@@ -123,6 +158,7 @@ export default function DispenseScreen() {
                 { text: 'OK', onPress: () => router.back() },
               ]);
             } catch (e: unknown) {
+              console.error('[DispenseScreen] handleDispense error:', e);
               const message = e instanceof Error ? e.message : 'Failed to dispense prescription';
               Alert.alert('Error', message);
             } finally {
@@ -132,22 +168,39 @@ export default function DispenseScreen() {
         },
       ],
     );
-  }, [prescription, dispensed, id, router, medicineStocks]);
+  }, [prescription, dispensed, id, router]);
 
-  const handleAdjust = useCallback((medicineId: string, delta: number) => {
-    setDispensed((d) => ({
-      ...d,
-      [medicineId]: Math.max(0, (d[medicineId] || 0) + delta),
-    }));
+  const handleAdjust = useCallback((medicineId: string, delta: number, maxStock?: number) => {
+    setDispensed((d) => {
+      const current = d[medicineId] || 0;
+      const newVal = Math.max(0, current + delta);
+      if (maxStock !== undefined && maxStock >= 0 && newVal > maxStock) {
+        return { ...d, [medicineId]: maxStock };
+      }
+      return { ...d, [medicineId]: newVal };
+    });
   }, []);
 
   // Calculate total prescribed vs dispensed
   const totalStats = useMemo(() => {
     if (!prescription) return { prescribed: 0, dispensing: 0 };
-    const prescribed = prescription.items.reduce((sum: number, item: DispenseItem) => sum + item.quantity, 0);
+    const prescribed = prescription.items.reduce((sum: number, item: PrescriptionItem) => sum + item.quantity, 0);
     const dispensing = Object.values(dispensed).reduce((sum, val) => sum + val, 0);
     return { prescribed, dispensing };
   }, [prescription, dispensed]);
+
+  const stocksLoaded = useMemo(() => Object.keys(medicineStocks).length > 0, [medicineStocks]);
+
+  const canSubmit = useMemo(() => {
+    if (!prescription || prescription.items.length === 0) return false;
+    if (!stocksLoaded) return false;
+    const allFailed = prescription.items.every((item: PrescriptionItem) => {
+      const medId = typeof item.medicineId === 'object' ? item.medicineId._id : item.medicineId;
+      return medicineStocks[medId] === -1;
+    });
+    if (allFailed) return false;
+    return true;
+  }, [prescription, stocksLoaded, medicineStocks]);
 
   if (loading) {
     return (
@@ -218,18 +271,28 @@ export default function DispenseScreen() {
 
       <Text style={[styles.sectionTitle, { color: theme.text }]}>Medicines to Dispense</Text>
 
+      {!stocksLoaded && prescription.items.length > 0 && (
+        <View style={[styles.skeletonCard, { backgroundColor: theme.surface, borderColor: theme.border }]}>
+          <View style={[styles.skeletonLine, { backgroundColor: theme.surfaceTertiary }]} />
+          <View style={[styles.skeletonLineShort, { backgroundColor: theme.surfaceTertiary }]} />
+          <View style={[styles.skeletonLineShort, { backgroundColor: theme.surfaceTertiary }]} />
+        </View>
+      )}
+
       {prescription.items.length === 0 ? (
         <View style={[styles.emptyCard, { backgroundColor: theme.surface, borderColor: theme.border }]}>
           <Feather name="inbox" size={40} color={theme.textTertiary} />
           <Text style={[styles.emptyText, { color: theme.textSecondary }]}>No items in this prescription</Text>
         </View>
       ) : (
-        prescription.items.map((item: DispenseItem, index: number) => {
+        prescription.items.map((item: PrescriptionItem, index: number) => {
           const medId = typeof item.medicineId === 'object' ? item.medicineId._id : item.medicineId;
-          const stock = medicineStocks[medId] ?? 0;
+          const rawStock = medicineStocks[medId] ?? 0;
+          const stockFetchFailed = rawStock === -1;
+          const stock = stockFetchFailed ? 0 : rawStock;
           const currentDispensed = dispensed[medId] || 0;
-          const isLowStock = stock < item.quantity;
-          const isOverStock = currentDispensed > stock;
+          const isLowStock = !stockFetchFailed && stock < LOW_STOCK_THRESHOLD;
+          const isOverStock = !stockFetchFailed && currentDispensed > stock;
 
           return (
             <View
@@ -242,7 +305,12 @@ export default function DispenseScreen() {
               <View style={styles.itemInfo}>
                 <View style={styles.itemHeader}>
                   <Text style={[styles.medicineName, { color: theme.text }]}>{item.medicineName}</Text>
-                  {isLowStock && !isOverStock && (
+                  {stockFetchFailed && (
+                    <View style={[styles.lowStockBadge, { backgroundColor: theme.errorBg, borderColor: theme.error }]}>
+                      <Text style={[styles.lowStockText, { color: theme.error }]}>Stock Unavailable</Text>
+                    </View>
+                  )}
+                  {!stockFetchFailed && isLowStock && !isOverStock && (
                     <View style={[styles.lowStockBadge, { backgroundColor: theme.errorBg, borderColor: theme.error }]}>
                       <Text style={[styles.lowStockText, { color: theme.error }]}>Low Stock</Text>
                     </View>
@@ -255,8 +323,8 @@ export default function DispenseScreen() {
                   <Text style={[styles.prescribedText, { color: theme.textSecondary }]}>
                     Prescribed: {item.quantity}
                   </Text>
-                  <Text style={[styles.stockText, { color: isOverStock ? theme.error : theme.textSecondary }]}>
-                    Stock: {stock} available
+                  <Text style={[styles.stockText, { color: stockFetchFailed ? theme.error : (isOverStock ? theme.error : theme.textSecondary) }]}>
+                    {stockFetchFailed ? 'Unable to determine stock' : `Stock: ${stock} available`}
                   </Text>
                 </View>
                 {item.instructions && (
@@ -288,7 +356,7 @@ export default function DispenseScreen() {
                 </Text>
                 <TouchableOpacity
                   style={[styles.adjustBtn, { backgroundColor: theme.primary }]}
-                  onPress={() => handleAdjust(medId, 1)}
+                  onPress={() => handleAdjust(medId, 1, stock >= 0 ? stock : undefined)}
                   activeOpacity={0.7}
                 >
                   <Text style={styles.adjustBtnText}>+</Text>
@@ -304,10 +372,10 @@ export default function DispenseScreen() {
         style={[
           styles.submitBtn,
           { backgroundColor: theme.success },
-          (submitting || prescription.items.length === 0) && { opacity: 0.6 },
+          (submitting || !canSubmit) && { opacity: 0.6 },
         ]}
         onPress={handleDispense}
-        disabled={submitting || prescription.items.length === 0}
+        disabled={submitting || !canSubmit}
         activeOpacity={0.8}
       >
         {submitting ? (
@@ -405,4 +473,14 @@ const styles = StyleSheet.create({
   },
   submitBtnContent: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
   submitBtnText: { color: '#fff', fontSize: 16, fontWeight: '700' },
+  skeletonCard: {
+    padding: spacing.md,
+    marginHorizontal: spacing.md,
+    marginBottom: spacing.md,
+    borderRadius: radius.lg,
+    borderWidth: 1,
+    gap: spacing.sm,
+  },
+  skeletonLine: { height: 16, borderRadius: radius.sm },
+  skeletonLineShort: { height: 12, width: '60%', borderRadius: radius.sm },
 });

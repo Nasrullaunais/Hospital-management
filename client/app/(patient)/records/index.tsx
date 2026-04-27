@@ -16,10 +16,8 @@ import { useAuth } from '@/shared/context/AuthContext';
 import type { PopulatedMedicalRecord } from '@/shared/types';
 import Colors from '@/constants/Colors';
 import { useColorScheme } from '@/components/useColorScheme';
-
+import { TAB_BAR_HEIGHT } from '@/shared/constants/Config';
 import { spacing } from '@/constants/ThemeTokens';
-
-const TAB_BAR_HEIGHT = 70;
 
 export default function RecordsScreen() {
   const { user } = useAuth();
@@ -29,6 +27,7 @@ export default function RecordsScreen() {
   const [records, setRecords] = useState<PopulatedMedicalRecord[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const fetchRecords = useCallback(async () => {
     if (!user) return;
@@ -40,7 +39,8 @@ export default function RecordsScreen() {
         const data = await recordService.getDoctorLogs();
         setRecords(data);
       }
-    } catch {
+    } catch (err: unknown) {
+      console.error('fetchRecords failed:', err);
       setLoading(false);
       setRefreshing(false);
     }
@@ -51,6 +51,7 @@ export default function RecordsScreen() {
   }, [fetchRecords]);
 
   const handleRefresh = () => {
+    setError(null);
     setRefreshing(true);
     void fetchRecords();
   };
@@ -67,14 +68,16 @@ export default function RecordsScreen() {
     return (
       <TouchableOpacity
         style={[styles.card, { backgroundColor: theme.surface, borderColor: theme.border }]}
-        onPress={() => router.push(`/(patient)/records/${item._id}` as Href)}
+        onPress={() => {
+          if (item._id) router.push(`/(patient)/records/${item._id}`);
+        }}
       >
         <Text style={[styles.diagnosis, { color: theme.text }]}>{item.diagnosis}</Text>
 
         <Text style={[styles.subLabel, { color: theme.primary }]}>
           {isPatientView
             ? `Dr. ${item.doctorId.userId.name} · ${item.doctorId.specialization}`
-            : `Patient: ${item.patientId.name}`}
+            : `Patient: ${item.patientId.name ?? 'Unknown Patient'}`}
         </Text>
 
         <View style={styles.dateRow}>

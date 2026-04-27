@@ -34,11 +34,22 @@ export default function DoctorDetailScreen() {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    doctorService
-      .getDoctorById(doctorId)
-      .then(setDoctor)
-      .catch((err) => setError(err instanceof Error ? err.message : 'Failed to load doctor.'))
-      .finally(() => setLoading(false));
+    let cancelled = false;
+    setLoading(true);
+    setError(null);
+    (async () => {
+      try {
+        const doc = await doctorService.getDoctorById(doctorId);
+        if (!cancelled) setDoctor(doc);
+      } catch (err) {
+        if (!cancelled) setError(err instanceof Error ? err.message : 'Failed to load doctor.');
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
   }, [doctorId]);
 
   if (loading) {

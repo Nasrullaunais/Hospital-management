@@ -102,15 +102,17 @@ export interface Medicine {
 
 // ── Invoice ────────────────────────────────────────────────────────────────────
 
-export type PaymentStatus = 'Unpaid' | 'Pending Verification' | 'Paid';
+export type PaymentStatus = 'Unpaid' | 'Pending Verification' | 'Paid' | 'Overdue';
 
 export interface Invoice {
   _id: string;
   patientId: string | User;
   appointmentId?: string | Appointment;
+  invoiceNumber?: string;
   totalAmount: number;
   paymentStatus: PaymentStatus;
   issuedDate: string;
+  dueDate?: string;
   paymentReceiptUrl?: string;
 }
 
@@ -130,6 +132,8 @@ export interface Department {
 
 // ── Prescription ─────────────────────────────────────────────────────────────────
 
+export type PrescriptionStatus = 'active' | 'fulfilled' | 'cancelled';
+
 export interface PrescriptionItem {
   medicineId: string | { _id: string; name?: string };
   medicineName: string;
@@ -142,7 +146,7 @@ export interface PendingPrescription {
   patientId: string | { _id: string; name?: string };
   doctorId: string | { _id: string; userId?: { name?: string } };
   items: PrescriptionItem[];
-  status: string;
+  status: PrescriptionStatus;
   createdAt: string;
 }
 

@@ -7,6 +7,7 @@ import Colors from '@/constants/Colors';
 import { useColorScheme } from '@/components/useColorScheme';
 import { Card, Button, Badge } from '@/components/ui';
 import { spacing } from '@/constants/ThemeTokens';
+import { LOW_STOCK_THRESHOLD, EXPIRY_WARNING_DAYS, ONE_DAY_MS } from '@/shared/constants/pharmacy';
 import { medicineService } from '@/features/pharmacy/services/medicine.service';
 import { dispensingService } from '@/features/dispensing/services/dispensing.service';
 import type { Medicine } from '@/shared/types';
@@ -35,12 +36,12 @@ export default function PharmacistDashboard() {
 
   const calculateStats = useCallback((medicines: Medicine[]) => {
     const now = Date.now();
-    const sixtyDaysMs = 60 * 24 * 60 * 60 * 1000;
+    const expiryThresholdMs = EXPIRY_WARNING_DAYS * ONE_DAY_MS;
 
-    const lowStock = medicines.filter(m => m.stockQuantity < 10).length;
+    const lowStock = medicines.filter(m => m.stockQuantity < LOW_STOCK_THRESHOLD).length;
     const expiringSoon = medicines.filter(m => {
       const expiryDate = new Date(m.expiryDate).getTime();
-      return (expiryDate - now) <= sixtyDaysMs && expiryDate > now;
+      return (expiryDate - now) <= expiryThresholdMs && expiryDate > now;
     }).length;
 
     return { lowStock, expiringSoon };
@@ -49,7 +50,7 @@ export default function PharmacistDashboard() {
   const fetchDashboardData = useCallback(async () => {
     try {
       const [medicines, pending] = await Promise.all([
-        medicineService.getMedicines(),
+        medicineService.getMedicines().catch(() => [] as Medicine[]),
         dispensingService.getPendingPrescriptions().catch(() => []),
       ]);
 
@@ -61,8 +62,10 @@ export default function PharmacistDashboard() {
         expiringSoonCount: expiringSoon,
         pendingPrescriptions: Array.isArray(pending) ? pending.length : 0,
       });
-    } catch {
-      // Silently fail - dashboard shows zeros
+    } catch (err) {
+      if (__DEV__) {
+        console.warn('[PharmacistDashboard] Failed to load dashboard data', err);
+      }
     } finally {
       setLoading(false);
       setRefreshing(false);

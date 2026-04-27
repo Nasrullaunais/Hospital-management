@@ -10,7 +10,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Feather } from '@expo/vector-icons';
-import { useLocalSearchParams, useRouter, Stack } from 'expo-router';
+import { useLocalSearchParams, useRouter, Stack, ErrorBoundary } from 'expo-router';
 import {
   wardReceptionistService,
   type BedStatus,
@@ -40,9 +40,9 @@ export default function PatientDetailScreen() {
         if (found) {
           setBed(found);
         }
-      } catch {
-        // Bed not found
-      } finally {
+      } catch (err) {
+        console.error('fetchBedStatuses error:', err);
+        Alert.alert('Error', 'Failed to load patient data. Please try again.');
         setLoading(false);
       }
     };
@@ -60,8 +60,9 @@ export default function PatientDetailScreen() {
       try {
         const meds = await wardReceptionistService.getPatientMedications(bed.patientId);
         setMedications(meds);
-      } catch {
-        // Failed to load medications
+      } catch (err) {
+        console.error('[PatientDetail] getPatientMedications error:', err);
+        Alert.alert('Error', err instanceof Error ? err.message : 'Failed to load medications. Please try again.');
       } finally {
         setMedicationsLoading(false);
       }
@@ -88,8 +89,9 @@ export default function PatientDetailScreen() {
             try {
               await wardReceptionistService.unassignPatient(bed.patientId!);
               router.back();
-            } catch {
-              Alert.alert('Error', 'Failed to unassign patient. Please try again.');
+            } catch (err) {
+              console.error('[PatientDetail] unassign error:', err);
+              Alert.alert('Error', err instanceof Error ? err.message : 'Failed to unassign patient. Please try again.');
             } finally {
               setUnassigning(false);
             }
@@ -134,148 +136,150 @@ export default function PatientDetailScreen() {
   }
 
   return (
-    <>
-      <Stack.Screen
-        options={{
-          title: bed.patientName ?? 'Patient Details',
-          headerShown: true,
-        }}
-      />
-      <SafeAreaView edges={['bottom']} style={[styles.container, { backgroundColor: theme.background }]}>
-        <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
-          {/* Patient Info Header */}
-          <View style={[styles.headerCard, { backgroundColor: theme.surface, borderColor: theme.primary }]}>
-            <View style={styles.headerRow}>
-              <View style={[styles.patientIcon, { backgroundColor: theme.primaryLight }]}>
-                <Feather name="user" size={28} color={theme.primary} />
-              </View>
-              <View style={styles.headerInfo}>
-                <Text style={[styles.patientName, { color: theme.text }]}>
-                  {bed.patientName ?? 'Unknown Patient'}
-                </Text>
-                <Text style={[styles.wardInfo, { color: theme.textSecondary }]}>
-                  {bed.wardName} • Bed #{bed.bedNumber}
-                </Text>
-              </View>
-            </View>
-          </View>
-
-          {/* Assignment Details */}
-          <View style={[styles.section, { backgroundColor: theme.surface, borderColor: theme.border }]}>
-            <Text style={[styles.sectionTitle, { color: theme.text }]}>Assignment Details</Text>
-
-            <View style={styles.infoRow}>
-              <Feather name="calendar" size={18} color={theme.textSecondary} />
-              <View style={styles.infoContent}>
-                <Text style={[styles.infoLabel, { color: theme.textTertiary }]}>Admission Date</Text>
-                <Text style={[styles.infoValue, { color: theme.text }]}>
-                  {formatDate(bed.admissionDate)}
-                </Text>
-              </View>
-            </View>
-
-            <View style={styles.infoRow}>
-              <Feather name="log-out" size={18} color={theme.textSecondary} />
-              <View style={styles.infoContent}>
-                <Text style={[styles.infoLabel, { color: theme.textTertiary }]}>Expected Discharge</Text>
-                <Text style={[styles.infoValue, { color: theme.text }]}>
-                  {formatDate(bed.expectedDischarge)}
-                </Text>
-              </View>
-            </View>
-
-            {bed.patientPhone && (
-              <View style={styles.infoRow}>
-                <Feather name="phone" size={18} color={theme.textSecondary} />
-                <View style={styles.infoContent}>
-                  <Text style={[styles.infoLabel, { color: theme.textTertiary }]}>Phone</Text>
-                  <Text style={[styles.infoValue, { color: theme.text }]}>{bed.patientPhone}</Text>
+    <ErrorBoundary>
+      <>
+        <Stack.Screen
+          options={{
+            title: bed.patientName ?? 'Patient Details',
+            headerShown: true,
+          }}
+        />
+        <SafeAreaView edges={['bottom']} style={[styles.container, { backgroundColor: theme.background }]}>
+          <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
+            {/* Patient Info Header */}
+            <View style={[styles.headerCard, { backgroundColor: theme.surface, borderColor: theme.primary }]}>
+              <View style={styles.headerRow}>
+                <View style={[styles.patientIcon, { backgroundColor: theme.primaryLight }]}>
+                  <Feather name="user" size={28} color={theme.primary} />
+                </View>
+                <View style={styles.headerInfo}>
+                  <Text style={[styles.patientName, { color: theme.text }]}>
+                    {bed.patientName ?? 'Unknown Patient'}
+                  </Text>
+                  <Text style={[styles.wardInfo, { color: theme.textSecondary }]}>
+                    {bed.wardName} • Bed #{bed.bedNumber}
+                  </Text>
                 </View>
               </View>
-            )}
-          </View>
+            </View>
 
-          {/* Medications Section */}
-          <View style={[styles.section, { backgroundColor: theme.surface, borderColor: theme.border }]}>
-            <Text style={[styles.sectionTitle, { color: theme.text }]}>Current Medications</Text>
+            {/* Assignment Details */}
+            <View style={[styles.section, { backgroundColor: theme.surface, borderColor: theme.border }]}>
+              <Text style={[styles.sectionTitle, { color: theme.text }]}>Assignment Details</Text>
 
-            {medicationsLoading ? (
-              <View style={styles.medicationsLoading}>
-                <ActivityIndicator size="small" color={theme.primary} />
-                <Text style={[styles.loadingText, { color: theme.textSecondary }]}>
-                  Loading medications...
-                </Text>
+              <View style={styles.infoRow}>
+                <Feather name="calendar" size={18} color={theme.textSecondary} />
+                <View style={styles.infoContent}>
+                  <Text style={[styles.infoLabel, { color: theme.textTertiary }]}>Admission Date</Text>
+                  <Text style={[styles.infoValue, { color: theme.text }]}>
+                    {formatDate(bed.admissionDate)}
+                  </Text>
+                </View>
               </View>
-            ) : medications.length === 0 ? (
-              <View style={styles.emptyMedications}>
-                <Feather name="info" size={20} color={theme.textTertiary} />
-                <Text style={[styles.emptyText, { color: theme.textSecondary }]}>
-                  No active medications for this patient.
-                </Text>
+
+              <View style={styles.infoRow}>
+                <Feather name="log-out" size={18} color={theme.textSecondary} />
+                <View style={styles.infoContent}>
+                  <Text style={[styles.infoLabel, { color: theme.textTertiary }]}>Expected Discharge</Text>
+                  <Text style={[styles.infoValue, { color: theme.text }]}>
+                    {formatDate(bed.expectedDischarge)}
+                  </Text>
+                </View>
               </View>
-            ) : (
-              medications
-                .filter((med) => med.status === 'active')
-                .map((med) => (
-                  <View
-                    key={med._id}
-                    style={[styles.medicationCard, { backgroundColor: theme.background }]}
-                  >
-                    <View style={styles.medicationHeader}>
-                      <Text style={[styles.medicationName, { color: theme.text }]}>
-                        {med.medicationName}
-                      </Text>
-                      <View style={[styles.medStatusBadge, { backgroundColor: theme.successLight }]}>
-                        <Text style={[styles.medStatusText, { color: theme.success }]}>
-                          {med.status}
-                        </Text>
-                      </View>
-                    </View>
-                    <View style={styles.medicationDetails}>
-                      <View style={styles.medDetailItem}>
-                        <Text style={[styles.medDetailLabel, { color: theme.textTertiary }]}>Dosage</Text>
-                        <Text style={[styles.medDetailValue, { color: theme.text }]}>{med.dosage}</Text>
-                      </View>
-                      <View style={styles.medDetailItem}>
-                        <Text style={[styles.medDetailLabel, { color: theme.textTertiary }]}>Frequency</Text>
-                        <Text style={[styles.medDetailValue, { color: theme.text }]}>{med.frequency}</Text>
-                      </View>
-                      <View style={styles.medDetailItem}>
-                        <Text style={[styles.medDetailLabel, { color: theme.textTertiary }]}>Route</Text>
-                        <Text style={[styles.medDetailValue, { color: theme.text }]}>{med.route}</Text>
-                      </View>
-                    </View>
-                    {med.notes && (
-                      <Text style={[styles.medNotes, { color: theme.textSecondary }]}>
-                        Notes: {med.notes}
-                      </Text>
-                    )}
+
+              {bed.patientPhone && (
+                <View style={styles.infoRow}>
+                  <Feather name="phone" size={18} color={theme.textSecondary} />
+                  <View style={styles.infoContent}>
+                    <Text style={[styles.infoLabel, { color: theme.textTertiary }]}>Phone</Text>
+                    <Text style={[styles.infoValue, { color: theme.text }]}>{bed.patientPhone}</Text>
                   </View>
-                ))
-            )}
-          </View>
-
-          {/* Unassign Action */}
-          <View style={styles.actions}>
-            <TouchableOpacity
-              style={[styles.actionButton, styles.unassignButton, { backgroundColor: theme.error }]}
-              activeOpacity={0.8}
-              onPress={handleUnassign}
-              disabled={unassigning}
-            >
-              {unassigning ? (
-                <ActivityIndicator size="small" color="#fff" />
-              ) : (
-                <>
-                  <Feather name="user-x" size={18} color="#fff" />
-                  <Text style={styles.actionButtonText}>Unassign Patient</Text>
-                </>
+                </View>
               )}
-            </TouchableOpacity>
-          </View>
-        </ScrollView>
-      </SafeAreaView>
-    </>
+            </View>
+
+            {/* Medications Section */}
+            <View style={[styles.section, { backgroundColor: theme.surface, borderColor: theme.border }]}>
+              <Text style={[styles.sectionTitle, { color: theme.text }]}>Current Medications</Text>
+
+              {medicationsLoading ? (
+                <View style={styles.medicationsLoading}>
+                  <ActivityIndicator size="small" color={theme.primary} />
+                  <Text style={[styles.loadingText, { color: theme.textSecondary }]}>
+                    Loading medications...
+                  </Text>
+                </View>
+              ) : medications.length === 0 ? (
+                <View style={styles.emptyMedications}>
+                  <Feather name="info" size={20} color={theme.textTertiary} />
+                  <Text style={[styles.emptyText, { color: theme.textSecondary }]}>
+                    No active medications for this patient.
+                  </Text>
+                </View>
+              ) : (
+                medications
+                  .filter((med) => med.status === 'active')
+                  .map((med) => (
+                    <View
+                      key={med._id}
+                      style={[styles.medicationCard, { backgroundColor: theme.background }]}
+                    >
+                      <View style={styles.medicationHeader}>
+                        <Text style={[styles.medicationName, { color: theme.text }]}>
+                          {med.medicationName}
+                        </Text>
+                        <View style={[styles.medStatusBadge, { backgroundColor: theme.successLight }]}>
+                          <Text style={[styles.medStatusText, { color: theme.success }]}>
+                            {med.status}
+                          </Text>
+                        </View>
+                      </View>
+                      <View style={styles.medicationDetails}>
+                        <View style={styles.medDetailItem}>
+                          <Text style={[styles.medDetailLabel, { color: theme.textTertiary }]}>Dosage</Text>
+                          <Text style={[styles.medDetailValue, { color: theme.text }]}>{med.dosage}</Text>
+                        </View>
+                        <View style={styles.medDetailItem}>
+                          <Text style={[styles.medDetailLabel, { color: theme.textTertiary }]}>Frequency</Text>
+                          <Text style={[styles.medDetailValue, { color: theme.text }]}>{med.frequency}</Text>
+                        </View>
+                        <View style={styles.medDetailItem}>
+                          <Text style={[styles.medDetailLabel, { color: theme.textTertiary }]}>Route</Text>
+                          <Text style={[styles.medDetailValue, { color: theme.text }]}>{med.route}</Text>
+                        </View>
+                      </View>
+                      {med.notes && (
+                        <Text style={[styles.medNotes, { color: theme.textSecondary }]}>
+                          Notes: {med.notes}
+                        </Text>
+                      )}
+                    </View>
+                  ))
+              )}
+            </View>
+
+            {/* Unassign Action */}
+            <View style={styles.actions}>
+              <TouchableOpacity
+                style={[styles.actionButton, styles.unassignButton, { backgroundColor: theme.error }]}
+                activeOpacity={0.8}
+                onPress={handleUnassign}
+                disabled={unassigning}
+              >
+                {unassigning ? (
+                  <ActivityIndicator size="small" color="#fff" />
+                ) : (
+                  <>
+                    <Feather name="user-x" size={18} color="#fff" />
+                    <Text style={styles.actionButtonText}>Unassign Patient</Text>
+                  </>
+                )}
+              </TouchableOpacity>
+            </View>
+          </ScrollView>
+        </SafeAreaView>
+      </>
+    </ErrorBoundary>
   );
 }
 

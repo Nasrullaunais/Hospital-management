@@ -25,6 +25,11 @@ router.post('/auth/register', registerValidation, validate, register);
 /** POST /api/auth/login — Login and receive JWT */
 router.post('/auth/login', loginValidation, validate, login);
 
+/** POST /api/auth/logout — Invalidate token (client-side token deletion confirms logout) */
+router.post('/auth/logout', authMiddleware, (_req, res) => {
+  res.json({ success: true, message: 'Logged out successfully' });
+});
+
 // ── Protected Patient Routes ───────────────────────────────────────────────────
 
 /** GET /api/patients/me — Get own profile */

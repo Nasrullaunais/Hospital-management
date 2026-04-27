@@ -133,6 +133,7 @@ async function createWardAssignment(params: {
   patientId: mongoose.Types.ObjectId;
   bedNumber: number;
   status?: string;
+  assignedBy?: mongoose.Types.ObjectId;
 }): Promise<TestWardAssignment> {
   return WardAssignment.create({
     wardId: params.wardId,
@@ -140,6 +141,7 @@ async function createWardAssignment(params: {
     bedNumber: params.bedNumber,
     admissionDate: new Date(),
     status: params.status ?? 'active',
+    assignedBy: params.assignedBy || new mongoose.Types.ObjectId(),
   });
 }
 

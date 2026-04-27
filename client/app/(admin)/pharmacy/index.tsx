@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import { ROLES } from '@/shared/constants/roles';
 import { useFocusEffect } from 'expo-router';
 import {
   ActivityIndicator,
@@ -16,17 +17,10 @@ import { useRouter } from 'expo-router';
 import Colors from '@/constants/Colors';
 import { useColorScheme } from '@/components/useColorScheme';
 import { useAuth } from '@/shared/context/AuthContext';
-import { Config } from '@/shared/constants/Config';
+import { LOW_STOCK_THRESHOLD } from '@/shared/constants/Config';
+import { getImageUrl } from '@/shared/utils/getImageUrl';
 import type { Medicine } from '@/shared/types';
 import { medicineService } from '@/features/pharmacy/services/medicine.service';
-
-function getImageUrl(url: string): string {
-  if (!url) return '';
-  if (url.startsWith('http://') || url.startsWith('https://')) return url;
-  const base = Config.BASE_URL.endsWith('/') ? Config.BASE_URL.slice(0, -1) : Config.BASE_URL;
-  const path = url.startsWith('/') ? url : `/${url}`;
-  return `${base}${path}`;
-}
 
 const makeStyles = (colorScheme: 'light' | 'dark') => StyleSheet.create({
   container: {
@@ -185,7 +179,7 @@ export default function PharmacyInventoryScreen() {
   const [error, setError] = useState<string | null>(null);
 
   const canAddMedicine = useMemo(
-    () => user?.role === 'admin' || user?.role === 'pharmacist',
+    () => user?.role === ROLES.ADMIN || user?.role === ROLES.PHARMACIST,
     [user?.role],
   );
 
@@ -239,7 +233,7 @@ export default function PharmacyInventoryScreen() {
   };
 
   const renderItem = ({ item }: { item: Medicine }) => {
-    const lowStock = item.stockQuantity < 10;
+    const lowStock = item.stockQuantity < LOW_STOCK_THRESHOLD;
 
     return (
       <View style={styles.card}>

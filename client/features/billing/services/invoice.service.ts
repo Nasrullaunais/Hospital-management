@@ -12,6 +12,16 @@ export interface CreateInvoicePayload {
   appointmentId?: string;
 }
 
+export interface CreateInvoicePayloadWithOptionalAppointment extends CreateInvoicePayload {
+  appointmentId?: string;
+}
+
+type AssertValidAppointmentId<T extends CreateInvoicePayload> =
+  T['appointmentId'] extends undefined ? T :
+  T['appointmentId'] extends '' ? never : T;
+
+export type ValidCreateInvoicePayload = AssertValidAppointmentId<CreateInvoicePayload>;
+
 export interface InvoiceFilters {
   paymentStatus?: PaymentStatus;
   patientId?: string;
@@ -53,6 +63,16 @@ export const invoiceService = {
   },
 
   /**
+   * Fetch a single invoice by ID.
+   */
+  getInvoiceById: async (id: string): Promise<Invoice> => {
+    const res = await apiClient.get<ApiSuccessResponse<Invoice>>(
+      ENDPOINTS.INVOICES.BY_ID(id),
+    );
+    return res.data.data;
+  },
+
+  /**
    * Upload a payment receipt for a specific invoice.
    * Sets status to "Pending Verification". Patient + ownership enforced.
    *
@@ -83,6 +103,6 @@ export const invoiceService = {
    * Delete an invoice. Admin only.
    */
   deleteInvoice: async (id: string): Promise<void> => {
-    await apiClient.delete(`${ENDPOINTS.INVOICES.BASE}/${id}`);
+    await apiClient.delete(ENDPOINTS.INVOICES.BY_ID(id));
   },
 };

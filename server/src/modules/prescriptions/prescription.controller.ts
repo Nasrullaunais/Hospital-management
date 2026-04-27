@@ -1,4 +1,5 @@
 import { type Request, type Response } from 'express';
+import mongoose from 'mongoose';
 import { Prescription } from './prescription.model.js';
 import { findDoctorByUserId } from '../../shared/utils/doctorLookup.js';
 import { ApiError } from '../../shared/utils/ApiError.js';
@@ -10,6 +11,12 @@ export const createPrescription = async (req: Request, res: Response) => {
 
   if (!patientId || !items?.length) {
     throw new ApiError(400, 'patientId and items are required');
+  }
+
+  if (medicalRecordId !== undefined) {
+    if (!mongoose.Types.ObjectId.isValid(medicalRecordId)) {
+      throw new ApiError(400, 'medicalRecordId must be a valid ObjectId');
+    }
   }
 
   // Use req.user.id from JWT as the actual doctorId - prevents prescription forgery
@@ -24,6 +31,18 @@ export const createPrescription = async (req: Request, res: Response) => {
   for (const item of items) {
     if (!item.medicineId || !item.dosage || !item.quantity || item.quantity <= 0) {
       throw new ApiError(400, 'Each item must have medicineId, dosage, and quantity > 0');
+    }
+    if (item.dosage && typeof item.dosage === 'string' && item.dosage.trim().length === 0) {
+      throw new ApiError(400, 'Each item must have a non-empty dosage');
+    }
+  }
+
+  // If medicalRecordId is provided, verify it belongs to the specified patient
+  if (medicalRecordId !== undefined) {
+    const { MedicalRecord } = await import('../records/record.model.js');
+    const record = await MedicalRecord.findOne({ _id: medicalRecordId, patientId });
+    if (!record) {
+      throw new ApiError(400, 'Medical record does not belong to the specified patient');
     }
   }
 
@@ -58,7 +77,7 @@ export const getPrescriptionById = async (req: Request, res: Response) => {
   const prescription = await Prescription.findById(req.params.id)
     .populate('doctorId', 'userId.name specialization')
     .populate('patientId', 'name email')
-    .populate('items.medicineId');
+    .populate('items.medicineId', 'name price stockQuantity');
   if (!prescription) throw new ApiError(404, 'Prescription not found');
 
   // Authorization: user must be the patient, the prescribing doctor, or an admin
@@ -83,11 +102,35 @@ export const getPrescriptionById = async (req: Request, res: Response) => {
 };
 
 export const getPendingPrescriptions = async (req: Request, res: Response) => {
-  const prescriptions = await Prescription.find({ status: PRESCRIPTION_STATUS.ACTIVE })
-    .populate('patientId', 'name email phone')
-    .populate('doctorId', 'userId.name specialization')
+  const skip = Math.max(0, Number(req.query.skip) || 0);
+  const limit = Math.min(100, Math.max(1, Number(req.query.limit) || 20));
+
+  const [prescriptions, total] = await Promise.all([
+    Prescription.find({ status: PRESCRIPTION_STATUS.ACTIVE })
+      .populate('patientId', 'name email phone')
+      .populate('doctorId', 'userId.name specialization')
+      .populate('items.medicineId', 'name price stockQuantity')
+      .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(limit),
+    Prescription.countDocuments({ status: PRESCRIPTION_STATUS.ACTIVE }),
+  ]);
+
+  res.json({ success: true, data: { prescriptions, total, skip, limit } });
+};
+
+export const getPrescriptionsByMedicalRecord = async (req: Request, res: Response) => {
+  const { medicalRecordId } = req.params;
+
+  if (!mongoose.Types.ObjectId.isValid(medicalRecordId)) {
+    throw new ApiError(400, 'Invalid medical record ID');
+  }
+
+  const prescriptions = await Prescription.find({ medicalRecordId })
+    .populate('doctorId', 'specialization')
     .populate('items.medicineId', 'name price stockQuantity')
     .sort({ createdAt: -1 });
+
   res.json({ success: true, data: prescriptions });
 };
 
@@ -95,7 +138,6 @@ export const cancelPrescription = async (req: Request, res: Response) => {
   const prescription = await Prescription.findById(req.params.id);
   if (!prescription) throw new ApiError(404, 'Prescription not found');
 
-  // Status guard: can only cancel active prescriptions
   if (prescription.status !== PRESCRIPTION_STATUS.ACTIVE) {
     throw new ApiError(400, `Cannot cancel a prescription with status '${prescription.status}'`);
   }

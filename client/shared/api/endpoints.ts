@@ -11,6 +11,7 @@ export const ENDPOINTS = {
   AUTH: {
     REGISTER: '/auth/register',
     LOGIN: '/auth/login',
+    LOGOUT: '/auth/logout',
   },
   PATIENTS: {
     ME: '/patients/me',
@@ -45,6 +46,7 @@ export const ENDPOINTS = {
   MEDICINES: {
     BASE: '/medicines',
     BY_ID: (id: string) => `/medicines/${id}`,
+    BATCH: '/medicines/batch',
     ADJUST_STOCK: (id: string) => `/medicines/${id}/stock`,
   },
 
@@ -52,6 +54,7 @@ export const ENDPOINTS = {
   INVOICES: {
     BASE: '/invoices',
     MY_BILLS: '/invoices/my-bills',
+    BY_ID: (id: string) => `/invoices/${id}`,
     UPLOAD_RECEIPT: (id: string) => `/invoices/${id}/upload-receipt`,
     VERIFY: (id: string) => `/invoices/${id}/verify`,
   },
@@ -62,6 +65,7 @@ export const ENDPOINTS = {
     PENDING: '/prescriptions/pending',
     BY_PATIENT: (patientId: string) => `/prescriptions/patient/${patientId}`,
     BY_ID: (id: string) => `/prescriptions/${id}`,
+    BY_RECORD: (recordId: string) => `/prescriptions/record/${recordId}`,
   },
 
   // Member 8 — Dispensing
@@ -83,12 +87,14 @@ export const ENDPOINTS = {
   },
 
   WARD_RECEPTIONIST: {
-    STATS: '/wardAssignments/stats',
-    BED_STATUSES: '/wardAssignments/bed-statuses',
-    ASSIGNMENTS_BASE: '/wardAssignments',
-    ASSIGNMENTS: (wardId: string) => `/wardAssignments/ward/${wardId}`,
-    UNASSIGN: (assignmentId: string) => `/wardAssignments/${assignmentId}`,
+    STATS: '/assignments/stats',
+    BED_STATUSES: '/assignments/bed-statuses',
+    ASSIGNMENTS_BASE: '/assignments',
+    ASSIGNMENTS: (wardId: string) => `/assignments/ward/${wardId}`,
+    UNASSIGN: (assignmentId: string) => `/assignments/${assignmentId}`,
     PATIENT_MEDICATIONS: (patientId: string) => `/wardMedications/patient/${patientId}`,
-    PATIENTS: (wardId: string) => `/wardAssignments/ward/${wardId}/patients`,
+    PATIENTS: (wardId: string) => `/assignments/ward/${wardId}/patients`,
+    PATIENT_BY_ID: (patientId: string) => `/assignments/patient/${patientId}`,
+    ALL_PATIENTS: '/assignments/patients',
   },
 } as const;

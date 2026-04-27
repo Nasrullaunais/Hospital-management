@@ -16,8 +16,7 @@ import { useRouter } from 'expo-router';
 import Colors from '@/constants/Colors';
 import { useColorScheme } from '@/components/useColorScheme';
 import { wardService } from '@/features/wards/services/ward.service';
-
-const WARD_TYPES = ['general', 'private', 'icu', 'emergency'] as const;
+import { WARD_TYPES } from '@/shared/constants/wardTypes';
 
 const makeStyles = (colorScheme: 'light' | 'dark') => StyleSheet.create({
   container: { flex: 1, backgroundColor: Colors[colorScheme].surfaceTertiary },
@@ -83,10 +82,25 @@ export default function AddWardScreen() {
   const [submitting, setSubmitting] = useState(false);
 
   const handleSubmit = async () => {
-    if (!departmentId.trim()) return Alert.alert('Validation', 'Department ID is required.');
-    if (!name.trim()) return Alert.alert('Validation', 'Ward name is required.');
-    if (!totalBeds.trim() || Number(totalBeds) <= 0)
-      return Alert.alert('Validation', 'Valid total beds count is required.');
+    const validationErrors: string[] = [];
+    if (!departmentId.trim()) validationErrors.push('Department ID is required.');
+    if (!name.trim()) validationErrors.push('Ward name is required.');
+    if (!totalBeds.trim() || Number(totalBeds) <= 0) {
+      validationErrors.push('Valid total beds count is required (must be greater than 0).');
+    }
+    const occupancy = Number(currentOccupancy);
+    const beds = Number(totalBeds);
+    if (!isNaN(occupancy) && occupancy < 0) {
+      validationErrors.push('Current occupancy cannot be negative.');
+    }
+    if (!isNaN(occupancy) && !isNaN(beds) && beds > 0 && occupancy > beds) {
+      validationErrors.push(`Current occupancy (${occupancy}) cannot exceed total beds (${beds}).`);
+    }
+
+    if (validationErrors.length > 0) {
+      Alert.alert('Validation', validationErrors.join('\n'));
+      return;
+    }
 
     setSubmitting(true);
     try {

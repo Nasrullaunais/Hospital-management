@@ -8,8 +8,8 @@ import { useAuth } from '@/shared/context/AuthContext';
 import Colors from '@/constants/Colors';
 import { useColorScheme } from '@/components/useColorScheme';
 import { spacing, radius, shadows } from '@/constants/ThemeTokens';
-
-const TAB_BAR_HEIGHT = 70;
+import { TAB_BAR_HEIGHT } from '@/shared/constants/Config';
+import { getPrescriptionStatusStyle } from '@/shared/utils/statusStyles';
 
 export default function PrescriptionListScreen() {
   const [prescriptions, setPrescriptions] = useState<Prescription[]>([]);
@@ -27,8 +27,9 @@ export default function PrescriptionListScreen() {
       if (!user?._id) return;
       const data = await prescriptionService.getMyPrescriptions(user._id);
       setPrescriptions(data);
-    } catch (e: any) {
-      setError(e.message);
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'Failed to load prescriptions.');
+      console.error('loadPrescriptions failed:', err);
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -42,30 +43,14 @@ export default function PrescriptionListScreen() {
     loadPrescriptions();
   }, [loadPrescriptions]);
 
-  const getStatusStyle = useCallback((status: string) => {
-    switch (status) {
-      case 'active':
-      case 'Active':
-        return { bg: theme.infoBg, text: theme.info };
-      case 'fulfilled':
-      case 'Fulfilled':
-        return { bg: theme.successBg, text: theme.success };
-      case 'cancelled':
-      case 'Cancelled':
-        return { bg: theme.errorBg, text: theme.error };
-      default:
-        return { bg: theme.surfaceTertiary, text: theme.textSecondary };
-    }
-  }, [theme]);
-
   const renderPrescription = useCallback(({ item }: { item: Prescription }) => {
     const doctorName = item.doctorId && typeof item.doctorId === 'object' ? item.doctorId?.userId?.name : 'Doctor';
-    const statusStyle = getStatusStyle(item.status);
+    const statusStyle = getPrescriptionStatusStyle(item.status, theme);
 
     return (
       <TouchableOpacity
         style={[styles.card, { backgroundColor: theme.surface, borderColor: theme.border }]}
-        onPress={() => router.push(`/(patient)/prescriptions/${item._id}` as any)}
+        onPress={() => router.push(`/(patient)/prescriptions/${String(item._id)}`)}
         activeOpacity={0.7}
       >
         <View style={styles.cardHeader}>
@@ -84,7 +69,7 @@ export default function PrescriptionListScreen() {
         </View>
       </TouchableOpacity>
     );
-  }, [theme, router, getStatusStyle]);
+  }, [theme, router]);
 
   const keyExtractor = useCallback((item: Prescription) => item._id, []);
 

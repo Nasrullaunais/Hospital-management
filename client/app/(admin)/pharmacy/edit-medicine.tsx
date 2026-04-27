@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
+import { ROLES } from '@/shared/constants/roles';
 import {
   View,
   Text,
@@ -15,13 +16,16 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import DateTimePicker, { type DateTimePickerEvent } from '@react-native-community/datetimepicker';
 import * as ImagePicker from 'expo-image-picker';
+import { Ionicons } from '@expo/vector-icons';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import Colors from '@/constants/Colors';
 import { useColorScheme } from '@/components/useColorScheme';
 import { useAuth } from '@/shared/context/AuthContext';
-import { Config } from '@/shared/constants/Config';
-import { medicineService } from '@/features/pharmacy/services/medicine.service';
+import { MS_PER_DAY } from '@/shared/constants/Config';
+import { medicineService, UpdateMedicinePayload } from '@/features/pharmacy/services/medicine.service';
 import type { Medicine } from '@/shared/types';
+import { getImageUrl } from '@/shared/utils/getImageUrl';
+import { toFormDataFile } from '@/shared/utils/formData';
 
 interface PickedImage {
   uri: string;
@@ -149,7 +153,8 @@ const makeStyles = (colorScheme: 'light' | 'dark') => StyleSheet.create({
 
 export default function EditMedicineScreen() {
   const router = useRouter();
-  const { id } = useLocalSearchParams<{ id: string }>();
+  const { id: rawId } = useLocalSearchParams<{ id: string }>();
+  const id = rawId ?? '';
   const { user } = useAuth();
   const colorScheme = useColorScheme() ?? 'light';
   const styles = useMemo(() => makeStyles(colorScheme), [colorScheme]);
@@ -167,20 +172,21 @@ export default function EditMedicineScreen() {
   const [newImage, setNewImage] = useState<PickedImage | null>(null);
 
   const canSubmit = useMemo(
-    () => user?.role === 'admin' || user?.role === 'pharmacist',
+    () => user?.role === ROLES.ADMIN || user?.role === ROLES.PHARMACIST,
     [user?.role],
   );
 
   useEffect(() => {
     if (!id) {
       Alert.alert('Error', 'Medicine ID is required.');
-      router.back();
       return;
     }
 
+    let cancelled = false;
     const loadMedicine = async () => {
       try {
         const medicine: Medicine = await medicineService.getMedicineById(id);
+        if (cancelled) return;
         setName(medicine.name);
         setCategory(medicine.category);
         setPrice(String(medicine.price));
@@ -188,15 +194,19 @@ export default function EditMedicineScreen() {
         setExpiryDate(new Date(medicine.expiryDate));
         setPackagingImageUrl(medicine.packagingImageUrl ?? '');
       } catch (err) {
+        if (cancelled) return;
+        console.error('[EditMedicine] Failed to load medicine:', err);
         Alert.alert('Error', err instanceof Error ? err.message : 'Failed to load medication.');
-        router.back();
       } finally {
-        setLoading(false);
+        if (!cancelled) setLoading(false);
       }
     };
 
     loadMedicine();
-  }, [id, router]);
+    return () => {
+      cancelled = true;
+    };
+  }, [id]);
 
   const onDateChange = (_event: DateTimePickerEvent, selectedDate?: Date) => {
     setShowDatePicker(false);
@@ -225,6 +235,33 @@ export default function EditMedicineScreen() {
         name: `packaging-${Date.now()}.${extension}`,
         type: asset.mimeType ?? 'image/jpeg',
       });
+    }
+  };
+
+  const pickFromGallery = async () => {
+    try {
+      const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      if (!permission.granted) {
+        Alert.alert('Permission Required', 'Gallery permission is required to select packaging images.');
+        return;
+      }
+
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ['images'],
+        quality: 0.8,
+      });
+
+      if (!result.canceled && result.assets.length > 0) {
+        const asset = result.assets[0];
+        const extension = asset.uri.split('.').pop() ?? 'jpg';
+        setNewImage({
+          uri: asset.uri,
+          name: `packaging-${Date.now()}.${extension}`,
+          type: asset.mimeType ?? 'image/jpeg',
+        });
+      }
+    } catch (err) {
+      Alert.alert('Error', 'Failed to open image gallery.');
     }
   };
 
@@ -257,7 +294,7 @@ export default function EditMedicineScreen() {
     try {
       setSubmitting(true);
 
-      const payload: Record<string, string | number> = {
+      const payload: UpdateMedicinePayload = {
         name: name.trim(),
         category: category.trim(),
         price: Number(price),
@@ -268,17 +305,19 @@ export default function EditMedicineScreen() {
       if (newImage) {
         const formData = new FormData();
         Object.entries(payload).forEach(([key, value]) => {
-          formData.append(key, String(value));
+          if (value !== undefined) formData.append(key, String(value));
         });
-        formData.append('packagingImage', {
+        const file = toFormDataFile({
           uri: newImage.uri,
           name: newImage.name,
-          type: newImage.type,
-        } as unknown as Blob);
+          mimeType: newImage.type,
+        });
 
-        await medicineService.updateMedicine(id, formData as unknown as Parameters<typeof medicineService.updateMedicine>[1]);
+        formData.append('packagingImage', file!);
+
+        await medicineService.updateMedicine(id, formData);
       } else {
-        await medicineService.updateMedicine(id, payload as Parameters<typeof medicineService.updateMedicine>[1]);
+        await medicineService.updateMedicine(id, payload as UpdateMedicinePayload);
       }
 
       Alert.alert('Success', 'Medication updated successfully.', [{ text: 'OK', onPress: () => router.replace('/(admin)/pharmacy') }]);
@@ -365,7 +404,7 @@ export default function EditMedicineScreen() {
               value={expiryDate}
               mode="date"
               display={Platform.OS === 'ios' ? 'inline' : 'default'}
-              minimumDate={new Date(Date.now() + 24 * 60 * 60 * 1000)}
+              minimumDate={new Date(Date.now() + MS_PER_DAY)}
               onChange={onDateChange}
             />
           ) : null}
@@ -374,13 +413,7 @@ export default function EditMedicineScreen() {
           {packagingImageUrl && !newImage ? (
             <View style={styles.imagePreviewRow}>
               <Image
-                source={{ uri: (() => {
-                  if (!packagingImageUrl) return '';
-                  if (packagingImageUrl.startsWith('http://') || packagingImageUrl.startsWith('https://')) return packagingImageUrl;
-                  const base = Config.BASE_URL.endsWith('/') ? Config.BASE_URL.slice(0, -1) : Config.BASE_URL;
-                  const path = packagingImageUrl.startsWith('/') ? packagingImageUrl : `/${packagingImageUrl}`;
-                  return `${base}${path}`;
-                })() }}
+                source={{ uri: getImageUrl(packagingImageUrl) }}
                 style={styles.currentImage}
                 resizeMode="cover"
               />
@@ -389,15 +422,26 @@ export default function EditMedicineScreen() {
               </Text>
             </View>
           ) : null}
-          <TouchableOpacity
-            onPress={pickNewImage}
-            style={styles.imageButton}
-            disabled={submitting}
-          >
-            <Text style={styles.imageButtonText}>
-              {newImage ? 'Retake Packaging Photo' : packagingImageUrl ? 'Replace Packaging Photo' : 'Capture Packaging Photo'}
-            </Text>
-          </TouchableOpacity>
+          <View style={{ flexDirection: 'row', gap: 12, marginTop: 10 }}>
+            <TouchableOpacity
+              onPress={pickNewImage}
+              style={[styles.imageButton, { flex: 1 }]}
+              disabled={submitting}
+              activeOpacity={0.7}
+            >
+              <Ionicons name="camera-outline" size={20} color={Colors[colorScheme].primary} />
+              <Text style={styles.imageButtonText}>Camera</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              onPress={pickFromGallery}
+              style={[styles.imageButton, { flex: 1 }]}
+              disabled={submitting}
+              activeOpacity={0.7}
+            >
+              <Ionicons name="images-outline" size={20} color={Colors[colorScheme].primary} />
+              <Text style={styles.imageButtonText}>Gallery</Text>
+            </TouchableOpacity>
+          </View>
 
           {newImage ? (
             <View style={styles.previewWrap}>

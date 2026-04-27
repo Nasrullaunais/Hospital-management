@@ -44,7 +44,7 @@ export default function DoctorDashboard() {
         allAppointments
           .filter((appt) => appt.status === APPOINTMENT_STATUS.COMPLETED || appt.status === APPOINTMENT_STATUS.CONFIRMED)
           .map((appt) => {
-            if (typeof appt.patientId === 'object') return (appt.patientId as any)._id;
+            if (typeof appt.patientId === 'object') return (appt.patientId as User)._id;
             return appt.patientId;
           })
       );

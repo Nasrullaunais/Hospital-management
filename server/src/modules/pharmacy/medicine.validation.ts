@@ -6,12 +6,10 @@ export const createMedicineValidation = [
   body('price').isFloat({ min: 0 }).withMessage('Price must be a non-negative number'),
   body('stockQuantity').isInt({ min: 0 }).withMessage('Stock quantity must be a non-negative integer'),
   body('expiryDate')
-    .custom((value: string) => !Number.isNaN(new Date(value).getTime()))
-    .withMessage('Expiry date must be a valid date')
     .custom((value: string) => {
-      if (new Date(value) <= new Date()) {
-        throw new Error('Expiry date must be in the future');
-      }
+      const t = new Date(value).getTime();
+      if (Number.isNaN(t)) throw new Error('Expiry date must be a valid date');
+      if (new Date(value) <= new Date()) throw new Error('Expiry date must be in the future');
       return true;
     }),
 ];
@@ -23,8 +21,12 @@ export const updateMedicineValidation = [
   body('stockQuantity').optional().isInt({ min: 0 }).withMessage('Stock quantity must be a non-negative integer'),
   body('expiryDate')
     .optional()
-    .custom((value: string) => !Number.isNaN(new Date(value).getTime()))
-    .withMessage('Expiry date must be a valid date'),
+    .custom((value: string) => {
+      const t = new Date(value).getTime();
+      if (Number.isNaN(t)) throw new Error('Expiry date must be a valid date');
+      if (new Date(value) <= new Date()) throw new Error('Expiry date must be in the future');
+      return true;
+    }),
 ];
 
 export const adjustStockValidation = [

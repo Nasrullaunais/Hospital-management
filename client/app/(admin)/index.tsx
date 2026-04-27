@@ -6,8 +6,7 @@ import Colors from '@/constants/Colors';
 import { useColorScheme } from '@/components/useColorScheme';
 import { Card, Button, Badge } from '@/components/ui';
 import { spacing } from '@/constants/ThemeTokens';
-
-const TAB_BAR_HEIGHT = 70;
+import { TAB_BAR_HEIGHT } from '@/shared/constants/Config';
 
 export default function AdminDashboard() {
   const router = useRouter();
@@ -54,7 +53,7 @@ export default function AdminDashboard() {
           style={styles.button}
         />
         <Button
-          title="Review Inventory Actions"
+          title="Manage Pharmacy Inventory"
           onPress={() => router.push('/(admin)/pharmacy')}
           variant="outline"
           fullWidth

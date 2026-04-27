@@ -12,6 +12,8 @@ import { uploadSingle } from '../../shared/middlewares/uploadMiddleware.js';
 import { ROLES } from '../../shared/constants/roles.js';
 import { bookAppointmentValidation, updateStatusValidation } from './appointment.validation.js';
 
+const emptyValidation = [];
+
 const router = Router();
 
 router.post(
@@ -25,7 +27,7 @@ router.post(
 
 router.get('/my-appointments', authMiddleware, requireRole(ROLES.PATIENT), getMyAppointments);
 
-router.get('/doctor-schedule', authMiddleware, requireRole(ROLES.DOCTOR), getMyDoctorSchedule);
+router.get('/doctor-schedule', authMiddleware, requireRole(ROLES.DOCTOR), emptyValidation, getMyDoctorSchedule);
 
 router.get('/doctor/:doctorId', authMiddleware, requireRole(ROLES.DOCTOR, ROLES.ADMIN), getDoctorAppointments);
 

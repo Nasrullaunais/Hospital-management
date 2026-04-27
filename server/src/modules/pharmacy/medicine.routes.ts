@@ -6,6 +6,7 @@ import {
   adjustStock,
   updateMedicine,
   deleteMedicine,
+  getMedicinesByIds,
 } from './medicine.controller.js';
 import { authMiddleware, requireRole } from '../../shared/middlewares/authMiddleware.js';
 import { uploadSingle } from '../../shared/middlewares/uploadMiddleware.js';
@@ -33,11 +34,14 @@ router.get('/', authMiddleware, getAllMedicines);
 /** GET /api/medicines/:id */
 router.get('/:id', authMiddleware, getMedicineById);
 
+/** POST /api/medicines/batch — Protected, batch fetch medicines by IDs */
+router.post('/batch', authMiddleware, getMedicinesByIds);
+
 /** PATCH /api/medicines/:id/stock — Protected */
 router.patch('/:id/stock', authMiddleware, requireRole('pharmacist', 'admin'), adjustStockValidation, adjustStock);
 
 /** PUT /api/medicines/:id — Admin only */
-router.put('/:id', authMiddleware, requireRole('admin'), updateMedicineValidation, updateMedicine);
+router.put('/:id', authMiddleware, requireRole('admin'), uploadSingle('packagingImage'), updateMedicineValidation, updateMedicine);
 
 /** DELETE /api/medicines/:id — Admin only */
 router.delete('/:id', authMiddleware, requireRole('admin'), deleteMedicine);

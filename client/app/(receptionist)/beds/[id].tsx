@@ -79,8 +79,9 @@ export default function BedDetailScreen() {
             try {
               await wardReceptionistService.unassignPatient(bed.patientId!);
               router.back();
-            } catch {
-              Alert.alert('Error', 'Failed to unassign patient. Please try again.');
+            } catch (err) {
+              console.error('[BedDetail] unassign error:', err);
+              Alert.alert('Error', err instanceof Error ? err.message : 'Failed to unassign patient. Please try again.');
             } finally {
               setUnassigning(false);
             }

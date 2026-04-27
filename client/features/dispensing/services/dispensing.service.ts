@@ -7,6 +7,7 @@ import type { PendingPrescription, ApiSuccessResponse } from '@/shared/types';
 
 export interface DispensePayload {
   medicineId: string;
+  medicineName: string;
   quantityDispensed: number;
 }
 
@@ -17,9 +18,12 @@ export interface DispenseResponse {
 }
 
 export const dispensingService = {
-  getPendingPrescriptions: async () => {
-    const res = await apiClient.get<ApiSuccessResponse<PendingPrescription[]>>(ENDPOINTS.PRESCRIPTIONS.PENDING);
-    return res.data.data;
+  getPendingPrescriptions: async (skip = 0, limit = 20) => {
+    const res = await apiClient.get<ApiSuccessResponse<{ prescriptions: PendingPrescription[]; total: number; skip: number; limit: number }>>(
+      ENDPOINTS.PRESCRIPTIONS.PENDING,
+      { params: { skip, limit } },
+    );
+    return res.data.data.prescriptions;
   },
 
   dispensePrescription: async (prescriptionId: string, dispensedItems: DispensePayload[]) => {

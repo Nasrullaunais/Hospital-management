@@ -16,6 +16,8 @@ import { useRouter } from 'expo-router';
 import Colors from '@/constants/Colors';
 import { useColorScheme } from '@/components/useColorScheme';
 import { departmentService } from '@/features/departments/services/department.service';
+import { doctorService } from '@/features/doctors/services/doctor.service';
+import { ApiError } from '@/shared/types';
 
 const makeStyles = (colorScheme: 'light' | 'dark') => StyleSheet.create({
   container: { flex: 1, backgroundColor: Colors[colorScheme].background },
@@ -60,19 +62,46 @@ export default function AddDepartmentScreen() {
   const [submitting, setSubmitting] = useState(false);
 
   const handleSubmit = async () => {
-    if (!name.trim()) return Alert.alert('Validation', 'Department name is required.');
-    if (!location.trim()) return Alert.alert('Validation', 'Location is required.');
-    if (!phone.trim()) return Alert.alert('Validation', 'Phone number is required.');
-    if (!description.trim()) return Alert.alert('Validation', 'Description is required.');
+    const validationErrors: string[] = [];
+    if (!name.trim()) validationErrors.push('Department name is required.');
+    if (!location.trim()) validationErrors.push('Location is required.');
+    if (!phone.trim()) validationErrors.push('Phone number is required.');
+    if (!description.trim()) validationErrors.push('Description is required.');
+
+    if (headDoctorId.trim()) {
+      const objectIdRegex = /^[a-fA-F0-9]{24}$/;
+      if (!objectIdRegex.test(headDoctorId.trim())) {
+        validationErrors.push('Head Doctor ID must be a valid 24-character hex string.');
+      }
+    }
+
+    if (validationErrors.length > 0) {
+      Alert.alert('Validation', validationErrors.join('\n'));
+      return;
+    }
 
     setSubmitting(true);
     try {
+      if (headDoctorId.trim()) {
+        try {
+          await doctorService.getDoctorById(headDoctorId.trim());
+        } catch (err) {
+          if (err instanceof ApiError && err.status === 404) {
+            Alert.alert('Validation', 'Head Doctor not found. Please check the ID and try again.');
+          } else {
+            Alert.alert('Error', err instanceof Error ? err.message : 'Failed to verify head doctor.');
+          }
+          setSubmitting(false);
+          return;
+        }
+      }
+
       await departmentService.createDepartment({
         name: name.trim(),
         description: description.trim(),
         location: location.trim(),
         phone: phone.trim(),
-        headDoctorId: headDoctorId.trim() || undefined,
+        headDoctorId: headDoctorId.trim(),
         status: 'active',
       });
       Alert.alert('Success', 'Department created successfully.', [

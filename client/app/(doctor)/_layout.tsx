@@ -7,7 +7,8 @@ import { useAuth } from '@/shared/context/AuthContext';
 import { getRoleHomeRoute } from '@/shared/constants/roleRoutes';
 import { CustomTabBar, TabItem } from '@/components/ui/CustomTabBar';
 
-const TAB_SCREENS = ['index', 'appointments', 'records', 'profile'];
+const VALID_TAB_KEYS = ['index', 'appointments', 'records', 'profile'] as const;
+type TabKey = typeof VALID_TAB_KEYS[number];
 
 export default function DoctorLayout() {
   const colorScheme = useColorScheme() ?? 'light';
@@ -15,27 +16,27 @@ export default function DoctorLayout() {
   const router = useRouter();
   const pathname = usePathname();
   const { user, isLoading } = useAuth();
-  const [activeTab, setActiveTab] = useState('index');
+  const [activeTab, setActiveTab] = useState<TabKey>('index');
 
   const tabs: TabItem[] = [
-    { key: 'index', title: 'Home', icon: '🏠' },
-    { key: 'appointments', title: 'Schedule', icon: '📅' },
-    { key: 'records', title: 'Patients', icon: '📋' },
-    { key: 'profile', title: 'Profile', icon: '👤' },
+    { key: 'index', title: 'Home', icon: 'home' },
+    { key: 'appointments', title: 'Schedule', icon: 'calendar' },
+    { key: 'records', title: 'Patients', icon: 'users' },
+    { key: 'profile', title: 'Profile', icon: 'user' },
   ];
 
   useEffect(() => {
     const segments = pathname.split('/');
     const screenName = segments[2];
-    if (screenName && TAB_SCREENS.includes(screenName)) {
-      setActiveTab(screenName);
+    if (screenName && VALID_TAB_KEYS.includes(screenName as TabKey)) {
+      setActiveTab(screenName as TabKey);
     }
   }, [pathname]);
 
   const handleTabPress = (tabKey: string) => {
     setActiveTab(tabKey);
-    const path = tabKey === 'index' ? '/(doctor)' : `/(doctor)/${tabKey}`;
-    router.push(path as any);
+    const path: string = tabKey === 'index' ? '/(doctor)' : `/(doctor)/${tabKey}`;
+    router.push(path);
   };
 
   if (isLoading) {
@@ -64,8 +65,8 @@ export default function DoctorLayout() {
       >
         {/* Main tab screens */}
         <Stack.Screen name="index" options={{ headerShown: false }} />
-        <Stack.Screen name="appointments" options={{ headerShown: false }} />
-        <Stack.Screen name="records" options={{ headerShown: false }} />
+        <Stack.Screen name="appointments/index" options={{ headerShown: false }} />
+        <Stack.Screen name="records/index" options={{ headerShown: false }} />
         <Stack.Screen name="profile" options={{ headerShown: false }} />
 
         {/* Detail pages with headers */}

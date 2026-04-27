@@ -17,8 +17,7 @@ import type { Invoice } from '@/shared/types';
 import Colors from '@/constants/Colors';
 import { useColorScheme } from '@/components/useColorScheme';
 import { spacing } from '@/constants/ThemeTokens';
-
-const TAB_BAR_HEIGHT = 70;
+import { TAB_BAR_HEIGHT } from '@/shared/constants/Config';
 
 export default function BillingScreen() {
   const { user } = useAuth();
@@ -38,21 +37,24 @@ export default function BillingScreen() {
         ? await invoiceService.getAllInvoices()
         : await invoiceService.getMyBills();
       setInvoices(data);
-    } catch (err) {
+    } catch (err: unknown) {
+      console.error('fetchInvoices failed:', err);
       setError(err instanceof Error ? err.message : 'Failed to load invoices.');
     }
   }, [isAdmin]);
 
   useEffect(() => {
     setLoading(true);
-    fetchInvoices().finally(() => setLoading(false));
+    fetchInvoices()
+      .catch(() => {})
+      .then(() => setLoading(false));
   }, [fetchInvoices]);
 
-  const onRefresh = async () => {
+  const onRefresh = useCallback(async () => {
     setRefreshing(true);
     await fetchInvoices();
     setRefreshing(false);
-  };
+  }, [fetchInvoices]);
 
   const handleInvoiceUpdate = (updated: Invoice & { _deleted?: boolean }) => {
     if (updated._deleted) {

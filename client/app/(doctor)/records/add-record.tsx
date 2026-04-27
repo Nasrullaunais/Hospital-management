@@ -25,12 +25,12 @@ import { APPOINTMENT_STATUS } from '@/shared/constants/appointmentStatus';
 import { recordService } from '@/features/records/services/record.service';
 import { prescriptionService, type PrescriptionItem } from '@/features/prescriptions/services/prescription.service';
 import { medicineService } from '@/features/pharmacy/services/medicine.service';
-import type { ApiSuccessResponse, Appointment, User, Medicine } from '@/shared/types';
+import type { ApiSuccessResponse, Appointment, MedicalRecord, User, Medicine } from '@/shared/types';
 
 const TAB_BAR_HEIGHT = 70;
 
 type PatientOption = {
-  appointmentId: string;
+  appointmentId: string; 
   patientId: string;
   patientName: string;
   appointmentDate: string;
@@ -52,10 +52,11 @@ export default function AddRecordScreen() {
   const [rxItems, setRxItems] = useState<PrescriptionItem[]>([]);
   const [medicineModalOpen, setMedicineModalOpen] = useState(false);
   const [medicines, setMedicines] = useState<Medicine[]>([]);
+  const [allMedicines, setAllMedicines] = useState<Medicine[]>([]);
   const [loadingMedicines, setLoadingMedicines] = useState(false);
   const [newItem, setNewItem] = useState<Partial<PrescriptionItem>>({});
+  const [medicineSearchQuery, setMedicineSearchQuery] = useState('');
 
-  // Focus state for inputs
   const [diagnosisFocused, setDiagnosisFocused] = useState(false);
 
   useEffect(() => {
@@ -70,13 +71,18 @@ export default function AddRecordScreen() {
 
         for (const appt of appointments) {
           if (appt.status === APPOINTMENT_STATUS.CANCELLED) continue;
-          const patient = appt.patientId as User;
-          if (seen.has(patient._id)) continue;
-          seen.add(patient._id);
+          const patient = appt.patientId;
+          if (typeof patient !== 'object' || !patient || !('_id' in patient)) {
+            console.warn('[AddRecord] Skipping appointment with unpopulated patientId:', appt._id);
+            continue;
+          }
+          const user = patient as User;
+          if (seen.has(user._id)) continue;
+          seen.add(user._id);
           options.push({
             appointmentId: appt._id,
-            patientId: patient._id,
-            patientName: patient.name,
+            patientId: user._id,
+            patientName: user.name,
             appointmentDate: appt.appointmentDate,
             status: appt.status,
           });
@@ -96,8 +102,10 @@ export default function AddRecordScreen() {
 
   const openMedicinePicker = async () => {
     setLoadingMedicines(true);
+    setMedicineSearchQuery('');
     try {
       const data = await medicineService.getMedicines();
+      setAllMedicines(data);
       setMedicines(data);
       setMedicineModalOpen(true);
     } catch {
@@ -141,6 +149,13 @@ export default function AddRecordScreen() {
       Alert.alert('Validation', 'Diagnosis is required.');
       return;
     }
+    for (let i = 0; i < rxItems.length; i++) {
+      const item = rxItems[i];
+      if (!item.medicineId || !item.dosage || !item.quantity) {
+        Alert.alert('Validation', `Prescription item ${i + 1} is incomplete. Medicine, dosage, and quantity are required.`);
+        return;
+      }
+    }
 
     try {
       setSubmitting(true);
@@ -150,22 +165,33 @@ export default function AddRecordScreen() {
       formData.append('appointmentId', selectedPatient.appointmentId);
       formData.append('diagnosis', diagnosis.trim());
       if (labFile) {
-        formData.append('labReport', {
-          uri: labFile.uri,
-          name: labFile.name,
-          type: labFile.mimeType ?? 'application/octet-stream',
-        } as unknown as Blob);
+        const fileUri = labFile.uri;
+        const fileName = labFile.name ?? 'lab_report';
+        const fileType = labFile.mimeType ?? 'application/octet-stream';
+        const response = await fetch(fileUri);
+        const blob = await response.blob();
+        const file = new Blob([blob], { type: fileType });
+        formData.append('labReport', file, fileName);
       }
 
       const record = await recordService.createRecord(formData);
 
       if (rxItems.length > 0) {
-        await prescriptionService.createPrescription({
-          patientId: selectedPatient.patientId,
-          medicalRecordId: (record as any)._id,
-          items: rxItems,
-          notes: '',
-        });
+        try {
+          await prescriptionService.createPrescription({
+            patientId: selectedPatient.patientId,
+            medicalRecordId: record._id,
+            items: rxItems,
+            notes: '',
+          });
+          const prescriptionSummary = rxItems
+            .map((item) => `${item.medicineName} ${item.dosage} (x${item.quantity})`)
+            .join(', ');
+          await recordService.updateRecord(record._id, { prescription: prescriptionSummary });
+        } catch (prescriptionErr) {
+          try { await recordService.deleteRecord(record._id); } catch { }
+          throw prescriptionErr;
+        }
       }
 
       Alert.alert('Success', 'Medical record created successfully.', [
@@ -285,6 +311,7 @@ export default function AddRecordScreen() {
           multiline
           numberOfLines={4}
           textAlignVertical="top"
+          maxLength={2000}
         />
 
         {/* Prescription Items */}
@@ -357,87 +384,109 @@ export default function AddRecordScreen() {
       {/* Medicine Picker Modal */}
       <Modal visible={medicineModalOpen} animationType="slide" transparent>
         <View style={styles.modalOverlay}>
-          <View style={[styles.modalContent, { backgroundColor: colors.surface }]}>
-            <View style={styles.modalDragHandle} />
-            <Text style={[styles.modalTitle, { color: colors.text }]}>Select Medicine</Text>
-            {loadingMedicines ? (
-              <ActivityIndicator size="large" color={colors.primary} />
-            ) : (
-              <FlatList
-                data={medicines}
-                keyExtractor={(m) => m._id}
-                style={styles.medicineList}
-                renderItem={({ item }) => (
-                  <TouchableOpacity
-                    style={[
-                      styles.medicineRow,
-                      { borderBottomColor: colors.divider },
-                      item.stockQuantity === 0 && { opacity: 0.4 },
-                    ]}
-                    onPress={() => {
-                      if (item.stockQuantity === 0) return;
-                      setNewItem(prev => ({
-                        ...prev,
-                        medicineId: item._id,
-                        medicineName: item.name,
-                      }));
-                    }}
-                    disabled={item.stockQuantity === 0}
-                  >
-                    <View>
-                      <Text style={[styles.medicineName, { color: colors.text }]}>{item.name}</Text>
-                      <Text style={[styles.medicineDosage, { color: colors.textSecondary }]}>{item.category}</Text>
-                    </View>
-                    <Text
-                      style={[
-                        styles.medicineStock,
-                        { color: item.stockQuantity === 0 ? colors.error : colors.textSecondary },
-                      ]}
-                    >
-                      {item.stockQuantity === 0 ? 'Out of stock' : `Stock: ${item.stockQuantity}`}
-                    </Text>
-                  </TouchableOpacity>
-                )}
-              />
-            )}
-
-            {newItem.medicineId && (
-              <View style={[styles.itemForm, { backgroundColor: colors.surfaceTertiary }]}>
+          <KeyboardAvoidingView
+            behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+            style={styles.modalKeyboardAvoiding}
+          >
+            <View style={[styles.modalContent, { backgroundColor: colors.surface }]}>
+              <ScrollView keyboardShouldPersistTaps="handled" style={styles.modalScrollView}>
+                <View style={styles.modalDragHandle} />
+                <Text style={[styles.modalTitle, { color: colors.text }]}>Select Medicine</Text>
                 <TextInput
                   style={[styles.input, { backgroundColor: colors.inputBackground, borderColor: colors.inputBorder, color: colors.inputText }]}
-                  placeholder="Dosage (e.g., 500mg)"
+                  placeholder="Search medicines..."
                   placeholderTextColor={colors.inputPlaceholder}
-                  value={newItem.dosage}
-                  onChangeText={(v) => setNewItem(prev => ({ ...prev, dosage: v }))}
+                  value={medicineSearchQuery}
+                  onChangeText={(v) => {
+                    setMedicineSearchQuery(v);
+                    const q = v.toLowerCase();
+                    const filtered = allMedicines.filter((m) => m.name.toLowerCase().includes(q));
+                    setMedicines(filtered);
+                  }}
                 />
-                <TextInput
-                  style={[styles.input, { backgroundColor: colors.inputBackground, borderColor: colors.inputBorder, color: colors.inputText, marginTop: 8 }]}
-                  placeholder="Quantity"
-                  keyboardType="number-pad"
-                  placeholderTextColor={colors.inputPlaceholder}
-                  value={newItem.quantity ? String(newItem.quantity) : ''}
-                  onChangeText={(v) => setNewItem(prev => ({ ...prev, quantity: parseInt(v, 10) || 0 }))}
-                />
-                <TextInput
-                  style={[styles.input, { backgroundColor: colors.inputBackground, borderColor: colors.inputBorder, color: colors.inputText, marginTop: 8 }]}
-                  placeholder="Instructions (optional)"
-                  placeholderTextColor={colors.inputPlaceholder}
-                  value={newItem.instructions}
-                  onChangeText={(v) => setNewItem(prev => ({ ...prev, instructions: v }))}
-                />
-                <TouchableOpacity style={[styles.confirmAddButton, { backgroundColor: colors.primary }]} onPress={() => void addRxItem()}>
-                  <Text style={styles.confirmAddButtonText}>Add to Prescription</Text>
-                </TouchableOpacity>
-              </View>
-            )}
+                {loadingMedicines ? (
+                  <ActivityIndicator size="large" color={colors.primary} />
+                ) : (
+                  <FlatList
+                    data={medicines}
+                    keyExtractor={(m) => m._id}
+                    style={styles.medicineList}
+                    renderItem={({ item }) => (
+                      <TouchableOpacity
+                        style={[
+                          styles.medicineRow,
+                          { borderBottomColor: colors.divider },
+                          item.stockQuantity === 0 && { opacity: 0.4 },
+                        ]}
+                        onPress={() => {
+                          if (item.stockQuantity === 0) return;
+                          setNewItem(prev => ({
+                            ...prev,
+                            medicineId: item._id,
+                            medicineName: item.name,
+                          }));
+                        }}
+                        disabled={item.stockQuantity === 0}
+                      >
+                        <View>
+                          <Text style={[styles.medicineName, { color: colors.text }]}>{item.name}</Text>
+                          <Text style={[styles.medicineDosage, { color: colors.textSecondary }]}>{item.category}</Text>
+                        </View>
+                        <Text
+                          style={[
+                            styles.medicineStock,
+                            { color: item.stockQuantity === 0 ? colors.error : colors.textSecondary },
+                          ]}
+                        >
+                          {item.stockQuantity === 0 ? 'Out of stock' : `Stock: ${item.stockQuantity}`}
+                        </Text>
+                      </TouchableOpacity>
+                    )}
+                  />
+                )}
 
-            <TouchableOpacity
-              style={styles.closeModalButton}
-              onPress={() => { setMedicineModalOpen(false); setNewItem({}); }}
-            >
-              <Text style={[styles.closeModalButtonText, { color: colors.textSecondary }]}>Cancel</Text>
-            </TouchableOpacity>
-          </View>
+                {newItem.medicineId && (
+                  <View style={[styles.itemForm, { backgroundColor: colors.surfaceTertiary }]}>
+                    <TextInput
+                      style={[styles.input, { backgroundColor: colors.inputBackground, borderColor: colors.inputBorder, color: colors.inputText }]}
+                      placeholder="Dosage (e.g., 500mg)"
+                      placeholderTextColor={colors.inputPlaceholder}
+                      value={newItem.dosage}
+                      onChangeText={(v) => setNewItem(prev => ({ ...prev, dosage: v }))}
+                    />
+                    <TextInput
+                      style={[styles.input, { backgroundColor: colors.inputBackground, borderColor: colors.inputBorder, color: colors.inputText, marginTop: 8 }]}
+                      placeholder="Quantity"
+                      keyboardType="number-pad"
+                      placeholderTextColor={colors.inputPlaceholder}
+                      value={newItem.quantity ? String(newItem.quantity) : ''}
+                      onChangeText={(v) => {
+                      const parsed = parseInt(v, 10);
+                      setNewItem(prev => ({ ...prev, quantity: Number.isInteger(parsed) && parsed > 0 ? parsed : prev.quantity }));
+                    }}
+                    />
+                    <TextInput
+                      style={[styles.input, { backgroundColor: colors.inputBackground, borderColor: colors.inputBorder, color: colors.inputText, marginTop: 8 }]}
+                      placeholder="Instructions (optional)"
+                      placeholderTextColor={colors.inputPlaceholder}
+                      value={newItem.instructions}
+                      onChangeText={(v) => setNewItem(prev => ({ ...prev, instructions: v }))}
+                    />
+                    <TouchableOpacity style={[styles.confirmAddButton, { backgroundColor: colors.primary }]} onPress={() => void addRxItem()}>
+                      <Text style={styles.confirmAddButtonText}>Add to Prescription</Text>
+                    </TouchableOpacity>
+                  </View>
+                )}
+
+                <TouchableOpacity
+                  style={styles.closeModalButton}
+                  onPress={() => { setMedicineModalOpen(false); setNewItem({}); }}
+                >
+                  <Text style={[styles.closeModalButtonText, { color: colors.textSecondary }]}>Cancel</Text>
+                </TouchableOpacity>
+              </ScrollView>
+            </View>
+          </KeyboardAvoidingView>
         </View>
       </Modal>
       </KeyboardAvoidingView>

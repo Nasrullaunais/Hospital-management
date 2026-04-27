@@ -11,7 +11,7 @@ declare global {
       user?: {
         id: string;
         email: string;
-        role: 'patient' | 'doctor' | 'admin' | 'pharmacist';
+        role: 'patient' | 'doctor' | 'admin' | 'pharmacist' | 'receptionist';
       };
     }
   }

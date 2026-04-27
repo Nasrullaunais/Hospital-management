@@ -17,6 +17,7 @@ import { useRouter } from 'expo-router';
 import Colors from '@/constants/Colors';
 import { useColorScheme } from '@/components/useColorScheme';
 import { doctorService } from '@/features/doctors/services/doctor.service';
+import { toFormDataFile } from '@/shared/utils/formData';
 
 const makeStyles = (colorScheme: 'light' | 'dark') => StyleSheet.create({
   container: { flex: 1, backgroundColor: Colors[colorScheme].surfaceTertiary },
@@ -78,13 +79,19 @@ export default function AddDoctorScreen() {
   };
 
   const handleSubmit = async () => {
-    if (!userId.trim()) return Alert.alert('Validation', 'User ID is required.');
-    if (!specialization.trim()) return Alert.alert('Validation', 'Specialization is required.');
+    const validationErrors: string[] = [];
+    if (!userId.trim()) validationErrors.push('User ID is required.');
+    if (!specialization.trim()) validationErrors.push('Specialization is required.');
     if (!experienceYears.trim() || Number(experienceYears) < 0)
-      return Alert.alert('Validation', 'Valid experience years are required.');
+      validationErrors.push('Valid experience years are required (must be 0 or greater).');
     if (!consultationFee.trim() || Number(consultationFee) < 0)
-      return Alert.alert('Validation', 'Valid consultation fee is required.');
-    if (!licenseDoc) return Alert.alert('Validation', 'License document is required.');
+      validationErrors.push('Valid consultation fee is required (must be 0 or greater).');
+    if (!licenseDoc) validationErrors.push('License document is required.');
+
+    if (validationErrors.length > 0) {
+      Alert.alert('Validation', validationErrors.join('\n'));
+      return;
+    }
 
     setSubmitting(true);
     try {
@@ -93,11 +100,13 @@ export default function AddDoctorScreen() {
       formData.append('specialization', specialization.trim());
       formData.append('experienceYears', experienceYears.trim());
       formData.append('consultationFee', consultationFee.trim());
-      formData.append('licenseDocument', {
+      const file = toFormDataFile({
         uri: licenseDoc.uri,
         name: licenseDoc.name,
-        type: licenseDoc.mimeType ?? 'application/octet-stream',
-      } as unknown as Blob);
+        mimeType: licenseDoc.mimeType ?? 'application/octet-stream',
+      });
+
+      formData.append('licenseDocument', file!);
 
       await doctorService.createDoctor(formData);
       Alert.alert('Success', 'Doctor profile created successfully.', [

@@ -2,13 +2,29 @@ import type { Request, Response, NextFunction } from 'express';
 import { validationResult } from 'express-validator';
 import { Medicine } from './medicine.model.js';
 import { ApiError } from '../../shared/utils/ApiError.js';
+import { s3Service } from '../../shared/services/s3.service.js';
+import { formatFileReference } from '../../shared/utils/fileReference.js';
 
 /** POST /api/medicines */
 export const addMedicine = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   const errors = validationResult(req);
-  if (!errors.isEmpty()) return next(new ApiError(422, 'Validation failed'));
+  if (!errors.isEmpty()) {
+    return next(new ApiError(422, 'Validation failed'));
+  }
+
   try {
-    if (!req.file) return next(ApiError.badRequest('Packaging image is required'));
+    let packagingImageUrl: string;
+
+    if (req.body.fileKey && typeof req.body.fileKey === 'string' && req.body.fileKey.trim().length > 0) {
+      // S3 presigned upload flow: verify the fileKey belongs to this user
+      await s3Service.verifyAndConsume(req.user!.id, req.body.fileKey);
+      packagingImageUrl = formatFileReference('s3', req.body.fileKey);
+    } else if (req.file) {
+      // Legacy multer upload: store with local protocol
+      packagingImageUrl = formatFileReference('local', `/uploads/${req.file.filename}`);
+    } else {
+      return next(ApiError.badRequest('Either fileKey (S3) or file upload is required'));
+    }
 
     const name = String(req.body['name'] ?? '').trim();
     const category = String(req.body['category'] ?? '').trim();
@@ -34,7 +50,7 @@ export const addMedicine = async (req: Request, res: Response, next: NextFunctio
       price,
       stockQuantity,
       expiryDate,
-      packagingImageUrl: `/uploads/${req.file.filename}`,
+      packagingImageUrl,
     });
 
     res.status(201).json({ success: true, message: 'Medicine added', data: { medicine } });
@@ -53,8 +69,15 @@ export const getAllMedicines = async (
     const filter: Record<string, unknown> = {};
     if (req.query.category) filter.category = req.query.category;
 
-    const medicines = await Medicine.find(filter).sort({ name: 1 }).collation({ locale: 'en' });
-    res.json({ success: true, data: { medicines, count: medicines.length } });
+    const skip = Math.max(0, Number(req.query.skip) || 0);
+    const limit = Math.min(100, Math.max(1, Number(req.query.limit) || 20));
+
+    const [medicines, total] = await Promise.all([
+      Medicine.find(filter).sort({ name: 1 }).collation({ locale: 'en' }).skip(skip).limit(limit),
+      Medicine.countDocuments(filter),
+    ]);
+
+    res.json({ success: true, data: { medicines, count: medicines.length, total, skip, limit } });
   } catch (err) {
     next(err);
   }
@@ -74,7 +97,10 @@ export const getMedicineById = async (req: Request, res: Response, next: NextFun
 /** PUT /api/medicines/:id */
 export const updateMedicine = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   const errors = validationResult(req);
-  if (!errors.isEmpty()) return next(new ApiError(422, 'Validation failed'));
+  if (!errors.isEmpty()) {
+    return next(new ApiError(422, 'Validation failed'));
+  }
+
   try {
     const updates: Record<string, unknown> = {};
 
@@ -110,11 +136,21 @@ export const updateMedicine = async (req: Request, res: Response, next: NextFunc
       updates['expiryDate'] = parsedExpiryDate;
     }
 
+    // Handle image update: S3 presigned upload or local file upload
+    if (req.body.fileKey && typeof req.body.fileKey === 'string' && req.body.fileKey.trim().length > 0) {
+      // S3 presigned upload flow: verify the fileKey belongs to this user
+      await s3Service.verifyAndConsume(req.user!.id, req.body.fileKey);
+      updates['packagingImageUrl'] = formatFileReference('s3', req.body.fileKey);
+    } else if (req.file) {
+      // Legacy multer upload: store with local protocol
+      updates['packagingImageUrl'] = formatFileReference('local', `/uploads/${req.file.filename}`);
+    }
+
     if (Object.keys(updates).length === 0) {
       return next(ApiError.badRequest('No valid fields provided for update'));
     }
 
-    const medicine = await Medicine.findByIdAndUpdate(req.params.id, updates, { new: true, runValidators: true });
+    const medicine = await Medicine.findByIdAndUpdate(req.params.id, updates, { returnDocument: 'after', runValidators: true });
     if (!medicine) return next(ApiError.notFound('Medicine not found'));
     res.json({ success: true, message: 'Medicine updated', data: { medicine } });
   } catch (err) {
@@ -125,7 +161,10 @@ export const updateMedicine = async (req: Request, res: Response, next: NextFunc
 /** PATCH /api/medicines/:id/stock */
 export const adjustStock = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   const errors = validationResult(req);
-  if (!errors.isEmpty()) return next(new ApiError(422, 'Validation failed'));
+  if (!errors.isEmpty()) {
+    const errorMessages = errors.array().map((e) => e.msg).join(', ');
+    return next(new ApiError(422, `Validation failed: ${errorMessages}`));
+  }
 
   try {
     const quantityChange = Number(req.body['quantityChange']);
@@ -141,7 +180,7 @@ export const adjustStock = async (req: Request, res: Response, next: NextFunctio
     const medicine = await Medicine.findOneAndUpdate(
       updateFilter,
       { $inc: { stockQuantity: quantityChange } },
-      { new: true, runValidators: true },
+      { returnDocument: 'after', runValidators: true },
     );
 
     if (!medicine) {
@@ -168,6 +207,25 @@ export const deleteMedicine = async (req: Request, res: Response, next: NextFunc
     const medicine = await Medicine.findByIdAndDelete(req.params.id);
     if (!medicine) return next(ApiError.notFound('Medicine not found'));
     res.json({ success: true, message: 'Medicine deleted' });
+  } catch (err) {
+    next(err);
+  }
+};
+
+/** POST /api/medicines/batch - Get multiple medicines by IDs (for N+1 elimination) */
+export const getMedicinesByIds = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+  try {
+    const { ids } = req.body as { ids: string[] };
+    if (!Array.isArray(ids) || ids.length === 0) {
+      return next(ApiError.badRequest('ids must be a non-empty array'));
+    }
+
+    if (ids.length > 100) {
+      return next(ApiError.badRequest('Maximum 100 IDs per batch request'));
+    }
+
+    const medicines = await Medicine.find({ _id: { $in: ids } });
+    res.json({ success: true, data: { medicines } });
   } catch (err) {
     next(err);
   }

@@ -32,4 +32,6 @@ export const updateDoctorValidation = [
 export const listDoctorsValidation = [
   query('specialization').optional().trim(),
   query('availability').optional().isIn(AVAILABILITIES),
+  query('page').optional().isInt({ min: 1 }).toInt(),
+  query('limit').optional().isInt({ min: 1, max: 100 }).toInt(),
 ];

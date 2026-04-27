@@ -5,8 +5,11 @@ import { validationResult } from 'express-validator';
 import { Doctor } from './doctor.model.js';
 import { User } from '../auth/auth.model.js';
 import { ApiError } from '../../shared/utils/ApiError.js';
+import { s3Service } from '../../shared/services/s3.service.js';
+import { formatFileReference } from '../../shared/utils/fileReference.js';
 import { ROLES } from '../../shared/constants/roles.js';
 import { findDoctorProfileByUserId } from '../../shared/utils/doctorLookup.js';
+import { isMongoDuplicateKeyError } from '../../shared/utils/mongoHelpers.js';
 
 // ── Controllers ────────────────────────────────────────────────────────────────
 
@@ -14,8 +17,8 @@ async function cleanupUploadedFile(file?: Express.Multer.File): Promise<void> {
   if (!file?.path) return;
   try {
     await fs.unlink(file.path);
-  } catch {
-    // Ignore cleanup failures to avoid masking original request errors.
+  } catch (err) {
+    console.error('Failed to cleanup uploaded file:', file.path, err instanceof Error ? err.message : err);
   }
 }
 
@@ -27,31 +30,46 @@ export const createDoctor = async (req: Request, res: Response, next: NextFuncti
     return next(new ApiError(422, 'Validation failed'));
   }
   try {
-    if (!req.file) return next(ApiError.badRequest('License document is required'));
+    let licenseDocumentUrl: string;
+
+    if (req.body.fileKey && typeof req.body.fileKey === 'string' && req.body.fileKey.trim().length > 0) {
+      // S3 presigned upload flow: verify the fileKey belongs to this user
+      await s3Service.verifyAndConsume(req.user!.id, req.body.fileKey);
+      licenseDocumentUrl = formatFileReference('s3', req.body.fileKey);
+    } else if (req.file) {
+      // Legacy multer upload: store with local protocol
+      licenseDocumentUrl = formatFileReference('local', `/uploads/${req.file.filename}`);
+    } else {
+      return next(ApiError.badRequest('License document is required'));
+    }
 
     const linkedUser = await User.findById(req.body.userId);
     if (!linkedUser) {
-      await cleanupUploadedFile(req.file);
+      // Only clean up multer files (S3 files are handled by presigned URL lifecycle)
+      if (req.file) { await cleanupUploadedFile(req.file); }
       return next(ApiError.badRequest('Linked user not found'));
     }
     if (linkedUser.role !== ROLES.DOCTOR) {
-      await cleanupUploadedFile(req.file);
+      if (req.file) { await cleanupUploadedFile(req.file); }
       return next(ApiError.badRequest('Linked user must have role doctor'));
     }
 
     const doctor = await Doctor.create({
       ...req.body,
-      licenseDocumentUrl: `/uploads/${req.file.filename}`,
+      licenseDocumentUrl,
     });
 
     res.status(201).json({ success: true, message: 'Doctor created', data: { doctor } });
   } catch (err) {
     await cleanupUploadedFile(req.file);
+    if (isMongoDuplicateKeyError(err)) {
+      return next(new ApiError(409, 'A doctor profile already exists for this user'));
+    }
     next(err);
   }
 };
 
-/** GET /api/doctors — List all doctors (public, filterable) */
+/** GET /api/doctors — List all doctors (public, filterable, paginated) */
 export const getDoctors = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   const errors = validationResult(req);
   if (!errors.isEmpty()) return next(new ApiError(422, 'Validation failed'));
@@ -60,8 +78,22 @@ export const getDoctors = async (req: Request, res: Response, next: NextFunction
     if (req.query.specialization) filter.specialization = req.query.specialization;
     if (req.query.availability) filter.availability = req.query.availability;
 
-    const doctors = await Doctor.find(filter).populate('userId', 'name email phone');
-    res.json({ success: true, data: { doctors, count: doctors.length } });
+    const page = Math.max(1, parseInt(req.query.page as string) || 1);
+    const limit = Math.min(100, Math.max(1, parseInt(req.query.limit as string) || 20));
+    const skip = (page - 1) * limit;
+
+    const [doctors, total] = await Promise.all([
+      Doctor.find(filter).populate('userId', 'name email phone').skip(skip).limit(limit),
+      Doctor.countDocuments(filter),
+    ]);
+    res.json({
+      success: true,
+      data: {
+        doctors,
+        count: doctors.length,
+        pagination: { total, page, limit, pages: Math.ceil(total / limit) },
+      },
+    });
   } catch (err) {
     next(err);
   }
