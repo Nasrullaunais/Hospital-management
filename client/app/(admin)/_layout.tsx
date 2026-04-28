@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { ActivityIndicator, View, StyleSheet } from 'react-native';
+import { ActivityIndicator, View, Text, StyleSheet } from 'react-native';
 import { Redirect, Stack, useRouter, usePathname } from 'expo-router';
 import Colors from '@/constants/Colors';
 import { useColorScheme } from '@/components/useColorScheme';
@@ -30,11 +30,11 @@ export default function AdminLayout() {
   const [activeTab, setActiveTab] = useState('index');
 
   const tabs: TabItem[] = [
-    { key: 'index', title: 'System', icon: 'settings' },
+    { key: 'index', title: 'Dashboard', icon: 'grid' },
     { key: 'doctors', title: 'Users', icon: 'users' },
-    { key: 'billing', title: 'Finances', icon: 'dollar-sign' },
+    { key: 'billing', title: 'Finance', icon: 'dollar-sign' },
     { key: 'pharmacy', title: 'Inventory', icon: 'package' },
-    { key: 'departments', title: 'Depts', icon: 'grid' },
+    { key: 'departments', title: 'Depts', icon: 'layers' },
     { key: 'wards', title: 'Wards', icon: 'home' },
     { key: 'profile', title: 'Profile', icon: 'user' },
   ];
@@ -60,7 +60,9 @@ export default function AdminLayout() {
   if (isLoading) {
     return (
       <View style={[styles.loading, { backgroundColor: theme.background }]}>
-        <ActivityIndicator size="large" color={theme.primary} />
+        <Text style={[styles.loadingTitle, { color: theme.primary }]}>Pulse</Text>
+        <Text style={[styles.loadingSubtitle, { color: theme.textSecondary }]}>Admin Portal</Text>
+        <ActivityIndicator size="large" color={theme.primary} style={{ marginTop: 16 }} />
       </View>
     );
   }
@@ -94,90 +96,108 @@ export default function AdminLayout() {
             name="doctors/[id]"
             options={{
               headerShown: true,
-              title: 'User Details',
+              title: 'Doctor Profile',
               headerStyle: { backgroundColor: theme.surface },
-              headerTintColor: theme.text,
+              headerTintColor: theme.primary,
+              headerTitleStyle: { fontWeight: '600', fontSize: 16 },
               headerShadowVisible: false,
+              headerBackTitleVisible: false,
             }}
           />
           <Stack.Screen
             name="doctors/add"
             options={{
               headerShown: true,
-              title: 'Add User',
+              title: 'New Doctor',
               headerStyle: { backgroundColor: theme.surface },
-              headerTintColor: theme.text,
+              headerTintColor: theme.primary,
+              headerTitleStyle: { fontWeight: '600', fontSize: 16 },
               headerShadowVisible: false,
+              headerBackTitleVisible: false,
             }}
           />
           <Stack.Screen
             name="departments/[id]"
             options={{
               headerShown: true,
-              title: 'Department Details',
+              title: 'Department Info',
               headerStyle: { backgroundColor: theme.surface },
-              headerTintColor: theme.text,
+              headerTintColor: theme.primary,
+              headerTitleStyle: { fontWeight: '600', fontSize: 16 },
               headerShadowVisible: false,
+              headerBackTitleVisible: false,
             }}
           />
           <Stack.Screen
             name="departments/add"
             options={{
               headerShown: true,
-              title: 'Add Department',
+              title: 'New Department',
               headerStyle: { backgroundColor: theme.surface },
-              headerTintColor: theme.text,
+              headerTintColor: theme.primary,
+              headerTitleStyle: { fontWeight: '600', fontSize: 16 },
               headerShadowVisible: false,
+              headerBackTitleVisible: false,
             }}
           />
           <Stack.Screen
             name="wards/[id]"
             options={{
               headerShown: true,
-              title: 'Ward Details',
+              title: 'Ward Info',
               headerStyle: { backgroundColor: theme.surface },
-              headerTintColor: theme.text,
+              headerTintColor: theme.primary,
+              headerTitleStyle: { fontWeight: '600', fontSize: 16 },
               headerShadowVisible: false,
+              headerBackTitleVisible: false,
             }}
           />
           <Stack.Screen
             name="wards/add"
             options={{
               headerShown: true,
-              title: 'Add Ward',
+              title: 'New Ward',
               headerStyle: { backgroundColor: theme.surface },
-              headerTintColor: theme.text,
+              headerTintColor: theme.primary,
+              headerTitleStyle: { fontWeight: '600', fontSize: 16 },
               headerShadowVisible: false,
+              headerBackTitleVisible: false,
             }}
           />
           <Stack.Screen
             name="pharmacy/edit-medicine"
             options={{
               headerShown: true,
-              title: 'Edit Medicine',
+              title: 'Edit Medication',
               headerStyle: { backgroundColor: theme.surface },
-              headerTintColor: theme.text,
+              headerTintColor: theme.primary,
+              headerTitleStyle: { fontWeight: '600', fontSize: 16 },
               headerShadowVisible: false,
+              headerBackTitleVisible: false,
             }}
           />
           <Stack.Screen
             name="billing/create"
             options={{
               headerShown: true,
-              title: 'Create Bill',
+              title: 'New Invoice',
               headerStyle: { backgroundColor: theme.surface },
-              headerTintColor: theme.text,
+              headerTintColor: theme.primary,
+              headerTitleStyle: { fontWeight: '600', fontSize: 16 },
               headerShadowVisible: false,
+              headerBackTitleVisible: false,
             }}
           />
           <Stack.Screen
             name="pharmacy/add-medicine"
             options={{
               headerShown: true,
-              title: 'Add Medicine',
+              title: 'New Medication',
               headerStyle: { backgroundColor: theme.surface },
-              headerTintColor: theme.text,
+              headerTintColor: theme.primary,
+              headerTitleStyle: { fontWeight: '600', fontSize: 16 },
               headerShadowVisible: false,
+              headerBackTitleVisible: false,
             }}
           />
         </Stack>
@@ -196,5 +216,16 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
+  },
+  loadingTitle: {
+    fontSize: 36,
+    fontWeight: '800',
+    letterSpacing: 1,
+  },
+  loadingSubtitle: {
+    fontSize: 14,
+    fontWeight: '500',
+    marginTop: 4,
+    letterSpacing: 0.5,
   },
 });

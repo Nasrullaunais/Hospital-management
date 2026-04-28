@@ -10,14 +10,41 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Feather } from '@expo/vector-icons';
-import { useRouter, ErrorBoundary } from 'expo-router';
-import { Card, Badge, EmptyState, ErrorState } from '@/components/ui';
+import { useRouter } from 'expo-router';
+import { Card, Badge, EmptyState, ErrorState, ErrorBoundary } from '@/components/ui';
 import { wardReceptionistService, type BedStatus } from '@/features/wardReceptionist/services/wardReceptionist.service';
 import Colors from '@/constants/Colors';
 import { useColorScheme } from '@/components/useColorScheme';
 import { spacing, radius, shadows } from '@/constants/ThemeTokens';
 
 const TAB_BAR_HEIGHT = 70;
+
+function getInitials(name: string): string {
+  return name
+    .split(' ')
+    .map((part) => part.charAt(0))
+    .join('')
+    .toUpperCase()
+    .slice(0, 2);
+}
+
+function getAvatarColor(name: string, theme: typeof Colors.light): string {
+  const colors = [theme.primaryMuted, theme.accent + '20', theme.errorBg, theme.warningBg, theme.successBg];
+  let hash = 0;
+  for (let i = 0; i < name.length; i++) {
+    hash = name.charCodeAt(i) + ((hash << 5) - hash);
+  }
+  return colors[Math.abs(hash) % colors.length];
+}
+
+function getAvatarTextColor(name: string, theme: typeof Colors.light): string {
+  const colors = [theme.primary, theme.accent, theme.error, theme.warning, theme.success];
+  let hash = 0;
+  for (let i = 0; i < name.length; i++) {
+    hash = name.charCodeAt(i) + ((hash << 5) - hash);
+  }
+  return colors[Math.abs(hash) % colors.length];
+}
 
 export default function PatientsListScreen() {
   const router = useRouter();
@@ -63,48 +90,58 @@ export default function PatientsListScreen() {
     router.push(`/(receptionist)/patients/${patientId}`);
   };
 
-  const renderPatientCard = ({ item }: { item: BedStatus }) => (
-    <TouchableOpacity
-      activeOpacity={0.7}
-      onPress={() => item.patientId && handlePatientPress(item.patientId)}
-      testID={`patient-card-${item._id}`}
-    >
-      <Card style={styles.patientCard}>
-        <View style={styles.cardHeader}>
-          <View style={styles.patientInfo}>
-            <Text style={[styles.patientName, { color: theme.text }]}>
-              {item.patientName ?? 'Unknown Patient'}
-            </Text>
-            <Text style={[styles.wardName, { color: theme.textSecondary }]}>
-              {item.wardName}
-            </Text>
-          </View>
-          <Badge
-            label={`Bed ${item.bedNumber}`}
-            variant="primary"
-            size="md"
-          />
-        </View>
+  const renderPatientCard = ({ item }: { item: BedStatus }) => {
+    const patientName = item.patientName ?? 'Unknown Patient';
+    const initials = getInitials(patientName);
+    const avatarBg = getAvatarColor(patientName, theme);
+    const avatarTextColor = getAvatarTextColor(patientName, theme);
 
-        <View style={[styles.cardDetails, { borderTopColor: theme.divider }]}>
-          <View style={styles.detailItem}>
-            <Feather name="calendar" size={14} color={theme.textTertiary} />
-            <Text style={[styles.detailLabel, { color: theme.textSecondary }]}>Admitted</Text>
-            <Text style={[styles.detailValue, { color: theme.text }]}>
-              {formatDate(item.admissionDate)}
-            </Text>
+    return (
+      <TouchableOpacity
+        activeOpacity={0.7}
+        onPress={() => item.patientId && handlePatientPress(item.patientId)}
+        testID={`patient-card-${item._id}`}
+      >
+        <Card style={styles.patientCard}>
+          <View style={styles.cardHeader}>
+            <View style={[styles.avatar, { backgroundColor: avatarBg }]}>
+              <Text style={[styles.avatarText, { color: avatarTextColor }]}>{initials}</Text>
+            </View>
+            <View style={styles.patientInfo}>
+              <Text style={[styles.patientName, { color: theme.text }]}>
+                {patientName}
+              </Text>
+              <Text style={[styles.wardName, { color: theme.textSecondary }]}>
+                {item.wardName}
+              </Text>
+            </View>
+            <Badge
+              label={`Bed ${item.bedNumber}`}
+              variant="primary"
+              size="md"
+            />
           </View>
-          <View style={styles.detailItem}>
-            <Feather name="log-out" size={14} color={theme.textTertiary} />
-            <Text style={[styles.detailLabel, { color: theme.textSecondary }]}>Discharge</Text>
-            <Text style={[styles.detailValue, { color: theme.text }]}>
-              {formatDate(item.expectedDischarge)}
-            </Text>
+
+          <View style={[styles.cardDetails, { borderTopColor: theme.divider }]}>
+            <View style={styles.detailItem}>
+              <Feather name="calendar" size={14} color={theme.textTertiary} />
+              <Text style={[styles.detailLabel, { color: theme.textSecondary }]}>Admitted</Text>
+              <Text style={[styles.detailValue, { color: theme.text }]}>
+                {formatDate(item.admissionDate)}
+              </Text>
+            </View>
+            <View style={styles.detailItem}>
+              <Feather name="log-out" size={14} color={theme.textTertiary} />
+              <Text style={[styles.detailLabel, { color: theme.textSecondary }]}>Discharge</Text>
+              <Text style={[styles.detailValue, { color: theme.text }]}>
+                {formatDate(item.expectedDischarge)}
+              </Text>
+            </View>
           </View>
-        </View>
-      </Card>
-    </TouchableOpacity>
-  );
+        </Card>
+      </TouchableOpacity>
+    );
+  };
 
   if (loading) {
     return (
@@ -169,11 +206,23 @@ const styles = StyleSheet.create({
   cardHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: 'flex-start',
+    alignItems: 'center',
+  },
+  avatar: {
+    width: 40,
+    height: 40,
+    borderRadius: radius.full,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: spacing.sm,
+  },
+  avatarText: {
+    fontSize: 14,
+    fontWeight: '700',
   },
   patientInfo: {
     flex: 1,
-    marginRight: spacing.md,
+    marginRight: spacing.sm,
   },
   patientName: {
     fontSize: 16,

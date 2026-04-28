@@ -1,11 +1,12 @@
 import React, { useState, useEffect } from 'react';
-import { ActivityIndicator, View, StyleSheet } from 'react-native';
+import { ActivityIndicator, View, Text, StyleSheet } from 'react-native';
 import { Redirect, Stack, useRouter, usePathname } from 'expo-router';
 import Colors from '@/constants/Colors';
 import { useColorScheme } from '@/components/useColorScheme';
 import { useAuth } from '@/shared/context/AuthContext';
 import { getRoleHomeRoute } from '@/shared/constants/roleRoutes';
 import { CustomTabBar, TabItem } from '@/components/ui/CustomTabBar';
+import { spacing, radius, shadows } from '@/constants/ThemeTokens';
 
 const VALID_TAB_KEYS = ['index', 'appointments', 'records', 'profile'] as const;
 type TabKey = typeof VALID_TAB_KEYS[number];
@@ -41,8 +42,10 @@ export default function DoctorLayout() {
 
   if (isLoading) {
     return (
-      <View style={[styles.loading, { backgroundColor: theme.background }]}>
-        <ActivityIndicator size="large" color={theme.primary} />
+      <View style={styles.loading}>
+        <Text style={styles.loadingBrand}>Pulse</Text>
+        <Text style={styles.loadingSubtitle}>Doctor Portal</Text>
+        <ActivityIndicator size="large" color="#F4795B" style={{ marginTop: 24 }} />
       </View>
     );
   }
@@ -74,20 +77,24 @@ export default function DoctorLayout() {
           name="records/add-record"
           options={{
             headerShown: true,
-            title: 'Add Record',
+            title: 'New Patient Record',
             headerStyle: { backgroundColor: theme.surface },
-            headerTintColor: theme.text,
+            headerTintColor: theme.primary,
+            headerTitleStyle: { fontWeight: '600', fontSize: 16 },
             headerShadowVisible: false,
+            headerBackTitleVisible: false,
           }}
         />
         <Stack.Screen
           name="records/[id]"
           options={{
             headerShown: true,
-            title: 'Record Details',
+            title: 'Record Info',
             headerStyle: { backgroundColor: theme.surface },
-            headerTintColor: theme.text,
+            headerTintColor: theme.primary,
+            headerTitleStyle: { fontWeight: '600', fontSize: 16 },
             headerShadowVisible: false,
+            headerBackTitleVisible: false,
           }}
         />
       </Stack>
@@ -106,5 +113,19 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
+    backgroundColor: '#1B2A4A',
+  },
+  loadingBrand: {
+    fontSize: 36,
+    fontWeight: '800',
+    color: '#FFFFFF',
+    letterSpacing: 2,
+  },
+  loadingSubtitle: {
+    fontSize: 14,
+    fontWeight: '500',
+    color: 'rgba(255,255,255,0.7)',
+    marginTop: 6,
+    letterSpacing: 1,
   },
 });

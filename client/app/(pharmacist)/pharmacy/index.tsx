@@ -1,6 +1,7 @@
 import React, { useCallback, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
+  Alert,
   FlatList,
   Image,
   RefreshControl,
@@ -18,7 +19,7 @@ import type { Medicine } from '@/shared/types';
 import { medicineService } from '@/features/pharmacy/services/medicine.service';
 import Colors from '@/constants/Colors';
 import { useColorScheme } from '@/components/useColorScheme';
-import { spacing, radius, shadows } from '@/constants/ThemeTokens';
+import { spacing, radius, shadows, typography } from '@/constants/ThemeTokens';
 import { LOW_STOCK_THRESHOLD, EXPIRY_WARNING_DAYS } from '@/shared/constants/pharmacy';
 import { getImageUrl } from '@/shared/utils/getImageUrl';
 
@@ -87,20 +88,35 @@ export default function PharmacyInventoryScreen() {
 
   const isLowStock = useCallback((qty: number) => qty < LOW_STOCK_THRESHOLD, []);
 
-  const getBadgeStyle = useCallback((lowStock: boolean, expiringSoon: boolean) => {
-    if (lowStock) return { bg: theme.errorBg, border: theme.error, text: theme.error };
-    if (expiringSoon) return { bg: theme.warningBg, border: theme.warning, text: theme.warning };
-    return { bg: theme.successBg, border: theme.success, text: theme.success };
-  }, [theme]);
+  const handleDeleteMedicine = useCallback((medicine: Medicine) => {
+    Alert.alert(
+      'Delete Medicine',
+      `Are you sure you want to delete ${medicine.name}? This action cannot be undone.`,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Delete',
+          style: 'destructive',
+          onPress: () => {
+            Alert.alert('Info', 'Delete functionality is available in the medicine detail view.');
+          },
+        },
+      ],
+    );
+  }, []);
 
   const renderItem = useCallback(({ item }: { item: Medicine }) => {
     const lowStock = isLowStock(item.stockQuantity);
     const expiringSoon = isExpiringSoon(item.expiryDate);
-    const badgeStyle = getBadgeStyle(lowStock, expiringSoon);
+
+    const badgeBg = lowStock ? theme.errorBg : theme.surfaceTertiary;
+    const badgeBorder = lowStock ? theme.error : theme.border;
+    const badgeText = lowStock ? theme.error : theme.textSecondary;
+    const badgeLabel = lowStock ? 'Low Stock' : 'In Stock';
 
     return (
       <TouchableOpacity
-        style={[styles.card, { backgroundColor: theme.surface, borderColor: theme.border }]}
+        style={[styles.card, { backgroundColor: theme.surface, ...shadows.card }]}
         onPress={() => router.push(`/(pharmacist)/pharmacy/${item._id}`)}
         activeOpacity={0.7}
       >
@@ -112,10 +128,8 @@ export default function PharmacyInventoryScreen() {
         <View style={styles.cardBody}>
           <View style={styles.rowBetween}>
             <Text style={[styles.name, { color: theme.text }]} numberOfLines={1}>{item.name}</Text>
-            <View style={[styles.stockBadge, { backgroundColor: badgeStyle.bg, borderColor: badgeStyle.border }]}>
-              <Text style={[styles.stockBadgeText, { color: badgeStyle.text }]}>
-                {lowStock ? 'Low Stock' : expiringSoon ? 'Expiring' : 'In Stock'}
-              </Text>
+            <View style={[styles.stockBadge, { backgroundColor: badgeBg, borderColor: badgeBorder }]}>
+              <Text style={[styles.stockBadgeText, { color: badgeText }]}>{badgeLabel}</Text>
             </View>
           </View>
 
@@ -141,10 +155,29 @@ export default function PharmacyInventoryScreen() {
               <Text style={[styles.stockWarning, { color: theme.error }]}>Reorder required</Text>
             )}
           </View>
+
+          <View style={styles.actionRow}>
+            <TouchableOpacity
+              style={[styles.editBtn, { backgroundColor: theme.primary }]}
+              onPress={() => router.push(`/(pharmacist)/pharmacy/${item._id}`)}
+              activeOpacity={0.7}
+            >
+              <Feather name="edit-2" size={14} color="#FFFFFF" />
+              <Text style={styles.editBtnText}>Edit</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.deleteBtn, { backgroundColor: theme.error }]}
+              onPress={() => handleDeleteMedicine(item)}
+              activeOpacity={0.7}
+            >
+              <Feather name="trash-2" size={14} color="#FFFFFF" />
+              <Text style={styles.deleteBtnText}>Delete</Text>
+            </TouchableOpacity>
+          </View>
         </View>
       </TouchableOpacity>
     );
-  }, [theme, isLowStock, isExpiringSoon, getBadgeStyle, router]);
+  }, [theme, isLowStock, isExpiringSoon, router, handleDeleteMedicine]);
 
   if (loading) {
     return (
@@ -213,10 +246,10 @@ export default function PharmacyInventoryScreen() {
 
       {canAddMedicine ? (
         <TouchableOpacity
-          style={[styles.addButton, { backgroundColor: theme.primary }]}
+          style={[styles.addButton, { backgroundColor: theme.accent }]}
           onPress={() => router.push('/(pharmacist)/pharmacy/add-medicine')}
         >
-          <Feather name="plus" size={18} color="#fff" style={{ marginRight: spacing.xs }} />
+          <Feather name="plus" size={20} color="#FFFFFF" style={{ marginRight: spacing.xs }} />
           <Text style={styles.addButtonText}>Add Medication</Text>
         </TouchableOpacity>
       ) : null}
@@ -250,22 +283,20 @@ const styles = StyleSheet.create({
   searchInput: { flex: 1, fontSize: 15 },
   filterChip: { flexDirection: 'row', alignItems: 'center', borderWidth: 1, borderRadius: radius.lg, paddingHorizontal: spacing.md, height: 42, gap: spacing.xs },
   filterChipText: { fontSize: 13, fontWeight: '600' },
-  list: { padding: spacing.md },
+  list: { padding: spacing.md, gap: spacing.sm },
   emptyList: { flex: 1 },
   emptyContainer: { flexGrow: 1, justifyContent: 'center', alignItems: 'center' },
-  emptyText: { fontSize: 16, fontWeight: '600', marginTop: spacing.sm },
+  emptyText: { fontSize: typography.md, fontWeight: '600', marginTop: spacing.sm },
   card: {
     flexDirection: 'row',
     borderRadius: radius.lg,
-    marginBottom: spacing.md,
     overflow: 'hidden',
-    borderWidth: 1,
     ...shadows.card,
   },
-  image: { width: 86, height: 86 },
+  image: { width: 86, height: 86, borderTopLeftRadius: 12, borderBottomLeftRadius: 12 },
   cardBody: { flex: 1, padding: spacing.md, gap: spacing.xs },
-  rowBetween: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: spacing.xs },
-  name: { fontSize: 15, fontWeight: '700', flex: 1, paddingRight: spacing.sm },
+  rowBetween: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+  name: { fontSize: 15, fontWeight: '600', flex: 1, paddingRight: spacing.sm },
   category: { fontSize: 12 },
   price: { fontSize: 14, fontWeight: '600' },
   metaRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, marginTop: spacing.xs },
@@ -277,10 +308,37 @@ const styles = StyleSheet.create({
   stockWarning: { fontSize: 11, fontWeight: '500' },
   stockBadge: { borderWidth: 1, borderRadius: radius.full, paddingHorizontal: spacing.sm, paddingVertical: spacing.xs },
   stockBadgeText: { fontSize: 11, fontWeight: '700' },
-  addButton: { marginHorizontal: spacing.md, marginTop: spacing.sm, marginBottom: spacing.xs, borderRadius: radius.md, paddingVertical: spacing.sm, flexDirection: 'row', alignItems: 'center', justifyContent: 'center' },
-  addButtonText: { color: '#ffffff', fontWeight: '700', fontSize: 14 },
+  actionRow: {
+    flexDirection: 'row',
+    gap: spacing.sm,
+    marginTop: spacing.xs,
+  },
+  editBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    height: 36,
+    paddingHorizontal: spacing.md,
+    borderRadius: radius.md,
+    gap: spacing.xs,
+    flex: 1,
+  },
+  editBtnText: { color: '#FFFFFF', fontSize: 12, fontWeight: '600' },
+  deleteBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    height: 36,
+    paddingHorizontal: spacing.md,
+    borderRadius: radius.md,
+    gap: spacing.xs,
+    flex: 1,
+  },
+  deleteBtnText: { color: '#FFFFFF', fontSize: 12, fontWeight: '600' },
+  addButton: { marginHorizontal: spacing.md, marginTop: spacing.sm, marginBottom: spacing.xs, borderRadius: radius.md, paddingVertical: spacing.sm, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', height: 52 },
+  addButtonText: { color: '#FFFFFF', fontWeight: '700', fontSize: 15 },
   center: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: 20 },
   errorText: { fontSize: 15, marginTop: spacing.md, textAlign: 'center' },
   retryButton: { borderRadius: radius.md, paddingHorizontal: spacing.md, paddingVertical: spacing.sm, marginTop: spacing.md },
-  retryButtonText: { color: '#ffffff', fontWeight: '600' },
+  retryButtonText: { color: '#FFFFFF', fontWeight: '600' },
 });

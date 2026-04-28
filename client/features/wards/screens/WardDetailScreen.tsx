@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useMemo } from 'react';
 import {
   View,
   Text,
@@ -12,6 +12,10 @@ import {
   Pressable,
 } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
+import { Feather } from '@expo/vector-icons';
+import Colors from '@/constants/Colors';
+import { useColorScheme } from '@/components/useColorScheme';
+import { spacing, radius, shadows, typography } from '@/constants/ThemeTokens';
 import { wardService } from '../services/ward.service';
 import type { Ward } from '@/shared/types';
 import { useAuth } from '@/shared/context/AuthContext';
@@ -20,12 +24,13 @@ export default function WardDetailScreen() {
   const { id: wardId } = useLocalSearchParams<{ id: string }>();
   const { user } = useAuth();
   const router = useRouter();
+  const colorScheme = useColorScheme();
+  const c = useMemo(() => Colors[colorScheme ?? 'light'], [colorScheme]);
 
   const [ward, setWard] = useState<Ward | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  // Modal state for bed occupancy update
   const [modalVisible, setModalVisible] = useState(false);
   const [bedInput, setBedInput] = useState('');
   const [bedInputError, setBedInputError] = useState<string | null>(null);
@@ -70,7 +75,6 @@ export default function WardDetailScreen() {
     try {
       const occupancy = parseInt(bedInput, 10);
       await wardService.updateBeds(ward._id, { currentOccupancy: occupancy });
-      // Refresh ward data
       const updated = await wardService.getWardById(ward._id);
       setWard(updated);
       setModalVisible(false);
@@ -84,16 +88,17 @@ export default function WardDetailScreen() {
 
   if (loading) {
     return (
-      <View style={styles.center}>
-        <ActivityIndicator size="large" color="#2563eb" />
+      <View style={[styles.center, { backgroundColor: c.background }]}>
+        <ActivityIndicator size="large" color={c.primary} />
       </View>
     );
   }
 
   if (error || !ward) {
     return (
-      <View style={styles.center}>
-        <Text style={styles.errorText}>{error ?? 'Ward not found.'}</Text>
+      <View style={[styles.center, { backgroundColor: c.background }]}>
+        <Feather name="alert-circle" size={48} color={c.error} />
+        <Text style={[styles.errorText, { color: c.error }]}>{error ?? 'Ward not found.'}</Text>
       </View>
     );
   }
@@ -101,91 +106,97 @@ export default function WardDetailScreen() {
   const isAdmin = user?.role === 'admin';
   const departmentName = typeof ward.departmentId === 'object' ? ward.departmentId.name : 'Unknown';
   const occupancyPercent = Math.round((ward.currentOccupancy / ward.totalBeds) * 100);
+  const initial = ward.name ? ward.name.charAt(0).toUpperCase() : 'W';
 
   const getStatusColor = (status: string) => {
     switch (status) {
-      case 'available': return styles.badgeGreen;
-      case 'full': return styles.badgeRed;
-      case 'maintenance': return styles.badgeYellow;
-      default: return styles.badgeGray;
-    }
-  };
-
-  const getStatusTextColor = (status: string) => {
-    switch (status) {
-      case 'available': return styles.badgeTextGreen;
-      case 'full': return styles.badgeTextRed;
-      case 'maintenance': return styles.badgeTextYellow;
-      default: return styles.badgeTextGray;
+      case 'available': return c.success;
+      case 'full': return c.error;
+      case 'maintenance': return '#D97706';
+      default: return c.textTertiary;
     }
   };
 
   return (
-    <ScrollView style={styles.container} contentContainerStyle={styles.content}>
-      <View style={styles.header}>
-        <View style={{ flex: 1 }}>
-          <Text style={styles.name}>{ward.name}</Text>
-          <Text style={styles.departmentName}>{departmentName}</Text>
+    <ScrollView style={[styles.container, { backgroundColor: c.background }]} contentContainerStyle={styles.content}>
+      <View style={styles.profileHeader}>
+        <View style={[styles.avatar, { backgroundColor: c.accent }]}>
+          <Text style={styles.avatarText}>{initial}</Text>
         </View>
-        <View style={[styles.badge, getStatusColor(ward.status)]}>
-          <Text style={[styles.badgeText, getStatusTextColor(ward.status)]}>
+        <Text style={[styles.name, { color: c.text }]}>{ward.name}</Text>
+        <Text style={[styles.subtitle, { color: c.textSecondary }]}>{departmentName}</Text>
+        <View style={styles.roleRow}>
+          <View style={[styles.roleBadge, { backgroundColor: c.primaryMuted }]}>
+            <Text style={[styles.roleBadgeText, { color: c.primary }]}>
+              {ward.type.toUpperCase()}
+            </Text>
+          </View>
+          <View style={[styles.statusDot, { backgroundColor: getStatusColor(ward.status) }]} />
+          <Text style={[styles.statusText, { color: getStatusColor(ward.status) }]}>
             {ward.status}
           </Text>
         </View>
       </View>
 
-      <View style={styles.typeContainer}>
-        <Text style={styles.typeLabel}>Type: </Text>
-        <Text style={styles.typeValue}>{ward.type.toUpperCase()}</Text>
-      </View>
-
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Bed Availability</Text>
+      <View style={[styles.card, shadows.card, { backgroundColor: c.surface }]}>
+        <Text style={[styles.sectionTitle, { color: c.textSecondary }]}>Bed Availability</Text>
         <View style={styles.bedsContainer}>
           <View style={styles.bedsInfo}>
-            <Text style={styles.bedsValue}>{ward.currentOccupancy}</Text>
-            <Text style={styles.bedsLabel}>Occupied</Text>
+            <Text style={[styles.bedsValue, { color: c.text }]}>{ward.currentOccupancy}</Text>
+            <Text style={[styles.bedsLabel, { color: c.textTertiary }]}>Occupied</Text>
           </View>
-          <View style={styles.bedsDivider} />
+          <View style={[styles.bedsDivider, { backgroundColor: c.divider }]} />
           <View style={styles.bedsInfo}>
-            <Text style={styles.bedsValue}>{ward.totalBeds - ward.currentOccupancy}</Text>
-            <Text style={styles.bedsLabel}>Available</Text>
+            <Text style={[styles.bedsValue, { color: c.success }]}>
+              {ward.totalBeds - ward.currentOccupancy}
+            </Text>
+            <Text style={[styles.bedsLabel, { color: c.textTertiary }]}>Available</Text>
           </View>
-          <View style={styles.bedsDivider} />
+          <View style={[styles.bedsDivider, { backgroundColor: c.divider }]} />
           <View style={styles.bedsInfo}>
-            <Text style={styles.bedsValue}>{ward.totalBeds}</Text>
-            <Text style={styles.bedsLabel}>Total</Text>
+            <Text style={[styles.bedsValue, { color: c.text }]}>{ward.totalBeds}</Text>
+            <Text style={[styles.bedsLabel, { color: c.textTertiary }]}>Total</Text>
           </View>
         </View>
         <View style={styles.progressBarContainer}>
-          <View style={styles.progressBar}>
-            <View style={[styles.progressFill, { width: `${occupancyPercent}%`, backgroundColor: occupancyPercent >= 100 ? '#ef4444' : '#22c55e' }]} />
+          <View style={[styles.progressBar, { backgroundColor: c.surfaceSecondary }]}>
+            <View
+              style={[
+                styles.progressFill,
+                {
+                  width: `${occupancyPercent}%`,
+                  backgroundColor: occupancyPercent >= 100 ? '#ef4444' : '#22c55e',
+                },
+              ]}
+            />
           </View>
-          <Text style={styles.progressText}>{occupancyPercent}% occupied</Text>
+          <Text style={[styles.progressText, { color: c.textTertiary }]}>
+            {occupancyPercent}% occupied
+          </Text>
         </View>
       </View>
 
-      {/* Admin actions */}
       {isAdmin && (
         <View style={styles.adminSection}>
-          <Text style={styles.adminLabel}>Admin Actions</Text>
           <TouchableOpacity
-            style={styles.editButton}
+            style={[styles.actionButton, { backgroundColor: c.primary }]}
             onPress={() => Alert.alert(
               'Edit Ward',
               'Edit functionality will be available in a future update.',
             )}
           >
-            <Text style={styles.editButtonText}>Edit Ward</Text>
+            <Feather name="edit-2" size={18} color="#fff" style={{ marginRight: spacing.sm }} />
+            <Text style={styles.actionButtonText}>Edit Ward</Text>
           </TouchableOpacity>
           <TouchableOpacity
-            style={[styles.editButton, { marginTop: 8 }]}
+            style={[styles.actionButton, { backgroundColor: c.primary }]}
             onPress={openBedUpdateModal}
           >
-            <Text style={styles.editButtonText}>Update Bed Occupancy</Text>
+            <Feather name="thermometer" size={18} color="#fff" style={{ marginRight: spacing.sm }} />
+            <Text style={styles.actionButtonText}>Update Bed Occupancy</Text>
           </TouchableOpacity>
           <TouchableOpacity
-            style={[styles.editButton, { marginTop: 8, borderColor: '#ef4444' }]}
+            style={[styles.actionButton, { backgroundColor: c.error }]}
             onPress={() => {
               Alert.alert(
                 'Delete Ward',
@@ -209,24 +220,33 @@ export default function WardDetailScreen() {
               );
             }}
           >
-            <Text style={[styles.editButtonText, { color: '#ef4444' }]}>Delete Ward</Text>
+            <Feather name="trash-2" size={18} color="#fff" style={{ marginRight: spacing.sm }} />
+            <Text style={styles.actionButtonText}>Delete Ward</Text>
           </TouchableOpacity>
         </View>
       )}
 
-      {/* Bed Update Modal */}
       <Modal
         visible={modalVisible}
         transparent
         animationType="fade"
         onRequestClose={() => setModalVisible(false)}
       >
-        <Pressable style={styles.modalOverlay} onPress={() => setModalVisible(false)}>
-          <Pressable style={styles.modalContent} onPress={(e) => e.stopPropagation()}>
-            <Text style={styles.modalTitle}>Update Bed Occupancy</Text>
-            <Text style={styles.modalSubtitle}>Enter new bed occupancy (0 - {ward.totalBeds}):</Text>
+        <Pressable style={[styles.modalOverlay, { backgroundColor: c.overlay }]} onPress={() => setModalVisible(false)}>
+          <Pressable
+            style={[styles.modalContent, shadows.modal, { backgroundColor: c.surface }]}
+            onPress={(e) => e.stopPropagation()}
+          >
+            <Text style={[styles.modalTitle, { color: c.text }]}>Update Bed Occupancy</Text>
+            <Text style={[styles.modalSubtitle, { color: c.textSecondary }]}>
+              Enter new bed occupancy (0 - {ward.totalBeds}):
+            </Text>
             <TextInput
-              style={[styles.modalInput, bedInputError ? styles.modalInputError : null]}
+              style={[
+                styles.modalInput,
+                { backgroundColor: c.inputBackground, borderColor: bedInputError ? c.inputErrorBorder : c.inputBorder, color: c.inputText },
+                bedInputError ? { borderColor: c.inputErrorBorder } : null,
+              ]}
               value={bedInput}
               onChangeText={(text) => {
                 setBedInput(text);
@@ -234,20 +254,22 @@ export default function WardDetailScreen() {
               }}
               keyboardType="number-pad"
               placeholder="Enter bed count"
-              placeholderTextColor="#9ca3af"
+              placeholderTextColor={c.inputPlaceholder}
               autoFocus
             />
-            {bedInputError && <Text style={styles.errorTextModal}>{bedInputError}</Text>}
+            {bedInputError && (
+              <Text style={[styles.errorTextModal, { color: c.error }]}>{bedInputError}</Text>
+            )}
             <View style={styles.modalButtons}>
               <TouchableOpacity
-                style={[styles.modalButton, styles.modalButtonCancel]}
+                style={[styles.modalButton, { backgroundColor: c.surfaceSecondary }]}
                 onPress={() => setModalVisible(false)}
                 disabled={updatingBeds}
               >
-                <Text style={styles.modalButtonCancelText}>Cancel</Text>
+                <Text style={[styles.modalButtonCancelText, { color: c.textSecondary }]}>Cancel</Text>
               </TouchableOpacity>
               <TouchableOpacity
-                style={[styles.modalButton, styles.modalButtonUpdate]}
+                style={[styles.modalButton, { backgroundColor: c.primary }]}
                 onPress={handleBedUpdate}
                 disabled={updatingBeds}
               >
@@ -266,115 +288,139 @@ export default function WardDetailScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#fff' },
-  content: { padding: 20 },
+  container: { flex: 1 },
+  content: { padding: spacing.lg, paddingBottom: spacing.xxl },
   center: { flex: 1, justifyContent: 'center', alignItems: 'center' },
-  errorText: { color: '#ef4444', fontSize: 15 },
-  header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 16 },
-  name: { fontSize: 26, fontWeight: '700', color: '#1a1a2e', marginBottom: 4 },
-  departmentName: { fontSize: 14, color: '#666' },
-  badge: { borderRadius: 12, paddingHorizontal: 10, paddingVertical: 3 },
-  badgeGreen: { backgroundColor: '#dcfed6' },
-  badgeRed: { backgroundColor: '#fee2e2' },
-  badgeYellow: { backgroundColor: '#fef3c7' },
-  badgeGray: { backgroundColor: '#f3f4f6' },
-  badgeText: { fontSize: 12, fontWeight: '600' },
-  badgeTextGreen: { color: '#166534' },
-  badgeTextRed: { color: '#991b1b' },
-  badgeTextYellow: { color: '#92400e' },
-  badgeTextGray: { color: '#6b7280' },
-  typeContainer: { flexDirection: 'row', marginBottom: 20 },
-  typeLabel: { fontSize: 15, color: '#888' },
-  typeValue: { fontSize: 15, fontWeight: '600', color: '#2563eb' },
-  section: { backgroundColor: '#f9fafb', borderRadius: 12, padding: 16, marginBottom: 24 },
-  sectionTitle: { fontSize: 14, fontWeight: '700', color: '#374151', marginBottom: 16 },
-  bedsContainer: { flexDirection: 'row', justifyContent: 'space-around', marginBottom: 16 },
+  errorText: { fontSize: typography.md, marginTop: spacing.sm },
+
+  // Profile Header
+  profileHeader: {
+    alignItems: 'center',
+    marginBottom: spacing.lg,
+    paddingTop: spacing.md,
+  },
+  avatar: {
+    width: 72,
+    height: 72,
+    borderRadius: 36,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: spacing.md,
+  },
+  avatarText: { fontSize: 28, fontWeight: typography.bold, color: '#FFFFFF' },
+  name: { fontSize: typography.xxl, fontWeight: typography.bold, marginBottom: spacing.xs },
+  subtitle: { fontSize: typography.sm, marginBottom: spacing.sm },
+  roleRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
+  roleBadge: {
+    borderRadius: radius.xs,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.xs,
+  },
+  roleBadgeText: { fontSize: typography.xs, fontWeight: typography.semibold },
+  statusDot: { width: 8, height: 8, borderRadius: 4 },
+  statusText: { fontSize: typography.xs, fontWeight: typography.medium },
+
+  // Detail Card
+  card: {
+    borderRadius: radius.lg,
+    padding: spacing.lg,
+    marginBottom: spacing.md,
+  },
+  sectionTitle: {
+    fontSize: typography.sm,
+    fontWeight: typography.semibold,
+    textTransform: 'uppercase',
+    letterSpacing: 0.8,
+    marginBottom: spacing.md,
+  },
+
+  // Bed Stats
+  bedsContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+    marginBottom: spacing.md,
+  },
   bedsInfo: { alignItems: 'center' },
-  bedsValue: { fontSize: 24, fontWeight: '700', color: '#1a1a2e' },
-  bedsLabel: { fontSize: 12, color: '#888', marginTop: 2 },
-  bedsDivider: { width: 1, backgroundColor: '#e5e7eb' },
+  bedsValue: { fontSize: typography.xxl, fontWeight: typography.bold },
+  bedsLabel: { fontSize: typography.xs, marginTop: spacing.xs },
+  bedsDivider: { width: 1, alignSelf: 'stretch' },
   progressBarContainer: { alignItems: 'center' },
-  progressBar: { width: '100%', height: 8, backgroundColor: '#e5e7eb', borderRadius: 4, overflow: 'hidden' },
-  progressFill: { height: '100%', borderRadius: 4 },
-  progressText: { fontSize: 12, color: '#888', marginTop: 8 },
-  adminSection: { marginTop: 24, borderTopWidth: 1, borderColor: '#f0f0f0', paddingTop: 16 },
-  adminLabel: { fontSize: 12, fontWeight: '700', color: '#888', marginBottom: 10, textTransform: 'uppercase' },
-  editButton: {
-    borderWidth: 1,
-    borderColor: '#e5e7eb',
-    borderRadius: 8,
-    paddingVertical: 10,
+  progressBar: {
+    width: '100%',
+    height: 8,
+    borderRadius: radius.xs,
+    overflow: 'hidden',
+  },
+  progressFill: { height: '100%', borderRadius: radius.xs },
+  progressText: { fontSize: typography.xs, marginTop: spacing.sm },
+
+  // Action Buttons
+  actionButton: {
+    flexDirection: 'row',
+    height: 48,
+    borderRadius: radius.md,
+    justifyContent: 'center',
     alignItems: 'center',
   },
-  editButtonText: { color: '#374151', fontWeight: '600' },
-  // Modal styles
+  actionButtonText: {
+    color: '#fff',
+    fontSize: typography.md,
+    fontWeight: typography.semibold,
+  },
+  adminSection: { gap: spacing.sm, marginTop: spacing.xs },
+
+  // Modal
   modalOverlay: {
     flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
     justifyContent: 'center',
     alignItems: 'center',
   },
   modalContent: {
-    backgroundColor: '#fff',
-    borderRadius: 12,
-    padding: 24,
+    borderRadius: radius.lg,
+    padding: spacing.lg,
     width: '85%',
     maxWidth: 400,
   },
   modalTitle: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: '#1a1a2e',
-    marginBottom: 8,
+    fontSize: typography.lg,
+    fontWeight: typography.bold,
+    marginBottom: spacing.sm,
   },
   modalSubtitle: {
-    fontSize: 14,
-    color: '#666',
-    marginBottom: 16,
+    fontSize: typography.sm,
+    marginBottom: spacing.md,
   },
   modalInput: {
     borderWidth: 1,
-    borderColor: '#e5e7eb',
-    borderRadius: 8,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    fontSize: 16,
-    color: '#1a1a2e',
-    backgroundColor: '#f9fafb',
-  },
-  modalInputError: {
-    borderColor: '#ef4444',
+    borderRadius: radius.sm,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+    fontSize: typography.md,
   },
   errorTextModal: {
-    color: '#ef4444',
-    fontSize: 13,
-    marginTop: 6,
+    fontSize: typography.xs,
+    marginTop: spacing.xs,
   },
   modalButtons: {
     flexDirection: 'row',
     justifyContent: 'flex-end',
-    marginTop: 20,
-    gap: 12,
+    marginTop: spacing.lg,
+    gap: spacing.sm,
   },
   modalButton: {
-    borderRadius: 8,
-    paddingHorizontal: 16,
-    paddingVertical: 10,
+    borderRadius: radius.md,
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.sm,
     minWidth: 80,
     alignItems: 'center',
-  },
-  modalButtonCancel: {
-    backgroundColor: '#f3f4f6',
+    height: 44,
+    justifyContent: 'center',
   },
   modalButtonCancelText: {
-    color: '#6b7280',
-    fontWeight: '600',
-  },
-  modalButtonUpdate: {
-    backgroundColor: '#2563eb',
+    fontWeight: typography.semibold,
   },
   modalButtonUpdateText: {
     color: '#fff',
-    fontWeight: '600',
+    fontWeight: typography.semibold,
   },
 });

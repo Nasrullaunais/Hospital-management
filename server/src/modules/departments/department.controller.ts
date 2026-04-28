@@ -67,11 +67,11 @@ export const getDepartmentById = async (req: Request, res: Response, next: NextF
   try {
     const departmentId = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
     if (!departmentId || !mongoose.Types.ObjectId.isValid(departmentId)) {
-      return next(new ApiError.badRequest('Invalid department id'));
+      return next(ApiError.badRequest('Invalid department id'));
     }
 
     const department = await Department.findById(departmentId).populate('headDoctorId', 'userId');
-    if (!department) return next(new ApiError.notFound('Department not found'));
+    if (!department) return next(ApiError.notFound('Department not found'));
     res.json({ success: true, data: { department } });
   } catch (err) {
     next(err);
@@ -85,7 +85,7 @@ export const updateDepartment = async (req: Request, res: Response, next: NextFu
   try {
     const departmentId = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
     if (!departmentId || !mongoose.Types.ObjectId.isValid(departmentId)) {
-      return next(new ApiError.badRequest('Invalid department id'));
+      return next(ApiError.badRequest('Invalid department id'));
     }
 
     const allowed = ['name', 'description', 'headDoctorId', 'location', 'phone', 'status'];
@@ -95,13 +95,13 @@ export const updateDepartment = async (req: Request, res: Response, next: NextFu
     }
 
     const existingDepartment = await Department.findById(departmentId);
-    if (!existingDepartment) return next(new ApiError.notFound('Department not found'));
+    if (!existingDepartment) return next(ApiError.notFound('Department not found'));
 
     const department = await Department.findByIdAndUpdate(departmentId, updates, {
       returnDocument: 'after',
       runValidators: true,
     });
-    if (!department) return next(new ApiError.notFound('Department not found'));
+    if (!department) return next(ApiError.notFound('Department not found'));
     res.json({ success: true, message: 'Department updated', data: { department } });
   } catch (err) {
     next(err);
@@ -113,7 +113,7 @@ export const deleteDepartment = async (req: Request, res: Response, next: NextFu
   try {
     const departmentId = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
     if (!departmentId || !mongoose.Types.ObjectId.isValid(departmentId)) {
-      return next(new ApiError.badRequest('Invalid department id'));
+      return next(ApiError.badRequest('Invalid department id'));
     }
 
     // Check if department has any wards
@@ -128,7 +128,7 @@ export const deleteDepartment = async (req: Request, res: Response, next: NextFu
     }
 
     const department = await Department.findByIdAndDelete(departmentId);
-    if (!department) return next(new ApiError.notFound('Department not found'));
+    if (!department) return next(ApiError.notFound('Department not found'));
     res.json({ success: true, message: 'Department deleted' });
   } catch (err) {
     next(err);

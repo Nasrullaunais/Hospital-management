@@ -3,10 +3,7 @@ import { ROLES } from '@/shared/constants/roles';
 import {
   View,
   Text,
-  TextInput,
   TouchableOpacity,
-  ActivityIndicator,
-  StyleSheet,
   ScrollView,
   Alert,
   Image,
@@ -18,10 +15,13 @@ import DateTimePicker, { type DateTimePickerEvent } from '@react-native-communit
 import * as ImagePicker from 'expo-image-picker';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
-import Colors from '@/constants/Colors';
+import { Colors } from '@/constants/Colors';
 import { useColorScheme } from '@/components/useColorScheme';
 import { useAuth } from '@/shared/context/AuthContext';
 import { MS_PER_DAY } from '@/shared/constants/Config';
+import { spacing, radius, shadows } from '@/constants/ThemeTokens';
+import { Input } from '@/components/ui/Input';
+import { Button } from '@/components/ui/Button';
 import { medicineService } from '@/features/pharmacy/services/medicine.service';
 import { toFormDataFile } from '@/shared/utils/formData';
 
@@ -31,114 +31,11 @@ interface PickedImage {
   type: string;
 }
 
-const makeStyles = (colorScheme: 'light' | 'dark') => StyleSheet.create({
-  flex: { flex: 1 },
-  container: {
-    flex: 1,
-    backgroundColor: Colors[colorScheme].surfaceTertiary,
-  },
-  content: {
-    padding: 18,
-    paddingBottom: 30,
-  },
-  title: {
-    fontSize: 24,
-    fontWeight: '700',
-    color: Colors[colorScheme].text,
-    marginBottom: 4,
-  },
-  subtitle: {
-    fontSize: 13,
-    color: Colors[colorScheme].textSecondary,
-    marginBottom: 16,
-  },
-  label: {
-    marginBottom: 6,
-    marginTop: 8,
-    color: Colors[colorScheme].textSecondary,
-    fontWeight: '600',
-    fontSize: 13,
-  },
-  input: {
-    borderWidth: 1,
-    borderColor: Colors[colorScheme].border,
-    borderRadius: 8,
-    backgroundColor: Colors[colorScheme].surface,
-    paddingHorizontal: 12,
-    paddingVertical: 11,
-    fontSize: 15,
-  },
-  inputError: {
-    borderColor: Colors[colorScheme].error,
-  },
-  errorText: {
-    color: Colors[colorScheme].error,
-    fontSize: 12,
-    marginTop: 4,
-  },
-  dateButton: {
-    borderWidth: 1,
-    borderColor: Colors[colorScheme].border,
-    borderRadius: 8,
-    backgroundColor: Colors[colorScheme].surface,
-    paddingHorizontal: 12,
-    paddingVertical: 12,
-  },
-  dateButtonText: {
-    color: Colors[colorScheme].text,
-    fontSize: 14,
-  },
-  imageButton: {
-    borderWidth: 1,
-    borderStyle: 'dashed',
-    borderColor: Colors[colorScheme].primary,
-    borderRadius: 8,
-    backgroundColor: Colors[colorScheme].infoBg,
-    paddingVertical: 14,
-    alignItems: 'center',
-  },
-  imageButtonText: {
-    color: Colors[colorScheme].primary,
-    fontSize: 14,
-    fontWeight: '600',
-  },
-  previewWrap: {
-    marginTop: 10,
-    alignItems: 'center',
-  },
-  previewImage: {
-    width: 160,
-    height: 160,
-    borderRadius: 10,
-    backgroundColor: Colors[colorScheme].border,
-  },
-  previewLabel: {
-    marginTop: 8,
-    color: Colors[colorScheme].textSecondary,
-    fontSize: 12,
-  },
-  submitButton: {
-    marginTop: 24,
-    backgroundColor: Colors[colorScheme].primary,
-    borderRadius: 10,
-    paddingVertical: 14,
-    alignItems: 'center',
-  },
-  submitButtonDisabled: {
-    opacity: 0.6,
-  },
-  submitButtonText: {
-    color: '#ffffff',
-    fontSize: 15,
-    fontWeight: '700',
-  },
-});
-
 export default function AddMedicineScreen() {
   const router = useRouter();
   const { user } = useAuth();
   const colorScheme = useColorScheme() ?? 'light';
-  const styles = useMemo(() => makeStyles(colorScheme), [colorScheme]);
+  const colors = Colors[colorScheme];
 
   const [name, setName] = useState('');
   const [category, setCategory] = useState('');
@@ -265,126 +162,254 @@ export default function AddMedicineScreen() {
   };
 
   return (
-    <SafeAreaView edges={['bottom']} style={{ flex: 1 }}>
+    <SafeAreaView edges={['bottom']} style={{ flex: 1, backgroundColor: colors.background }}>
       <KeyboardAvoidingView
-        style={styles.flex}
+        style={{ flex: 1 }}
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       >
-        <ScrollView style={styles.container} contentContainerStyle={styles.content}>
-        <Text style={styles.title}>Add Medication</Text>
-        <Text style={styles.subtitle}>Capture packaging and register medicine inventory.</Text>
+        <ScrollView contentContainerStyle={{ padding: spacing.md }}>
+          <Text style={{ fontSize: 24, fontWeight: '700', color: colors.text, marginBottom: 4 }}>
+            Add Medication
+          </Text>
+          <Text style={{ fontSize: 14, color: colors.textSecondary, marginBottom: spacing.lg }}>
+            Capture packaging and register medicine inventory.
+          </Text>
 
-        <Text style={styles.label}>Medicine Name</Text>
-        <TextInput
-          value={name}
-          onChangeText={(text) => {
-            setName(text);
-            if (errors.name) setErrors((prev) => ({ ...prev, name: undefined }));
-          }}
-          style={[styles.input, errors.name && styles.inputError]}
-          placeholder="e.g. Amoxicillin"
-          editable={!submitting}
-        />
-        {errors.name && <Text style={styles.errorText}>{errors.name}</Text>}
-
-        <Text style={styles.label}>Category</Text>
-        <TextInput
-          value={category}
-          onChangeText={(text) => {
-            setCategory(text);
-            if (errors.category) setErrors((prev) => ({ ...prev, category: undefined }));
-          }}
-          style={[styles.input, errors.category && styles.inputError]}
-          placeholder="e.g. Antibiotic"
-          editable={!submitting}
-        />
-        {errors.category && <Text style={styles.errorText}>{errors.category}</Text>}
-
-        <Text style={styles.label}>Price</Text>
-        <TextInput
-          value={price}
-          onChangeText={(text) => {
-            setPrice(text);
-            if (errors.price) setErrors((prev) => ({ ...prev, price: undefined }));
-          }}
-          style={[styles.input, errors.price && styles.inputError]}
-          placeholder="e.g. 12.5"
-          keyboardType="decimal-pad"
-          editable={!submitting}
-        />
-        {errors.price && <Text style={styles.errorText}>{errors.price}</Text>}
-
-        <Text style={styles.label}>Stock Quantity</Text>
-        <TextInput
-          value={stockQuantity}
-          onChangeText={(text) => {
-            setStockQuantity(text);
-            if (errors.stockQuantity) setErrors((prev) => ({ ...prev, stockQuantity: undefined }));
-          }}
-          style={[styles.input, errors.stockQuantity && styles.inputError]}
-          placeholder="e.g. 100"
-          keyboardType="number-pad"
-          editable={!submitting}
-        />
-        {errors.stockQuantity && <Text style={styles.errorText}>{errors.stockQuantity}</Text>}
-
-        <Text style={styles.label}>Expiry Date</Text>
-        <TouchableOpacity
-          onPress={() => setShowDatePicker(true)}
-          style={styles.dateButton}
-          disabled={submitting}
-        >
-          <Text style={styles.dateButtonText}>{expiryDate.toLocaleDateString()}</Text>
-        </TouchableOpacity>
-
-        {showDatePicker ? (
-          <DateTimePicker
-            value={expiryDate}
-            mode="date"
-            display={Platform.OS === 'ios' ? 'inline' : 'default'}
-            minimumDate={new Date(Date.now() + MS_PER_DAY)}
-            onChange={onDateChange}
-          />
-        ) : null}
-        {errors.expiryDate && <Text style={styles.errorText}>{errors.expiryDate}</Text>}
-
-        <Text style={styles.label}>Packaging Image</Text>
-        <View style={{ flexDirection: 'row', gap: 12, marginTop: 10 }}>
-          <TouchableOpacity
-            onPress={pickPackagingImage}
-            style={[styles.imageButton, errors.packagingImage && styles.inputError, { flex: 1 }]}
-            disabled={submitting}
-            activeOpacity={0.7}
+          {/* Medicine Details Section */}
+          <View
+            style={{
+              backgroundColor: colors.surface,
+              borderRadius: radius.lg,
+              padding: spacing.lg,
+              marginBottom: spacing.md,
+              ...shadows.card,
+            }}
           >
-            <Ionicons name="camera-outline" size={20} color={Colors[colorScheme].primary} />
-            <Text style={styles.imageButtonText}>Camera</Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            onPress={pickFromGallery}
-            style={[styles.imageButton, errors.packagingImage && styles.inputError, { flex: 1 }]}
-            disabled={submitting}
-            activeOpacity={0.7}
-          >
-            <Ionicons name="images-outline" size={20} color={Colors[colorScheme].primary} />
-            <Text style={styles.imageButtonText}>Gallery</Text>
-          </TouchableOpacity>
-        </View>
-        {errors.packagingImage && <Text style={styles.errorText}>{errors.packagingImage}</Text>}
+            <Text
+              style={{
+                fontSize: 14,
+                fontWeight: '600',
+                color: colors.textSecondary,
+                textTransform: 'uppercase',
+                letterSpacing: 1,
+                marginBottom: spacing.md,
+              }}
+            >
+              MEDICINE DETAILS
+            </Text>
 
-        {packagingImage ? (
-          <View style={styles.previewWrap}>
-            <Image source={{ uri: packagingImage.uri }} style={styles.previewImage} />
-            <Text style={styles.previewLabel}>{packagingImage.name}</Text>
+            <Input
+              label="Medicine Name"
+              placeholder="e.g. Amoxicillin"
+              value={name}
+              onChangeText={(text) => {
+                setName(text);
+                if (errors.name) setErrors((prev) => ({ ...prev, name: '' }));
+              }}
+              error={errors.name || undefined}
+              disabled={submitting}
+            />
+
+            <Input
+              label="Category"
+              placeholder="e.g. Antibiotic"
+              value={category}
+              onChangeText={(text) => {
+                setCategory(text);
+                if (errors.category) setErrors((prev) => ({ ...prev, category: '' }));
+              }}
+              error={errors.category || undefined}
+              disabled={submitting}
+            />
+
+            <Input
+              label="Price"
+              placeholder="e.g. 12.5"
+              value={price}
+              onChangeText={(text) => {
+                setPrice(text);
+                if (errors.price) setErrors((prev) => ({ ...prev, price: '' }));
+              }}
+              error={errors.price || undefined}
+              keyboardType="decimal-pad"
+              disabled={submitting}
+            />
+
+            <Input
+              label="Stock Quantity"
+              placeholder="e.g. 100"
+              value={stockQuantity}
+              onChangeText={(text) => {
+                setStockQuantity(text);
+                if (errors.stockQuantity) setErrors((prev) => ({ ...prev, stockQuantity: '' }));
+              }}
+              error={errors.stockQuantity || undefined}
+              keyboardType="number-pad"
+              disabled={submitting}
+            />
           </View>
-        ) : null}
 
-        <TouchableOpacity
-          style={[styles.submitButton, submitting ? styles.submitButtonDisabled : undefined]}
-          onPress={handleSubmit}
-          disabled={submitting}
-        >
-          {submitting ? <ActivityIndicator color="#fff" /> : <Text style={styles.submitButtonText}>Save Medication</Text>}
-        </TouchableOpacity>
+          {/* Expiry & Packaging Section */}
+          <View
+            style={{
+              backgroundColor: colors.surface,
+              borderRadius: radius.lg,
+              padding: spacing.lg,
+              marginBottom: spacing.md,
+              ...shadows.card,
+            }}
+          >
+            <Text
+              style={{
+                fontSize: 14,
+                fontWeight: '600',
+                color: colors.textSecondary,
+                textTransform: 'uppercase',
+                letterSpacing: 1,
+                marginBottom: spacing.md,
+              }}
+            >
+              EXPIRY & PACKAGING
+            </Text>
+
+            <View style={{ marginBottom: spacing.md }}>
+              <Text
+                style={{
+                  fontSize: 12,
+                  fontWeight: '600',
+                  textTransform: 'uppercase',
+                  letterSpacing: 0.8,
+                  color: colors.textSecondary,
+                  marginBottom: spacing.sm,
+                }}
+              >
+                Expiry Date
+              </Text>
+              <TouchableOpacity
+                onPress={() => setShowDatePicker(true)}
+                disabled={submitting}
+                activeOpacity={0.7}
+                style={{
+                  borderWidth: 1.5,
+                  borderColor: colors.inputBorder,
+                  borderRadius: radius.md,
+                  backgroundColor: submitting ? colors.inputDisabled : colors.inputBackground,
+                  paddingHorizontal: spacing.md,
+                  paddingVertical: 12,
+                  minHeight: 48,
+                  justifyContent: 'center',
+                }}
+              >
+                <Text style={{ color: colors.inputText, fontSize: 16 }}>
+                  {expiryDate.toLocaleDateString()}
+                </Text>
+              </TouchableOpacity>
+              {errors.expiryDate && (
+                <Text style={{ color: colors.inputError, fontSize: 12, marginTop: spacing.xs }}>
+                  {errors.expiryDate}
+                </Text>
+              )}
+            </View>
+
+            {showDatePicker ? (
+              <DateTimePicker
+                value={expiryDate}
+                mode="date"
+                display={Platform.OS === 'ios' ? 'inline' : 'default'}
+                minimumDate={new Date(Date.now() + MS_PER_DAY)}
+                onChange={onDateChange}
+              />
+            ) : null}
+
+            <View style={{ marginBottom: spacing.md }}>
+              <Text
+                style={{
+                  fontSize: 12,
+                  fontWeight: '600',
+                  textTransform: 'uppercase',
+                  letterSpacing: 0.8,
+                  color: colors.textSecondary,
+                  marginBottom: spacing.sm,
+                }}
+              >
+                Packaging Image
+              </Text>
+              <View style={{ flexDirection: 'row', gap: 12 }}>
+                <TouchableOpacity
+                  onPress={pickPackagingImage}
+                  disabled={submitting}
+                  activeOpacity={0.7}
+                  style={{
+                    flex: 1,
+                    borderWidth: 1,
+                    borderStyle: 'dashed',
+                    borderColor: errors.packagingImage ? colors.inputErrorBorder : colors.primary,
+                    borderRadius: radius.md,
+                    backgroundColor: colors.primaryMuted,
+                    paddingVertical: 14,
+                    alignItems: 'center',
+                  }}
+                >
+                  <Ionicons name="camera-outline" size={20} color={colors.primary} />
+                  <Text style={{ color: colors.primary, fontSize: 14, fontWeight: '600', marginTop: 4 }}>
+                    Camera
+                  </Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  onPress={pickFromGallery}
+                  disabled={submitting}
+                  activeOpacity={0.7}
+                  style={{
+                    flex: 1,
+                    borderWidth: 1,
+                    borderStyle: 'dashed',
+                    borderColor: errors.packagingImage ? colors.inputErrorBorder : colors.primary,
+                    borderRadius: radius.md,
+                    backgroundColor: colors.primaryMuted,
+                    paddingVertical: 14,
+                    alignItems: 'center',
+                  }}
+                >
+                  <Ionicons name="images-outline" size={20} color={colors.primary} />
+                  <Text style={{ color: colors.primary, fontSize: 14, fontWeight: '600', marginTop: 4 }}>
+                    Gallery
+                  </Text>
+                </TouchableOpacity>
+              </View>
+              {errors.packagingImage && (
+                <Text style={{ color: colors.inputError, fontSize: 12, marginTop: spacing.xs }}>
+                  {errors.packagingImage}
+                </Text>
+              )}
+            </View>
+
+            {packagingImage ? (
+              <View style={{ alignItems: 'center', marginTop: spacing.sm }}>
+                <Image
+                  source={{ uri: packagingImage.uri }}
+                  style={{
+                    width: 160,
+                    height: 160,
+                    borderRadius: radius.sm,
+                    backgroundColor: colors.border,
+                  }}
+                />
+                <Text style={{ color: colors.textSecondary, fontSize: 12, marginTop: spacing.sm }}>
+                  {packagingImage.name}
+                </Text>
+              </View>
+            ) : null}
+          </View>
+
+          <Button
+            title="Save Medication"
+            variant="accent"
+            size="lg"
+            fullWidth
+            loading={submitting}
+            onPress={handleSubmit}
+            style={{ marginTop: spacing.lg }}
+          />
         </ScrollView>
       </KeyboardAvoidingView>
     </SafeAreaView>

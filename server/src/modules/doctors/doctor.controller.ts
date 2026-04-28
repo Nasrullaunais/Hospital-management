@@ -75,7 +75,7 @@ export const getDoctors = async (req: Request, res: Response, next: NextFunction
   if (!errors.isEmpty()) return next(new ApiError(422, 'Validation failed'));
   try {
     const filter: Record<string, unknown> = {};
-    if (req.query.specialization) filter.specialization = req.query.specialization;
+    if (req.query.specialization) filter.specialization = { $regex: req.query.specialization as string, $options: 'i' };
     if (req.query.availability) filter.availability = req.query.availability;
 
     const page = Math.max(1, parseInt(req.query.page as string) || 1);

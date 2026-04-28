@@ -41,6 +41,24 @@ router.get(
   getWardAssignments,
 );
 
+/** GET /api/assignments/stats — Receptionist only (MUST be before /:id) */
+router.get(
+  '/stats',
+  authMiddleware,
+  requireRole('receptionist'),
+  wardIdQueryValidation,
+  getWardStats,
+);
+
+/** GET /api/assignments/bed-statuses — Receptionist only (MUST be before /:id) */
+router.get(
+  '/bed-statuses',
+  authMiddleware,
+  requireRole('receptionist'),
+  wardIdQueryValidation,
+  getBedStatuses,
+);
+
 /** GET /api/assignments/:id — Receptionist only */
 router.get(
   '/:id',
@@ -66,24 +84,6 @@ router.delete(
   requireRole('receptionist'),
   assignmentIdValidation,
   dischargePatient,
-);
-
-/** GET /api/assignments/stats — Receptionist only */
-router.get(
-  '/stats',
-  authMiddleware,
-  requireRole('receptionist'),
-  wardIdQueryValidation,
-  getWardStats,
-);
-
-/** GET /api/assignments/bed-statuses — Receptionist only */
-router.get(
-  '/bed-statuses',
-  authMiddleware,
-  requireRole('receptionist'),
-  wardIdQueryValidation,
-  getBedStatuses,
 );
 
 /** GET /api/assignments/ward/:wardId/patients — Receptionist only */

@@ -1,11 +1,8 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState } from 'react';
 import {
   View,
   Text,
-  TextInput,
   TouchableOpacity,
-  ActivityIndicator,
-  StyleSheet,
   ScrollView,
   Alert,
   KeyboardAvoidingView,
@@ -14,51 +11,18 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import * as DocumentPicker from 'expo-document-picker';
 import { useRouter } from 'expo-router';
-import Colors from '@/constants/Colors';
+import { Colors } from '@/constants/Colors';
 import { useColorScheme } from '@/components/useColorScheme';
+import { spacing, radius, shadows } from '@/constants/ThemeTokens';
+import { Input } from '@/components/ui/Input';
+import { Button } from '@/components/ui/Button';
 import { doctorService } from '@/features/doctors/services/doctor.service';
 import { toFormDataFile } from '@/shared/utils/formData';
-
-const makeStyles = (colorScheme: 'light' | 'dark') => StyleSheet.create({
-  container: { flex: 1, backgroundColor: Colors[colorScheme].surfaceTertiary },
-  content: { padding: 20, paddingBottom: 40 },
-  title: { fontSize: 24, fontWeight: '700', color: Colors[colorScheme].text, marginBottom: 4 },
-  subtitle: { fontSize: 14, color: Colors[colorScheme].textSecondary, marginBottom: 24 },
-  label: { fontSize: 13, fontWeight: '600', color: Colors[colorScheme].textSecondary, marginBottom: 6, marginTop: 12 },
-  input: {
-    backgroundColor: Colors[colorScheme].surface,
-    borderWidth: 1,
-    borderColor: Colors[colorScheme].border,
-    borderRadius: 8,
-    paddingHorizontal: 14,
-    paddingVertical: 12,
-    fontSize: 15,
-  },
-  pickButton: {
-    backgroundColor: Colors[colorScheme].surface,
-    borderWidth: 1,
-    borderColor: Colors[colorScheme].border,
-    borderRadius: 8,
-    paddingHorizontal: 14,
-    paddingVertical: 14,
-    alignItems: 'center',
-  },
-  pickButtonText: { fontSize: 14, color: Colors[colorScheme].primary },
-  submitButton: {
-    backgroundColor: Colors[colorScheme].primary,
-    borderRadius: 10,
-    paddingVertical: 16,
-    alignItems: 'center',
-    marginTop: 28,
-  },
-  submitButtonDisabled: { opacity: 0.6 },
-  submitButtonText: { color: '#fff', fontSize: 16, fontWeight: '600' },
-});
 
 export default function AddDoctorScreen() {
   const router = useRouter();
   const colorScheme = useColorScheme() ?? 'light';
-  const styles = useMemo(() => makeStyles(colorScheme), [colorScheme]);
+  const colors = Colors[colorScheme];
 
   const [userId, setUserId] = useState('');
   const [specialization, setSpecialization] = useState('');
@@ -120,71 +84,138 @@ export default function AddDoctorScreen() {
   };
 
   return (
-    <SafeAreaView edges={['bottom']} style={{ flex: 1 }}>
+    <SafeAreaView edges={['bottom']} style={{ flex: 1, backgroundColor: colors.background }}>
       <KeyboardAvoidingView
         style={{ flex: 1 }}
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       >
-        <ScrollView style={styles.container} contentContainerStyle={styles.content}>
-        <Text style={styles.title}>Add New Doctor</Text>
-        <Text style={styles.subtitle}>
-          Link an existing user account to a doctor profile.
-        </Text>
-
-        <Text style={styles.label}>User ID</Text>
-        <TextInput
-          style={styles.input}
-          placeholder="Paste the user's MongoDB _id"
-          value={userId}
-          onChangeText={setUserId}
-          autoCapitalize="none"
-          autoCorrect={false}
-        />
-
-        <Text style={styles.label}>Specialization</Text>
-        <TextInput
-          style={styles.input}
-          placeholder="e.g. Cardiology, Neurology"
-          value={specialization}
-          onChangeText={setSpecialization}
-        />
-
-        <Text style={styles.label}>Experience (years)</Text>
-        <TextInput
-          style={styles.input}
-          placeholder="e.g. 5"
-          value={experienceYears}
-          onChangeText={setExperienceYears}
-          keyboardType="numeric"
-        />
-
-        <Text style={styles.label}>Consultation Fee ($)</Text>
-        <TextInput
-          style={styles.input}
-          placeholder="e.g. 150"
-          value={consultationFee}
-          onChangeText={setConsultationFee}
-          keyboardType="numeric"
-        />
-
-        <Text style={styles.label}>License Document</Text>
-        <TouchableOpacity style={styles.pickButton} onPress={pickDocument}>
-          <Text style={styles.pickButtonText}>
-            {licenseDoc ? licenseDoc.name : 'Select PDF or Image'}
+        <ScrollView contentContainerStyle={{ padding: spacing.md }}>
+          <Text style={{ fontSize: 24, fontWeight: '700', color: colors.text, marginBottom: 4 }}>
+            Add New Doctor
           </Text>
-        </TouchableOpacity>
+          <Text style={{ fontSize: 14, color: colors.textSecondary, marginBottom: spacing.lg }}>
+            Link an existing user account to a doctor profile.
+          </Text>
 
-        <TouchableOpacity
-          style={[styles.submitButton, submitting && styles.submitButtonDisabled]}
-          onPress={handleSubmit}
-          disabled={submitting}
-        >
-          {submitting ? (
-            <ActivityIndicator color="#fff" />
-          ) : (
-            <Text style={styles.submitButtonText}>Create Doctor</Text>
-          )}
-        </TouchableOpacity>
+          {/* Doctor Information Section */}
+          <View
+            style={{
+              backgroundColor: colors.surface,
+              borderRadius: radius.lg,
+              padding: spacing.lg,
+              marginBottom: spacing.md,
+              ...shadows.card,
+            }}
+          >
+            <Text
+              style={{
+                fontSize: 14,
+                fontWeight: '600',
+                color: colors.textSecondary,
+                textTransform: 'uppercase',
+                letterSpacing: 1,
+                marginBottom: spacing.md,
+              }}
+            >
+              DOCTOR INFORMATION
+            </Text>
+
+            <Input
+              label="User ID"
+              placeholder="Paste the user's MongoDB _id"
+              value={userId}
+              onChangeText={setUserId}
+              autoCapitalize="none"
+              autoCorrect={false}
+            />
+
+            <Input
+              label="Specialization"
+              placeholder="e.g. Cardiology, Neurology"
+              value={specialization}
+              onChangeText={setSpecialization}
+            />
+
+            <Input
+              label="Experience (Years)"
+              placeholder="e.g. 5"
+              value={experienceYears}
+              onChangeText={setExperienceYears}
+              keyboardType="numeric"
+            />
+
+            <Input
+              label="Consultation Fee ($)"
+              placeholder="e.g. 150"
+              value={consultationFee}
+              onChangeText={setConsultationFee}
+              keyboardType="numeric"
+            />
+          </View>
+
+          {/* License Document Section */}
+          <View
+            style={{
+              backgroundColor: colors.surface,
+              borderRadius: radius.lg,
+              padding: spacing.lg,
+              marginBottom: spacing.md,
+              ...shadows.card,
+            }}
+          >
+            <Text
+              style={{
+                fontSize: 14,
+                fontWeight: '600',
+                color: colors.textSecondary,
+                textTransform: 'uppercase',
+                letterSpacing: 1,
+                marginBottom: spacing.md,
+              }}
+            >
+              LICENSE DOCUMENT
+            </Text>
+
+            <TouchableOpacity
+              onPress={pickDocument}
+              disabled={submitting}
+              activeOpacity={0.7}
+              style={{
+                backgroundColor: colors.primaryMuted,
+                borderWidth: 1,
+                borderStyle: 'dashed',
+                borderColor: colors.primary,
+                borderRadius: radius.md,
+                paddingVertical: 14,
+                alignItems: 'center',
+              }}
+            >
+              <Text style={{ color: colors.primary, fontSize: 14, fontWeight: '600' }}>
+                {licenseDoc ? licenseDoc.name : 'Select PDF or Image'}
+              </Text>
+            </TouchableOpacity>
+            {licenseDoc && (
+              <Text
+                style={{
+                  color: colors.textSecondary,
+                  fontSize: 12,
+                  marginTop: spacing.sm,
+                }}
+              >
+                {licenseDoc.mimeType} &mdash; {((licenseDoc.size ?? 0) / 1024).toFixed(1)} KB
+              </Text>
+            )}
+          </View>
+
+          <Button
+            title="Create Doctor"
+            variant="accent"
+            size="lg"
+            fullWidth
+            loading={submitting}
+            onPress={handleSubmit}
+            style={{ marginTop: spacing.lg }}
+          />
         </ScrollView>
       </KeyboardAvoidingView>
     </SafeAreaView>

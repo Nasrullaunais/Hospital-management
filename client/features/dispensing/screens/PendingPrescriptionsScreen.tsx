@@ -6,7 +6,7 @@ import { useRouter } from 'expo-router';
 import { dispensingService } from '../services/dispensing.service';
 import Colors from '@/constants/Colors';
 import { useColorScheme } from '@/components/useColorScheme';
-import { spacing, radius, shadows } from '@/constants/ThemeTokens';
+import { spacing, radius, shadows, typography } from '@/constants/ThemeTokens';
 
 interface PendingPrescription {
   _id: string;
@@ -71,10 +71,12 @@ export default function PendingPrescriptionsScreen() {
   const renderItem = useCallback(({ item }: { item: PendingPrescription }) => {
     const patientName = item.patientId && typeof item.patientId === 'object' ? item.patientId?.name ?? 'Patient' : 'Patient';
     const doctorName = item.doctorId && typeof item.doctorId === 'object' ? item.doctorId?.userId?.name ?? 'Doctor' : 'Doctor';
+    const medicationSummary = item.items.map(i => i.medicineName).join(', ').slice(0, 60);
+    const totalQuantity = item.items.reduce((sum, i) => sum + i.quantity, 0);
 
     return (
       <TouchableOpacity
-        style={[styles.card, { backgroundColor: theme.surface, borderColor: theme.border }]}
+        style={[styles.card, { backgroundColor: theme.surface, ...shadows.card }]}
         onPress={() => router.push(`/(pharmacist)/dispense/${item._id}`)}
         activeOpacity={0.7}
       >
@@ -85,12 +87,29 @@ export default function PendingPrescriptionsScreen() {
           </View>
         </View>
         <Text style={[styles.doctor, { color: theme.textSecondary }]}>Dr. {doctorName}</Text>
+
+        <View style={styles.medicationRow}>
+          <Feather name="droplet" size={14} color={theme.textTertiary} />
+          <Text style={[styles.medicationText, { color: theme.textTertiary }]} numberOfLines={1}>
+            {medicationSummary || 'No medications'}
+          </Text>
+        </View>
+
         <View style={styles.cardBottom}>
           <Text style={[styles.date, { color: theme.textTertiary }]}>{new Date(item.createdAt).toLocaleDateString()}</Text>
-          <View style={[styles.medicineCountBadge, { backgroundColor: theme.successBg }]}>
-            <Text style={[styles.medicineCount, { color: theme.success }]}>{item.items.length} medicine(s)</Text>
+          <View style={[styles.medicineCountBadge, { backgroundColor: theme.primaryMuted }]}>
+            <Text style={[styles.medicineCount, { color: theme.primary }]}>{item.items.length} meds · {totalQuantity} units</Text>
           </View>
         </View>
+
+        <TouchableOpacity
+          style={[styles.dispenseBtn, { backgroundColor: theme.accent }]}
+          onPress={() => router.push(`/(pharmacist)/dispense/${item._id}`)}
+          activeOpacity={0.8}
+        >
+          <Feather name="check-circle" size={16} color="#FFFFFF" />
+          <Text style={styles.dispenseBtnText}>Dispense</Text>
+        </TouchableOpacity>
       </TouchableOpacity>
     );
   }, [theme, router]);
@@ -181,21 +200,31 @@ const styles = StyleSheet.create({
     padding: spacing.md,
     marginBottom: spacing.md,
     borderRadius: radius.lg,
-    borderWidth: 1,
     ...shadows.card,
   },
   cardTop: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: spacing.xs },
   patientName: { fontSize: 18, fontWeight: '700' },
   pendingBadge: { borderWidth: 1, paddingHorizontal: spacing.sm, paddingVertical: spacing.xs, borderRadius: radius.md },
   pendingBadgeText: { fontSize: 11, fontWeight: '700', letterSpacing: 0.5 },
-  doctor: { fontSize: 14, marginBottom: spacing.sm },
-  cardBottom: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+  doctor: { fontSize: 14, marginBottom: spacing.xs },
+  medicationRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs, marginBottom: spacing.sm },
+  medicationText: { fontSize: 13, flex: 1 },
+  cardBottom: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: spacing.sm },
   date: { fontSize: 13 },
   medicineCountBadge: { borderRadius: radius.full, paddingHorizontal: spacing.sm, paddingVertical: spacing.xs },
-  medicineCount: { fontSize: 13, fontWeight: '600' },
-  empty: { fontSize: 16, fontWeight: '600', marginTop: spacing.sm },
-  emptySub: { fontSize: 14, marginTop: spacing.xs },
-  loadingText: { fontSize: 14, marginTop: spacing.sm },
+  medicineCount: { fontSize: 12, fontWeight: '600' },
+  dispenseBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    height: 42,
+    borderRadius: radius.md,
+    gap: spacing.sm,
+  },
+  dispenseBtnText: { color: '#FFFFFF', fontSize: 14, fontWeight: '700' },
+  empty: { fontSize: typography.md, fontWeight: '600', marginTop: spacing.sm },
+  emptySub: { fontSize: typography.sm, marginTop: spacing.xs },
+  loadingText: { fontSize: typography.sm, marginTop: spacing.sm },
   footerLoader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', paddingVertical: spacing.md, gap: spacing.sm },
   loadingMoreText: { fontSize: 13 },
   error: { fontSize: 15, marginBottom: spacing.md },

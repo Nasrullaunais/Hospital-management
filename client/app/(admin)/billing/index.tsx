@@ -10,16 +10,18 @@ import {
   RefreshControl,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { Feather } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import Colors from '@/constants/Colors';
 import { useColorScheme } from '@/components/useColorScheme';
 import { invoiceService } from '@/features/billing/services/invoice.service';
 import { InvoiceCard } from '@/features/billing/components';
 import { useAuth } from '@/shared/context/AuthContext';
+import { spacing, radius, shadows, typography } from '@/constants/ThemeTokens';
 import type { Invoice } from '@/shared/types';
 
 const makeStyles = (colorScheme: 'light' | 'dark') => StyleSheet.create({
-  container: { flex: 1, backgroundColor: Colors[colorScheme].background },
+  container: { flex: 1, backgroundColor: Colors[colorScheme].surfaceTertiary },
   center: { flex: 1, justifyContent: 'center', alignItems: 'center' },
   loadingOverlay: {
     position: 'absolute',
@@ -27,25 +29,36 @@ const makeStyles = (colorScheme: 'light' | 'dark') => StyleSheet.create({
     left: 0,
     right: 0,
     zIndex: 10,
-    backgroundColor: 'rgba(255, 255, 255, 0.7)',
+    backgroundColor: Colors[colorScheme].surface,
+    opacity: 0.85,
     alignItems: 'center',
-    padding: 10,
+    padding: spacing.sm,
   },
-  listContainer: { padding: 12 },
-  emptyContainer: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: 24 },
-  header: { fontSize: 22, fontWeight: '700', color: Colors[colorScheme].text, marginBottom: 12, paddingTop: 4 },
+  listContainer: { padding: spacing.md },
+  emptyContainer: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: spacing.lg },
+  header: {
+    fontSize: typography.xl,
+    fontWeight: typography.bold,
+    color: Colors[colorScheme].text,
+    marginBottom: spacing.sm,
+    paddingTop: spacing.xs,
+  },
   createButton: {
-    backgroundColor: Colors[colorScheme].primary,
-    marginHorizontal: 12,
-    marginTop: 12,
-    borderRadius: 8,
-    paddingVertical: 12,
+    flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: Colors[colorScheme].accent,
+    marginHorizontal: spacing.md,
+    marginTop: spacing.md,
+    marginBottom: spacing.xs,
+    borderRadius: radius.md,
+    height: 48,
+    ...shadows.button,
   },
-  createButtonText: { color: '#fff', fontWeight: '600', fontSize: 15 },
-  errorText: { fontSize: 15, marginBottom: 12 },
-  retryText: { fontWeight: '600', fontSize: 15 },
-  emptyText: { color: Colors[colorScheme].textTertiary, fontSize: 15, textAlign: 'center' },
+  createButtonText: { color: '#fff', fontWeight: typography.semibold, fontSize: typography.sm },
+  errorText: { fontSize: typography.sm, marginBottom: spacing.sm },
+  retryText: { fontWeight: typography.semibold, fontSize: typography.sm },
+  emptyText: { color: Colors[colorScheme].textTertiary, fontSize: typography.sm, textAlign: 'center' },
 });
 
 export default function BillingScreen() {
@@ -126,14 +139,15 @@ export default function BillingScreen() {
       )}
       {isAdmin && (
         <TouchableOpacity style={styles.createButton} onPress={() => router.push('/(admin)/billing/create')}>
-          <Text style={styles.createButtonText}>+ Create Invoice</Text>
+          <Feather name="plus" size={18} color="#fff" style={{ marginRight: spacing.sm }} />
+          <Text style={styles.createButtonText}>Create Invoice</Text>
         </TouchableOpacity>
       )}
       <FlatList
         data={invoices}
         keyExtractor={(item) => item._id}
         renderItem={renderInvoice}
-        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={Colors[colorScheme].primary} />}
         contentContainerStyle={
           invoices.length === 0 ? styles.emptyContainer : styles.listContainer
         }

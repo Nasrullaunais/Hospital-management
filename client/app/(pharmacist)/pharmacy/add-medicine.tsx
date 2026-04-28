@@ -2,7 +2,6 @@ import React, { useMemo, useState } from 'react';
 import {
   View,
   Text,
-  TextInput,
   TouchableOpacity,
   ActivityIndicator,
   StyleSheet,
@@ -22,6 +21,8 @@ import { useAuth } from '@/shared/context/AuthContext';
 import { medicineService } from '@/features/pharmacy/services/medicine.service';
 import Colors from '@/constants/Colors';
 import { useColorScheme } from '@/components/useColorScheme';
+import { Input } from '@/components/ui/Input';
+import { spacing, radius, shadows, typography } from '@/constants/ThemeTokens';
 
 interface PackagingImage {
   uri: string;
@@ -178,107 +179,101 @@ export default function AddMedicineScreen() {
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       >
         <ScrollView style={[styles.container, { backgroundColor: theme.background }]} contentContainerStyle={styles.content}>
-        <Text style={[styles.title, { color: theme.text }]}>Add Medication</Text>
-        <Text style={[styles.subtitle, { color: theme.textSecondary }]}>Capture packaging and register medicine inventory.</Text>
 
-        <Text style={[styles.label, { color: theme.text }]}>Medicine Name</Text>
-        <TextInput
-          value={name}
-          onChangeText={setName}
-          style={[styles.input, { backgroundColor: theme.surface, borderColor: theme.border, color: theme.text }]}
-          placeholder="e.g. Amoxicillin"
-          placeholderTextColor={theme.textSecondary}
-          editable={!submitting}
-        />
-
-        <Text style={[styles.label, { color: theme.text }]}>Category</Text>
-        <TextInput
-          value={category}
-          onChangeText={setCategory}
-          style={[styles.input, { backgroundColor: theme.surface, borderColor: theme.border, color: theme.text }]}
-          placeholder="e.g. Antibiotic"
-          placeholderTextColor={theme.textSecondary}
-          editable={!submitting}
-        />
-
-        <Text style={[styles.label, { color: theme.text }]}>Price ($)</Text>
-        <TextInput
-          value={price}
-          onChangeText={setPrice}
-          style={[styles.input, { backgroundColor: theme.surface, borderColor: theme.border, color: theme.text }]}
-          placeholder="e.g. 12.50"
-          placeholderTextColor={theme.textSecondary}
-          keyboardType="decimal-pad"
-          editable={!submitting}
-        />
-
-        <Text style={[styles.label, { color: theme.text }]}>Stock Quantity</Text>
-        <TextInput
-          value={stockQuantity}
-          onChangeText={setStockQuantity}
-          style={[styles.input, { backgroundColor: theme.surface, borderColor: theme.border, color: theme.text }]}
-          placeholder="e.g. 100"
-          placeholderTextColor={theme.textSecondary}
-          keyboardType="number-pad"
-          editable={!submitting}
-        />
-
-        <Text style={[styles.label, { color: theme.text }]}>Expiry Date</Text>
-        <TouchableOpacity
-          onPress={() => setShowDatePicker(true)}
-          style={[styles.dateButton, { backgroundColor: theme.surface, borderColor: theme.border }]}
-          disabled={submitting}
-        >
-          <Text style={[styles.dateButtonText, { color: theme.text }]}>{expiryDate.toLocaleDateString()}</Text>
-        </TouchableOpacity>
-
-        {showDatePicker ? (
-          <DateTimePicker
-            value={expiryDate}
-            mode="date"
-            display={Platform.OS === 'ios' ? 'inline' : 'default'}
-            minimumDate={new Date(Date.now() + ONE_DAY_MS)}
-            onChange={onDateChange}
-          />
-        ) : null}
-
-        <Text style={[styles.label, { color: theme.text }]}>Packaging Image</Text>
-        <View style={{ flexDirection: 'row', gap: 12, marginTop: 10 }}>
-          <TouchableOpacity
-            onPress={pickPackagingImage}
-            style={[styles.imageButton, { borderColor: theme.primary, backgroundColor: theme.infoBg, flex: 1 }]}
-            disabled={submitting}
-            activeOpacity={0.7}
-          >
-            <Ionicons name="camera-outline" size={20} color={theme.primary} />
-            <Text style={[styles.imageButtonText, { color: theme.primary }]}>Camera</Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            onPress={pickFromGallery}
-            style={[styles.imageButton, { borderColor: theme.primary, backgroundColor: theme.infoBg, flex: 1 }]}
-            disabled={submitting}
-            activeOpacity={0.7}
-          >
-            <Ionicons name="images-outline" size={20} color={theme.primary} />
-            <Text style={[styles.imageButtonText, { color: theme.primary }]}>Gallery</Text>
-          </TouchableOpacity>
-        </View>
-
-        {packagingImage ? (
-          <View style={styles.previewWrap}>
-            <Image source={{ uri: packagingImage.uri }} style={styles.previewImage} />
-            <Text style={[styles.previewLabel, { color: theme.textSecondary }]}>{packagingImage.name}</Text>
+          <View style={[styles.formCard, { backgroundColor: theme.surface, ...shadows.card }]}>
+            <Text style={[styles.sectionTitle, { color: theme.textSecondary }]}>MEDICATION DETAILS</Text>
+            <Input
+              label="Medicine Name"
+              placeholder="e.g. Amoxicillin"
+              value={name}
+              onChangeText={setName}
+              disabled={submitting}
+            />
+            <Input
+              label="Category"
+              placeholder="e.g. Antibiotic"
+              value={category}
+              onChangeText={setCategory}
+              disabled={submitting}
+            />
+            <Input
+              label="Price ($)"
+              placeholder="e.g. 12.50"
+              value={price}
+              onChangeText={setPrice}
+              keyboardType="decimal-pad"
+              disabled={submitting}
+            />
+            <Input
+              label="Stock Quantity"
+              placeholder="e.g. 100"
+              value={stockQuantity}
+              onChangeText={setStockQuantity}
+              keyboardType="number-pad"
+              disabled={submitting}
+            />
           </View>
-        ) : null}
 
-        <TouchableOpacity
-          style={[styles.submitButton, { backgroundColor: theme.primary }, submitting && { opacity: 0.6 }]}
-          onPress={handleSubmit}
-          disabled={submitting}
-        >
-          {submitting ? <ActivityIndicator color="#fff" /> : <Text style={styles.submitButtonText}>Save Medication</Text>}
-        </TouchableOpacity>
-      </ScrollView>
+          <View style={[styles.formCard, { backgroundColor: theme.surface, ...shadows.card }]}>
+            <Text style={[styles.sectionTitle, { color: theme.textSecondary }]}>EXPIRY DATE</Text>
+            <TouchableOpacity
+              onPress={() => setShowDatePicker(true)}
+              style={[styles.dateButton, { backgroundColor: theme.surface, borderColor: theme.border }]}
+              disabled={submitting}
+            >
+              <Text style={[styles.dateButtonText, { color: theme.text }]}>{expiryDate.toLocaleDateString()}</Text>
+            </TouchableOpacity>
+
+            {showDatePicker ? (
+              <DateTimePicker
+                value={expiryDate}
+                mode="date"
+                display={Platform.OS === 'ios' ? 'inline' : 'default'}
+                minimumDate={new Date(Date.now() + ONE_DAY_MS)}
+                onChange={onDateChange}
+              />
+            ) : null}
+          </View>
+
+          <View style={[styles.formCard, { backgroundColor: theme.surface, ...shadows.card }]}>
+            <Text style={[styles.sectionTitle, { color: theme.textSecondary }]}>PACKAGING IMAGE</Text>
+            <View style={{ flexDirection: 'row', gap: 12, marginTop: spacing.sm }}>
+              <TouchableOpacity
+                onPress={pickPackagingImage}
+                style={[styles.imageButton, { borderColor: theme.primary, backgroundColor: theme.primaryMuted, flex: 1 }]}
+                disabled={submitting}
+                activeOpacity={0.7}
+              >
+                <Ionicons name="camera-outline" size={20} color={theme.primary} />
+                <Text style={[styles.imageButtonText, { color: theme.primary }]}>Camera</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                onPress={pickFromGallery}
+                style={[styles.imageButton, { borderColor: theme.primary, backgroundColor: theme.primaryMuted, flex: 1 }]}
+                disabled={submitting}
+                activeOpacity={0.7}
+              >
+                <Ionicons name="images-outline" size={20} color={theme.primary} />
+                <Text style={[styles.imageButtonText, { color: theme.primary }]}>Gallery</Text>
+              </TouchableOpacity>
+            </View>
+
+            {packagingImage ? (
+              <View style={styles.previewWrap}>
+                <Image source={{ uri: packagingImage.uri }} style={styles.previewImage} />
+                <Text style={[styles.previewLabel, { color: theme.textSecondary }]}>{packagingImage.name}</Text>
+              </View>
+            ) : null}
+          </View>
+
+          <TouchableOpacity
+            style={[styles.submitButton, { backgroundColor: theme.accent }, submitting && { opacity: 0.6 }]}
+            onPress={handleSubmit}
+            disabled={submitting}
+          >
+            {submitting ? <ActivityIndicator color="#FFFFFF" /> : <Text style={styles.submitButtonText}>Save Medication</Text>}
+          </TouchableOpacity>
+        </ScrollView>
       </KeyboardAvoidingView>
     </SafeAreaView>
   );
@@ -287,41 +282,42 @@ export default function AddMedicineScreen() {
 const styles = StyleSheet.create({
   flex: { flex: 1 },
   container: { flex: 1 },
-  content: { padding: 18, paddingBottom: 30 },
-  title: { fontSize: 24, fontWeight: '700', marginBottom: 4 },
-  subtitle: { fontSize: 13, marginBottom: 16 },
-  label: { marginBottom: 6, marginTop: 8, fontWeight: '600', fontSize: 13 },
-  input: {
-    borderWidth: 1,
-    borderRadius: 8,
-    paddingHorizontal: 12,
-    paddingVertical: 11,
-    fontSize: 15,
+  content: { padding: spacing.md, paddingBottom: spacing.xxl, gap: spacing.md },
+  formCard: {
+    borderRadius: radius.lg,
+    padding: spacing.lg,
+  },
+  sectionTitle: {
+    fontSize: typography.sm,
+    fontWeight: typography.semibold,
+    textTransform: 'uppercase',
+    letterSpacing: 0.8,
+    marginBottom: spacing.sm,
   },
   dateButton: {
     borderWidth: 1,
-    borderRadius: 8,
-    paddingHorizontal: 12,
-    paddingVertical: 12,
+    borderRadius: radius.md,
+    paddingHorizontal: spacing.md,
+    paddingVertical: 14,
   },
-  dateButtonText: { fontSize: 14 },
+  dateButtonText: { fontSize: typography.md },
   imageButton: {
     borderWidth: 1,
     borderStyle: 'dashed',
-    borderRadius: 8,
+    borderRadius: radius.md,
     paddingVertical: 14,
     alignItems: 'center',
   },
-  imageButtonText: { fontSize: 14, fontWeight: '600' },
-  previewWrap: { marginTop: 10, alignItems: 'center' },
-  previewImage: { width: 160, height: 160, borderRadius: 10, backgroundColor: '#e5e7eb' },
-  previewLabel: { marginTop: 8, fontSize: 12 },
+  imageButtonText: { fontSize: typography.sm, fontWeight: '600' },
+  previewWrap: { marginTop: spacing.md, alignItems: 'center' },
+  previewImage: { width: 160, height: 160, borderRadius: radius.sm, backgroundColor: '#e5e7eb' },
+  previewLabel: { marginTop: spacing.sm, fontSize: typography.xs },
   submitButton: {
-    marginTop: 24,
-    borderRadius: 10,
-    paddingVertical: 14,
+    marginTop: spacing.sm,
+    borderRadius: radius.md,
+    height: 56,
     alignItems: 'center',
+    justifyContent: 'center',
   },
-  submitButtonDisabled: { opacity: 0.6 },
-  submitButtonText: { color: '#ffffff', fontSize: 15, fontWeight: '700' },
+  submitButtonText: { color: '#FFFFFF', fontSize: 16, fontWeight: '700' },
 });

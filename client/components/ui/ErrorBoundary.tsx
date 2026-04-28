@@ -21,7 +21,10 @@ export class ErrorBoundary extends Component<Props, State> {
   }
 
   static getDerivedStateFromError(error: Error): State {
-    return { hasError: true, errorMessage: error.message };
+    const errorMessage = typeof error === 'object' && error !== null && 'message' in error
+      ? String((error as Record<string, unknown>).message)
+      : String(error ?? 'An unexpected error occurred');
+    return { hasError: true, errorMessage };
   }
 
   componentDidCatch(error: Error, _errorInfo: ErrorInfo): void {

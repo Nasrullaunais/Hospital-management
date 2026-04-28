@@ -2,6 +2,7 @@ import React, { useEffect, useState, useCallback } from 'react';
 import { ActivityIndicator, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { SymbolView } from 'expo-symbols';
+import { Feather } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import Colors from '@/constants/Colors';
 import { useColorScheme } from '@/components/useColorScheme';
@@ -9,7 +10,8 @@ import { useAuth } from '@/shared/context/AuthContext';
 import { apiClient } from '@/shared/api/client';
 import { ENDPOINTS } from '@/shared/api/endpoints';
 import { APPOINTMENT_STATUS } from '@/shared/constants/appointmentStatus';
-import type { ApiSuccessResponse, Appointment } from '@/shared/types';
+import { spacing, radius, shadows, typography } from '@/constants/ThemeTokens';
+import type { ApiSuccessResponse, Appointment, User } from '@/shared/types';
 
 const TAB_BAR_HEIGHT = 70;
 
@@ -28,7 +30,6 @@ export default function DoctorDashboard() {
       );
       const allAppointments = res.data.data.appointments;
 
-      // Today's appointments
       const today = new Date();
       today.setHours(0, 0, 0, 0);
       const tomorrow = new Date(today);
@@ -39,7 +40,6 @@ export default function DoctorDashboard() {
         return apptDate >= today && apptDate < tomorrow && appt.status !== APPOINTMENT_STATUS.CANCELLED;
       }).length;
 
-      // Unique patients
       const uniquePatients = new Set(
         allAppointments
           .filter((appt) => appt.status === APPOINTMENT_STATUS.COMPLETED || appt.status === APPOINTMENT_STATUS.CONFIRMED)
@@ -59,7 +59,8 @@ export default function DoctorDashboard() {
     void fetchStats();
   }, [fetchStats]);
 
-  const firstName = user?.name?.split(' ')[0] ?? 'Doctor';
+  const nameParts = user?.name?.split(' ') ?? [];
+  const lastName = nameParts.length > 1 ? nameParts[nameParts.length - 1] : nameParts[0] ?? 'Doctor';
   const today = new Date().toLocaleDateString('en-US', {
     weekday: 'long',
     month: 'long',
@@ -72,87 +73,96 @@ export default function DoctorDashboard() {
         style={styles.container}
         contentContainerStyle={styles.content}
       >
-      {/* Greeting */}
-      <View style={styles.greeting}>
-        <Text style={[styles.greetingText, { color: colors.text }]}>Hello, {firstName}</Text>
-        <Text style={[styles.subtitle, { color: colors.textSecondary }]}>{today}</Text>
-      </View>
-
-      {/* Today's Panel — most prominent */}
-      <View style={[styles.todayPanel, { backgroundColor: colors.primary, shadowColor: colors.primary }]}>
-        <View style={styles.todayHeader}>
-          <View style={styles.todayBadge}>
-            <Text style={styles.todayBadgeText}>Today</Text>
-          </View>
-          <SymbolView
-            name={{ ios: 'calendar.badge.clock', android: 'event', web: 'event' }}
-            tintColor="rgba(255,255,255,0.9)"
-            size={32}
-          />
+        {/* Greeting */}
+        <View style={styles.greeting}>
+          <Text style={[styles.greetingText, { color: colors.text }]}>Hello, Dr. {lastName}</Text>
+          <Text style={[styles.subtitle, { color: colors.textSecondary }]}>{today}</Text>
         </View>
-        <Text style={styles.todayTitle}>Your Schedule</Text>
-        <Text style={styles.todayBody}>Review appointments and keep patient care up to date.</Text>
+
+        {/* Today's Schedule Panel — Pulse hero section */}
+        <View style={[styles.todayPanel, { backgroundColor: colors.primary, shadowColor: colors.primary }]}>
+          <View style={styles.todayHeader}>
+            <View style={styles.todayBadge}>
+              <Text style={styles.todayBadgeText}>Today</Text>
+            </View>
+            <SymbolView
+              name={{ ios: 'calendar.badge.clock', android: 'event', web: 'event' }}
+              tintColor="rgba(255,255,255,0.9)"
+              size={32}
+            />
+          </View>
+          <Text style={styles.todayTitle}>Your Schedule</Text>
+          <Text style={styles.todayBody}>Review appointments and keep patient care up to date.</Text>
+          <TouchableOpacity
+            style={styles.todayButton}
+            onPress={() => router.push('/(doctor)/appointments')}
+          >
+            <Text style={[styles.todayButtonText, { color: colors.primary }]}>Open My Schedule</Text>
+            <SymbolView name={{ ios: 'arrow.right', android: 'chevron_right', web: 'chevron_right' }} tintColor={colors.primary} size={18} />
+          </TouchableOpacity>
+        </View>
+
+        {/* Quick Stats Row */}
+        <View style={styles.statsRow}>
+          <View style={[styles.statCard, { backgroundColor: colors.surface, shadowColor: '#1B2A4A' }]}>
+            <SymbolView name={{ ios: 'calendar', android: 'event', web: 'event' }} tintColor={colors.primary} size={22} />
+            {stats.loading ? (
+              <ActivityIndicator size="small" color={colors.primary} style={{ marginTop: 4 }} />
+            ) : (
+              <Text style={[styles.statValue, { color: colors.text }]}>{stats.todayCount}</Text>
+            )}
+            <Text style={[styles.statLabel, { color: colors.textSecondary }]}>Today's Appts</Text>
+          </View>
+          <View style={[styles.statCard, { backgroundColor: colors.surface, shadowColor: '#1B2A4A' }]}>
+            <SymbolView name={{ ios: 'person.3', android: 'groups', web: 'groups' }} tintColor={colors.primary} size={22} />
+            {stats.loading ? (
+              <ActivityIndicator size="small" color={colors.accent} style={{ marginTop: 4 }} />
+            ) : (
+              <Text style={[styles.statValue, { color: colors.text }]}>{stats.totalPatients}</Text>
+            )}
+            <Text style={[styles.statLabel, { color: colors.textSecondary }]}>Total Patients</Text>
+          </View>
+        </View>
+
+        {/* Quick Actions */}
+        <Text style={[styles.sectionLabel, { color: colors.textSecondary }]}>Quick Actions</Text>
+        <View style={styles.gridRow}>
+          <TouchableOpacity
+            style={[styles.tile, { backgroundColor: colors.surface, shadowColor: '#1B2A4A' }]}
+            onPress={() => router.push('/(doctor)/records/add-record')}
+          >
+            <View style={[styles.tileIconWrap, { backgroundColor: colors.primaryMuted }]}>
+              <Feather name="file-text" size={24} color={colors.primary} />
+            </View>
+            <View style={styles.tileContent}>
+              <Text style={[styles.tileLabel, { color: colors.text }]}>Create Record</Text>
+              <Text style={[styles.tileSub, { color: colors.textSecondary }]}>Add diagnosis & labs</Text>
+            </View>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={[styles.tile, { backgroundColor: colors.surface, shadowColor: '#1B2A4A' }]}
+            onPress={() => router.push('/(doctor)/records')}
+          >
+            <View style={[styles.tileIconWrap, { backgroundColor: colors.primaryMuted }]}>
+              <Feather name="list" size={24} color={colors.primary} />
+            </View>
+            <View style={styles.tileContent}>
+              <Text style={[styles.tileLabel, { color: colors.text }]}>Patient Logs</Text>
+              <Text style={[styles.tileSub, { color: colors.textSecondary }]}>Review records</Text>
+            </View>
+          </TouchableOpacity>
+        </View>
+
+        {/* Bottom CTA */}
         <TouchableOpacity
-          style={styles.todayButton}
+          style={[styles.bottomCta, { backgroundColor: colors.accent, shadowColor: colors.accent }]}
           onPress={() => router.push('/(doctor)/appointments')}
         >
-          <Text style={[styles.todayButtonText, { color: colors.primary }]}>Open My Schedule</Text>
-          <SymbolView name={{ ios: 'arrow.right', android: 'chevron_right', web: 'chevron_right' }} tintColor={colors.primary} size={18} />
+          <Feather name="calendar" size={20} color="#fff" />
+          <Text style={styles.bottomCtaText}>View Today's Schedule</Text>
         </TouchableOpacity>
-      </View>
-
-      {/* Quick Stats Row */}
-      <View style={styles.statsRow}>
-        <View style={[styles.statCard, { backgroundColor: colors.surface }]}>
-          <SymbolView name={{ ios: 'calendar', android: 'event', web: 'event' }} tintColor={colors.primary} size={22} />
-          {stats.loading ? (
-            <ActivityIndicator size="small" color={colors.primary} style={{ marginTop: 4 }} />
-          ) : (
-            <Text style={[styles.statValue, { color: colors.text }]}>{stats.todayCount}</Text>
-          )}
-          <Text style={[styles.statLabel, { color: colors.textSecondary }]}>Today's Appts</Text>
-        </View>
-        <View style={[styles.statCard, { backgroundColor: colors.surface }]}>
-          <SymbolView name={{ ios: 'person.3', android: 'groups', web: 'groups' }} tintColor={colors.primary} size={22} />
-          {stats.loading ? (
-            <ActivityIndicator size="small" color={colors.primary} style={{ marginTop: 4 }} />
-          ) : (
-            <Text style={[styles.statValue, { color: colors.text }]}>{stats.totalPatients}</Text>
-          )}
-          <Text style={[styles.statLabel, { color: colors.textSecondary }]}>Total Patients</Text>
-        </View>
-      </View>
-
-      {/* Action Tiles */}
-      <Text style={[styles.sectionLabel, { color: colors.textSecondary }]}>Quick Actions</Text>
-      <View style={styles.gridRow}>
-        <TouchableOpacity
-          style={[styles.tile, { backgroundColor: colors.surface }]}
-          onPress={() => router.push('/(doctor)/records/add-record')}
-        >
-          <View style={[styles.tileIconWrap, { backgroundColor: colors.primaryMuted }]}>
-            <SymbolView name={{ ios: 'doc.badge.plus', android: 'add_circle', web: 'add_circle' }} tintColor={colors.primary} size={24} />
-          </View>
-          <View style={styles.tileContent}>
-            <Text style={[styles.tileLabel, { color: colors.text }]}>Create Record</Text>
-            <Text style={[styles.tileSub, { color: colors.textSecondary }]}>Add diagnosis & labs</Text>
-          </View>
-        </TouchableOpacity>
-
-        <TouchableOpacity
-          style={[styles.tile, { backgroundColor: colors.surface }]}
-          onPress={() => router.push('/(doctor)/records')}
-        >
-          <View style={[styles.tileIconWrap, { backgroundColor: colors.primaryMuted }]}>
-            <SymbolView name={{ ios: 'list.bullet.clipboard', android: 'assignment', web: 'assignment' }} tintColor={colors.primary} size={24} />
-          </View>
-          <View style={styles.tileContent}>
-            <Text style={[styles.tileLabel, { color: colors.text }]}>Patient Logs</Text>
-            <Text style={[styles.tileSub, { color: colors.textSecondary }]}>Review records</Text>
-          </View>
-        </TouchableOpacity>
-      </View>
-    </ScrollView>
+      </ScrollView>
     </SafeAreaView>
   );
 }
@@ -165,15 +175,15 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   content: {
-    padding: 16,
-    gap: 16,
-    paddingBottom: TAB_BAR_HEIGHT + 16,
+    padding: spacing.md,
+    gap: spacing.md,
+    paddingBottom: TAB_BAR_HEIGHT + spacing.md,
   },
   greeting: {
     marginBottom: 4,
   },
   greetingText: {
-    fontSize: 26,
+    fontSize: 28,
     fontWeight: '700',
     marginBottom: 2,
   },
@@ -181,7 +191,7 @@ const styles = StyleSheet.create({
     fontSize: 14,
   },
   todayPanel: {
-    borderRadius: 16,
+    borderRadius: radius.lg,
     padding: 18,
     gap: 8,
     shadowOffset: { width: 0, height: 6 },
@@ -196,7 +206,7 @@ const styles = StyleSheet.create({
   },
   todayBadge: {
     backgroundColor: 'rgba(255,255,255,0.25)',
-    borderRadius: 20,
+    borderRadius: radius.full,
     paddingHorizontal: 12,
     paddingVertical: 4,
   },
@@ -224,7 +234,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     gap: 8,
     backgroundColor: '#fff',
-    borderRadius: 10,
+    borderRadius: radius.md,
     paddingVertical: 12,
     marginTop: 8,
   },
@@ -238,15 +248,14 @@ const styles = StyleSheet.create({
   },
   statCard: {
     flex: 1,
-    borderRadius: 12,
+    borderRadius: radius.lg,
     padding: 14,
     alignItems: 'center',
     gap: 6,
-    shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.08,
-    shadowRadius: 6,
-    elevation: 2,
+    shadowRadius: 12,
+    elevation: 3,
   },
   statValue: {
     fontSize: 28,
@@ -272,22 +281,21 @@ const styles = StyleSheet.create({
   },
   tile: {
     flex: 1,
-    borderRadius: 14,
+    borderRadius: 16,
     padding: 14,
     flexDirection: 'row',
     alignItems: 'center',
     gap: 12,
     minHeight: 90,
-    shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.06,
-    shadowRadius: 6,
-    elevation: 2,
+    shadowOpacity: 0.08,
+    shadowRadius: 12,
+    elevation: 3,
   },
   tileIconWrap: {
     width: 44,
     height: 44,
-    borderRadius: 12,
+    borderRadius: 22,
     justifyContent: 'center',
     alignItems: 'center',
     flexShrink: 0,
@@ -303,5 +311,23 @@ const styles = StyleSheet.create({
   tileSub: {
     fontSize: 12,
     lineHeight: 15,
+  },
+  bottomCta: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    borderRadius: radius.lg,
+    paddingVertical: 16,
+    marginTop: 8,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.25,
+    shadowRadius: 12,
+    elevation: 4,
+  },
+  bottomCtaText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '700',
   },
 });

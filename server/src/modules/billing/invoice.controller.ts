@@ -40,15 +40,15 @@ export const createInvoice = async (req: Request, res: Response, next: NextFunct
   if (!errors.isEmpty()) return next(new ApiError(422, 'Validation failed'));
   try {
     const patient = await User.exists({ _id: req.body.patientId });
-    if (!patient) return next(new ApiError.badRequest('Patient not found'));
+    if (!patient) return next(ApiError.badRequest('Patient not found'));
 
     if (req.body.appointmentId) {
       const appointment = await Appointment.findById(req.body.appointmentId);
       if (!appointment) {
-        return next(new ApiError.badRequest('Appointment not found'));
+        return next(ApiError.badRequest('Appointment not found'));
       }
       if (appointment.patientId.toString() !== req.body.patientId) {
-        return next(new ApiError.badRequest('Appointment does not belong to the specified patient'));
+        return next(ApiError.badRequest('Appointment does not belong to the specified patient'));
       }
     }
 

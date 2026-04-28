@@ -1,11 +1,12 @@
 import React, { useState, useEffect } from 'react';
-import { ActivityIndicator, View, StyleSheet } from 'react-native';
+import { ActivityIndicator, View, Text, StyleSheet } from 'react-native';
 import { Redirect, Stack, useRouter, useSegments } from 'expo-router';
-import Colors from '@/constants/Colors';
+import { Colors } from '@/constants/Colors';
 import { useColorScheme } from '@/components/useColorScheme';
 import { useAuth } from '@/shared/context/AuthContext';
 import { getRoleHomeRoute } from '@/shared/constants/roleRoutes';
 import { CustomTabBar, TabItem } from '@/components/ui/CustomTabBar';
+import { spacing } from '@/constants/ThemeTokens';
 
 const TAB_SCREENS = ['index', 'doctors', 'appointments', 'profile'];
 
@@ -42,8 +43,14 @@ export default function PatientLayout() {
 
   if (isLoading) {
     return (
-      <View style={[styles.loading, { backgroundColor: theme.background }]}>
-        <ActivityIndicator size="large" color={theme.primary} />
+      <View style={[styles.loading, { backgroundColor: theme.primary }]}>
+        <Text style={styles.pulseBrand}>Pulse</Text>
+        <Text style={styles.pulseSubtitle}>Patient Portal</Text>
+        <ActivityIndicator
+          size="large"
+          color={colorScheme === 'dark' ? theme.accent : '#FFFFFF'}
+          style={styles.loadingSpinner}
+        />
       </View>
     );
   }
@@ -67,18 +74,150 @@ export default function PatientLayout() {
         <Stack.Screen name="index" />
         <Stack.Screen name="doctors/index" />
         <Stack.Screen name="appointments/index" />
-        <Stack.Screen name="profile" />
-        <Stack.Screen name="records/index" />
-        <Stack.Screen name="billing/index" />
-        <Stack.Screen name="departments/index" />
-        <Stack.Screen name="wards/index" />
-        <Stack.Screen name="prescriptions/index" />
-        <Stack.Screen name="doctors/[id]" options={{ headerShown: true, title: 'Doctor Details', headerStyle: { backgroundColor: theme.surface }, headerTintColor: theme.text, headerShadowVisible: false }} />
-        <Stack.Screen name="appointments/book" options={{ headerShown: true, title: 'Book Appointment', headerStyle: { backgroundColor: theme.surface }, headerTintColor: theme.text, headerShadowVisible: false }} />
-        <Stack.Screen name="billing/[id]" options={{ headerShown: true, title: 'Billing Details', headerStyle: { backgroundColor: theme.surface }, headerTintColor: theme.text, headerShadowVisible: false }} />
-        <Stack.Screen name="departments/[id]" options={{ headerShown: true, title: 'Department Details', headerStyle: { backgroundColor: theme.surface }, headerTintColor: theme.text, headerShadowVisible: false }} />
-        <Stack.Screen name="wards/[id]" options={{ headerShown: true, title: 'Ward Details', headerStyle: { backgroundColor: theme.surface }, headerTintColor: theme.text, headerShadowVisible: false }} />
-        <Stack.Screen name="prescriptions/[id]" options={{ headerShown: true, title: 'Prescription Details', headerStyle: { backgroundColor: theme.surface }, headerTintColor: theme.text, headerShadowVisible: false }} />
+        <Stack.Screen
+          name="profile"
+          options={{
+            headerShown: true,
+            title: 'Profile',
+            headerTintColor: theme.primary,
+            headerTitleStyle: { fontWeight: '600', fontSize: 16 },
+            headerStyle: { backgroundColor: theme.surface },
+            headerShadowVisible: false,
+            headerBackTitleVisible: false,
+          }}
+        />
+        <Stack.Screen
+          name="records/index"
+          options={{
+            headerShown: true,
+            title: 'Medical Records',
+            headerTintColor: theme.primary,
+            headerTitleStyle: { fontWeight: '600', fontSize: 16 },
+            headerStyle: { backgroundColor: theme.surface },
+            headerShadowVisible: false,
+            headerBackTitleVisible: false,
+          }}
+        />
+        <Stack.Screen
+          name="billing/index"
+          options={{
+            headerShown: true,
+            title: 'Invoices & Billing',
+            headerTintColor: theme.primary,
+            headerTitleStyle: { fontWeight: '600', fontSize: 16 },
+            headerStyle: { backgroundColor: theme.surface },
+            headerShadowVisible: false,
+            headerBackTitleVisible: false,
+          }}
+        />
+        <Stack.Screen
+          name="departments/index"
+          options={{
+            headerShown: true,
+            title: 'Departments',
+            headerTintColor: theme.primary,
+            headerTitleStyle: { fontWeight: '600', fontSize: 16 },
+            headerStyle: { backgroundColor: theme.surface },
+            headerShadowVisible: false,
+            headerBackTitleVisible: false,
+          }}
+        />
+        <Stack.Screen
+          name="wards/index"
+          options={{
+            headerShown: true,
+            title: 'Wards',
+            headerTintColor: theme.primary,
+            headerTitleStyle: { fontWeight: '600', fontSize: 16 },
+            headerStyle: { backgroundColor: theme.surface },
+            headerShadowVisible: false,
+            headerBackTitleVisible: false,
+          }}
+        />
+        <Stack.Screen
+          name="prescriptions/index"
+          options={{
+            headerShown: true,
+            title: 'Prescriptions',
+            headerTintColor: theme.primary,
+            headerTitleStyle: { fontWeight: '600', fontSize: 16 },
+            headerStyle: { backgroundColor: theme.surface },
+            headerShadowVisible: false,
+            headerBackTitleVisible: false,
+          }}
+        />
+        <Stack.Screen
+          name="doctors/[id]"
+          options={{
+            headerShown: true,
+            title: 'Doctor Profile',
+            headerTintColor: theme.primary,
+            headerTitleStyle: { fontWeight: '600', fontSize: 16 },
+            headerStyle: { backgroundColor: theme.surface },
+            headerShadowVisible: false,
+            headerBackTitleVisible: false,
+          }}
+        />
+        <Stack.Screen
+          name="appointments/book"
+          options={{
+            headerShown: true,
+            title: 'New Appointment',
+            headerTintColor: theme.primary,
+            headerTitleStyle: { fontWeight: '600', fontSize: 16 },
+            headerStyle: { backgroundColor: theme.surface },
+            headerShadowVisible: false,
+            headerBackTitleVisible: false,
+          }}
+        />
+        <Stack.Screen
+          name="billing/[id]"
+          options={{
+            headerShown: true,
+            title: 'Invoice Details',
+            headerTintColor: theme.primary,
+            headerTitleStyle: { fontWeight: '600', fontSize: 16 },
+            headerStyle: { backgroundColor: theme.surface },
+            headerShadowVisible: false,
+            headerBackTitleVisible: false,
+          }}
+        />
+        <Stack.Screen
+          name="departments/[id]"
+          options={{
+            headerShown: true,
+            title: 'Department Info',
+            headerTintColor: theme.primary,
+            headerTitleStyle: { fontWeight: '600', fontSize: 16 },
+            headerStyle: { backgroundColor: theme.surface },
+            headerShadowVisible: false,
+            headerBackTitleVisible: false,
+          }}
+        />
+        <Stack.Screen
+          name="wards/[id]"
+          options={{
+            headerShown: true,
+            title: 'Ward Info',
+            headerTintColor: theme.primary,
+            headerTitleStyle: { fontWeight: '600', fontSize: 16 },
+            headerStyle: { backgroundColor: theme.surface },
+            headerShadowVisible: false,
+            headerBackTitleVisible: false,
+          }}
+        />
+        <Stack.Screen
+          name="prescriptions/[id]"
+          options={{
+            headerShown: true,
+            title: 'Prescription Info',
+            headerTintColor: theme.primary,
+            headerTitleStyle: { fontWeight: '600', fontSize: 16 },
+            headerStyle: { backgroundColor: theme.surface },
+            headerShadowVisible: false,
+            headerBackTitleVisible: false,
+          }}
+        />
       </Stack>
 
       <CustomTabBar activeTab={activeTab.key} onTabPress={handleTabPress} tabs={TABS} />
@@ -94,5 +233,22 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
+  },
+  pulseBrand: {
+    fontSize: 48,
+    fontWeight: '800',
+    color: '#FFFFFF',
+    letterSpacing: 2,
+    marginBottom: spacing.xs,
+  },
+  pulseSubtitle: {
+    fontSize: 16,
+    fontWeight: '500',
+    color: 'rgba(255,255,255,0.8)',
+    letterSpacing: 1,
+    marginBottom: spacing.xl,
+  },
+  loadingSpinner: {
+    marginTop: spacing.md,
   },
 });

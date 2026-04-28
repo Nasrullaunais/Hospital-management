@@ -8,12 +8,11 @@ import { prescriptionService } from '../../prescriptions/services/prescription.s
 import { medicineService } from '@/features/pharmacy/services/medicine.service';
 import Colors from '@/constants/Colors';
 import { useColorScheme } from '@/components/useColorScheme';
-import { spacing, radius, shadows } from '@/constants/ThemeTokens';
+import { Badge } from '@/components/ui';
+import { spacing, radius, shadows, typography } from '@/constants/ThemeTokens';
 import { LOW_STOCK_THRESHOLD } from '@/shared/constants/pharmacy';
 import type { PendingPrescription, PrescriptionItem } from '@/shared/types';
 
-// Number of retry attempts for stock fetch failures
-// 2 retries = 3 total attempts (initial + 2 retries)
 const STOCK_FETCH_RETRIES = 2;
 
 export default function DispenseScreen() {
@@ -29,7 +28,6 @@ export default function DispenseScreen() {
   const [isMounted, setIsMounted] = useState(true);
   const router = useRouter();
 
-  // Ref to always access current medicineStocks without closure staleness
   const medicineStocksRef = useRef(medicineStocks);
   medicineStocksRef.current = medicineStocks;
 
@@ -181,7 +179,6 @@ export default function DispenseScreen() {
     });
   }, []);
 
-  // Calculate total prescribed vs dispensed
   const totalStats = useMemo(() => {
     if (!prescription) return { prescribed: 0, dispensing: 0 };
     const prescribed = prescription.items.reduce((sum: number, item: PrescriptionItem) => sum + item.quantity, 0);
@@ -240,39 +237,35 @@ export default function DispenseScreen() {
         contentContainerStyle={styles.content}
         showsVerticalScrollIndicator={false}
       >
-      {/* Patient Info Card */}
-      <View style={[styles.patientCard, { backgroundColor: theme.surface, borderColor: theme.border }]}>
+      <View style={[styles.patientCard, { backgroundColor: theme.surface, ...shadows.card }]}>
         <View style={styles.patientHeader}>
           <View>
-            <Text style={[styles.patientLabel, { color: theme.textSecondary }]}>Patient</Text>
+            <Text style={[styles.patientLabel, { color: theme.textSecondary }]}>PATIENT</Text>
             <Text style={[styles.patientName, { color: theme.text }]}>{patientName}</Text>
           </View>
-          <View style={[styles.statusBadge, { backgroundColor: theme.warningBg, borderColor: theme.warning }]}>
-            <Text style={[styles.statusText, { color: theme.warning }]}>PENDING</Text>
-          </View>
+          <Badge label="PENDING" variant="warning" size="md" />
         </View>
         <Text style={[styles.dateText, { color: theme.textTertiary }]}>
           Issued: {new Date(prescription.createdAt).toLocaleDateString()}
         </Text>
       </View>
 
-      {/* Summary Stats */}
-      <View style={[styles.summaryCard, { backgroundColor: theme.surface, borderColor: theme.border }]}>
+      <View style={[styles.summaryCard, { backgroundColor: theme.surface, ...shadows.card }]}>
         <View style={styles.summaryItem}>
           <Text style={[styles.summaryValue, { color: theme.primary }]}>{totalStats.prescribed}</Text>
-          <Text style={[styles.summaryLabel, { color: theme.textSecondary }]}>Total Prescribed</Text>
+          <Text style={[styles.summaryLabel, { color: theme.textSecondary }]}>TOTAL PRESCRIBED</Text>
         </View>
         <View style={[styles.summaryDivider, { backgroundColor: theme.border }]} />
         <View style={styles.summaryItem}>
           <Text style={[styles.summaryValue, { color: theme.success }]}>{totalStats.dispensing}</Text>
-          <Text style={[styles.summaryLabel, { color: theme.textSecondary }]}>To Dispense</Text>
+          <Text style={[styles.summaryLabel, { color: theme.textSecondary }]}>TO DISPENSE</Text>
         </View>
       </View>
 
       <Text style={[styles.sectionTitle, { color: theme.text }]}>Medicines to Dispense</Text>
 
       {!stocksLoaded && prescription.items.length > 0 && (
-        <View style={[styles.skeletonCard, { backgroundColor: theme.surface, borderColor: theme.border }]}>
+        <View style={[styles.skeletonCard, { backgroundColor: theme.surface, ...shadows.card }]}>
           <View style={[styles.skeletonLine, { backgroundColor: theme.surfaceTertiary }]} />
           <View style={[styles.skeletonLineShort, { backgroundColor: theme.surfaceTertiary }]} />
           <View style={[styles.skeletonLineShort, { backgroundColor: theme.surfaceTertiary }]} />
@@ -280,7 +273,7 @@ export default function DispenseScreen() {
       )}
 
       {prescription.items.length === 0 ? (
-        <View style={[styles.emptyCard, { backgroundColor: theme.surface, borderColor: theme.border }]}>
+        <View style={[styles.emptyCard, { backgroundColor: theme.surface, ...shadows.card }]}>
           <Feather name="inbox" size={40} color={theme.textTertiary} />
           <Text style={[styles.emptyText, { color: theme.textSecondary }]}>No items in this prescription</Text>
         </View>
@@ -299,21 +292,17 @@ export default function DispenseScreen() {
               key={`${medId}-${index}`}
               style={[
                 styles.itemCard,
-                { backgroundColor: theme.surface, borderColor: isOverStock ? theme.error : theme.border },
+                { backgroundColor: theme.surface, borderColor: isOverStock ? theme.error : theme.border, ...shadows.card },
               ]}
             >
               <View style={styles.itemInfo}>
                 <View style={styles.itemHeader}>
                   <Text style={[styles.medicineName, { color: theme.text }]}>{item.medicineName}</Text>
                   {stockFetchFailed && (
-                    <View style={[styles.lowStockBadge, { backgroundColor: theme.errorBg, borderColor: theme.error }]}>
-                      <Text style={[styles.lowStockText, { color: theme.error }]}>Stock Unavailable</Text>
-                    </View>
+                    <Badge label="Stock Unavailable" variant="error" size="sm" />
                   )}
                   {!stockFetchFailed && isLowStock && !isOverStock && (
-                    <View style={[styles.lowStockBadge, { backgroundColor: theme.errorBg, borderColor: theme.error }]}>
-                      <Text style={[styles.lowStockText, { color: theme.error }]}>Low Stock</Text>
-                    </View>
+                    <Badge label="Low Stock" variant="error" size="sm" />
                   )}
                 </View>
                 <Text style={[styles.dosage, { color: theme.textSecondary }]}>
@@ -367,11 +356,10 @@ export default function DispenseScreen() {
         })
       )}
 
-      {/* Submit Button */}
       <TouchableOpacity
         style={[
           styles.submitBtn,
-          { backgroundColor: theme.success },
+          { backgroundColor: theme.accent },
           (submitting || !canSubmit) && { opacity: 0.6 },
         ]}
         onPress={handleDispense}
@@ -379,10 +367,10 @@ export default function DispenseScreen() {
         activeOpacity={0.8}
       >
         {submitting ? (
-          <ActivityIndicator color="#fff" />
+          <ActivityIndicator color="#FFFFFF" />
         ) : (
           <View style={styles.submitBtnContent}>
-            <Feather name="check-circle" size={20} color="#fff" />
+            <Feather name="check-circle" size={22} color="#FFFFFF" />
             <Text style={styles.submitBtnText}>Fulfill Prescription</Text>
           </View>
         )}
@@ -402,40 +390,32 @@ const styles = StyleSheet.create({
   retryBtn: { marginTop: spacing.md, borderRadius: radius.md, paddingHorizontal: spacing.md, paddingVertical: spacing.sm },
   retryBtnText: { color: '#fff', fontWeight: '600' },
   patientCard: {
-    padding: spacing.md,
+    padding: spacing.lg,
     marginHorizontal: spacing.md,
     marginTop: spacing.md,
     borderRadius: radius.lg,
-    borderWidth: 1,
-    ...shadows.card,
   },
   patientHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' },
-  patientLabel: { fontSize: 12, fontWeight: '600', textTransform: 'uppercase', letterSpacing: 0.5 },
+  patientLabel: { fontSize: typography.xs, fontWeight: '600', textTransform: 'uppercase', letterSpacing: 0.5 },
   patientName: { fontSize: 18, fontWeight: '700', marginTop: spacing.xs },
-  statusBadge: { borderWidth: 1, paddingHorizontal: spacing.sm, paddingVertical: spacing.xs, borderRadius: radius.md },
-  statusText: { fontSize: 11, fontWeight: '700', letterSpacing: 0.5 },
   dateText: { fontSize: 13, marginTop: spacing.sm },
   summaryCard: {
     flexDirection: 'row',
-    padding: spacing.md,
+    padding: spacing.lg,
     marginHorizontal: spacing.md,
     marginTop: spacing.sm,
     borderRadius: radius.lg,
-    borderWidth: 1,
-    ...shadows.card,
   },
   summaryItem: { flex: 1, alignItems: 'center' },
   summaryDivider: { width: 1, marginVertical: spacing.xs },
-  summaryValue: { fontSize: 24, fontWeight: '700' },
-  summaryLabel: { fontSize: 12, marginTop: spacing.xs },
-  sectionTitle: { fontSize: 16, fontWeight: '600', marginHorizontal: spacing.md, marginTop: spacing.lg, marginBottom: spacing.sm },
+  summaryValue: { fontSize: typography.xxl, fontWeight: '700' },
+  summaryLabel: { fontSize: typography.xs, marginTop: spacing.xs, textTransform: 'uppercase', letterSpacing: 0.5 },
+  sectionTitle: { fontSize: typography.md, fontWeight: '600', marginHorizontal: spacing.md, marginTop: spacing.lg, marginBottom: spacing.sm },
   emptyCard: {
     padding: spacing.xl,
     marginHorizontal: spacing.md,
     borderRadius: radius.lg,
-    borderWidth: 1,
     alignItems: 'center',
-    ...shadows.card,
   },
   emptyText: { marginTop: spacing.sm },
   itemCard: {
@@ -446,39 +426,35 @@ const styles = StyleSheet.create({
     marginBottom: spacing.md,
     borderRadius: radius.lg,
     borderWidth: 1,
-    ...shadows.card,
   },
   itemInfo: { flex: 1, paddingRight: spacing.sm },
-  itemHeader: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, marginBottom: spacing.xs },
+  itemHeader: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, marginBottom: spacing.xs, flexWrap: 'wrap' },
   medicineName: { fontSize: 15, fontWeight: '600' },
-  lowStockBadge: { borderWidth: 1, paddingHorizontal: spacing.xs, paddingVertical: 2, borderRadius: radius.sm },
-  lowStockText: { fontSize: 10, fontWeight: '700' },
   dosage: { fontSize: 13, marginBottom: spacing.xs },
   itemMeta: { flexDirection: 'row', gap: spacing.md },
-  prescribedText: { fontSize: 12 },
-  stockText: { fontSize: 12 },
-  instructions: { fontSize: 12, fontStyle: 'italic', marginTop: spacing.xs },
+  prescribedText: { fontSize: typography.xs },
+  stockText: { fontSize: typography.xs },
+  instructions: { fontSize: typography.xs, fontStyle: 'italic', marginTop: spacing.xs },
   controls: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
   adjustBtn: { width: 36, height: 36, borderRadius: 18, justifyContent: 'center', alignItems: 'center' },
   adjustBtnText: { color: '#fff', fontSize: 20, fontWeight: '700', lineHeight: 22 },
   qty: { fontSize: 18, fontWeight: '700', minWidth: 28, textAlign: 'center' },
   qtyOver: { textDecorationLine: 'underline' },
   submitBtn: {
-    padding: spacing.md,
-    borderRadius: radius.lg,
+    height: 56,
+    borderRadius: radius.md,
     alignItems: 'center',
+    justifyContent: 'center',
     marginHorizontal: spacing.md,
     marginTop: spacing.lg,
-    ...shadows.button,
   },
   submitBtnContent: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
-  submitBtnText: { color: '#fff', fontSize: 16, fontWeight: '700' },
+  submitBtnText: { color: '#FFFFFF', fontSize: 17, fontWeight: '700' },
   skeletonCard: {
     padding: spacing.md,
     marginHorizontal: spacing.md,
     marginBottom: spacing.md,
     borderRadius: radius.lg,
-    borderWidth: 1,
     gap: spacing.sm,
   },
   skeletonLine: { height: 16, borderRadius: radius.sm },

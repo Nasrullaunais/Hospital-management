@@ -12,9 +12,10 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Feather } from '@expo/vector-icons';
 import { useLocalSearchParams, useRouter, Stack } from 'expo-router';
 import { wardReceptionistService, type BedStatus } from '@/features/wardReceptionist/services/wardReceptionist.service';
+import { Badge } from '@/components/ui';
 import Colors from '@/constants/Colors';
 import { useColorScheme } from '@/components/useColorScheme';
-import { spacing, radius } from '@/constants/ThemeTokens';
+import { spacing, radius, shadows } from '@/constants/ThemeTokens';
 
 export default function BedDetailScreen() {
   const { id, bedData } = useLocalSearchParams<{ id: string; bedData?: string }>();
@@ -48,18 +49,48 @@ export default function BedDetailScreen() {
       .finally(() => setLoading(false));
   }, [id, bedData]);
 
-  const getStatusStyle = useCallback((status: BedStatus['status']) => {
+  const getStatusBadgeVariant = useCallback((status: BedStatus['status']): 'success' | 'error' | 'warning' | 'info' | 'neutral' => {
+    switch (status) {
+      case 'vacant':
+        return 'success';
+      case 'occupied':
+        return 'error';
+      case 'maintenance':
+        return 'warning';
+      case 'reserved':
+        return 'neutral';
+      default:
+        return 'neutral';
+    }
+  }, []);
+
+  const getStatusLabel = useCallback((status: BedStatus['status']) => {
     switch (status) {
       case 'occupied':
-        return { bg: theme.infoBg, border: theme.info, text: theme.info, label: 'Occupied' };
+        return 'Occupied';
       case 'vacant':
-        return { bg: theme.successBg, border: theme.success, text: theme.success, label: 'Available' };
+        return 'Available';
       case 'maintenance':
-        return { bg: theme.warningBg, border: theme.warning, text: theme.warning, label: 'Maintenance' };
+        return 'Maintenance';
       case 'reserved':
-        return { bg: theme.surfaceTertiary, border: theme.border, text: theme.textSecondary, label: 'Reserved' };
+        return 'Reserved';
       default:
-        return { bg: theme.surfaceTertiary, border: theme.border, text: theme.textSecondary, label: status };
+        return status;
+    }
+  }, []);
+
+  const getStatusAccentColor = useCallback((status: BedStatus['status']) => {
+    switch (status) {
+      case 'occupied':
+        return theme.error;
+      case 'vacant':
+        return theme.success;
+      case 'maintenance':
+        return theme.warning;
+      case 'reserved':
+        return theme.textSecondary;
+      default:
+        return theme.textSecondary;
     }
   }, [theme]);
 
@@ -119,7 +150,8 @@ export default function BedDetailScreen() {
     );
   }
 
-  const statusStyle = getStatusStyle(bed.status);
+  const badgeVariant = getStatusBadgeVariant(bed.status);
+  const accentColor = getStatusAccentColor(bed.status);
   const isOccupied = bed.status === 'occupied';
   const isVacant = bed.status === 'vacant';
 
@@ -133,23 +165,23 @@ export default function BedDetailScreen() {
       />
       <SafeAreaView edges={['bottom']} style={[styles.container, { backgroundColor: theme.background }]}>
         <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
-          <View style={[styles.headerCard, { backgroundColor: theme.surface, borderColor: statusStyle.border }]}>
+          {/* Header Card */}
+          <View style={[styles.headerCard, { backgroundColor: theme.surface, borderColor: accentColor }, shadows.card]}>
             <View style={styles.headerRow}>
-              <View style={[styles.bedIcon, { backgroundColor: statusStyle.bg, borderColor: statusStyle.border }]}>
-                <Feather name="activity" size={28} color={statusStyle.text} />
+              <View style={[styles.bedIcon, { backgroundColor: theme.surfaceTertiary, borderColor: accentColor }]}>
+                <Feather name="activity" size={28} color={accentColor} />
               </View>
               <View style={styles.headerInfo}>
                 <Text style={[styles.bedTitle, { color: theme.text }]}>Bed #{bed.bedNumber}</Text>
                 <Text style={[styles.wardTitle, { color: theme.textSecondary }]}>{bed.wardName}</Text>
               </View>
-              <View style={[styles.statusBadge, { backgroundColor: statusStyle.bg, borderColor: statusStyle.border }]}>
-                <Text style={[styles.statusText, { color: statusStyle.text }]}>{statusStyle.label}</Text>
-              </View>
+              <Badge label={getStatusLabel(bed.status)} variant={badgeVariant} size="md" />
             </View>
           </View>
 
+          {/* Patient Information Section */}
           {isOccupied && (
-            <View style={[styles.section, { backgroundColor: theme.surface, borderColor: theme.border }]}>
+            <View style={[styles.section, { backgroundColor: theme.surface, borderColor: theme.border }, shadows.card]}>
               <Text style={[styles.sectionTitle, { color: theme.text }]}>Patient Information</Text>
 
               <View style={styles.infoRow}>
@@ -186,8 +218,9 @@ export default function BedDetailScreen() {
             </View>
           )}
 
+          {/* Vacant State */}
           {isVacant && (
-            <View style={[styles.section, { backgroundColor: theme.surface, borderColor: theme.border }]}>
+            <View style={[styles.section, { backgroundColor: theme.surface, borderColor: theme.border }, shadows.card]}>
               <View style={styles.vacantRow}>
                 <Feather name="check-circle" size={24} color={theme.success} />
                 <Text style={[styles.vacantText, { color: theme.success }]}>
@@ -197,8 +230,9 @@ export default function BedDetailScreen() {
             </View>
           )}
 
+          {/* Maintenance State */}
           {bed.status === 'maintenance' && (
-            <View style={[styles.section, { backgroundColor: theme.surface, borderColor: theme.border }]}>
+            <View style={[styles.section, { backgroundColor: theme.surface, borderColor: theme.border }, shadows.card]}>
               <View style={styles.vacantRow}>
                 <Feather name="alert-triangle" size={24} color={theme.warning} />
                 <Text style={[styles.vacantText, { color: theme.warning }]}>
@@ -208,6 +242,7 @@ export default function BedDetailScreen() {
             </View>
           )}
 
+          {/* Action Buttons */}
           <View style={styles.actions}>
             {isOccupied && (
               <>
@@ -228,7 +263,7 @@ export default function BedDetailScreen() {
                 </TouchableOpacity>
 
                 <TouchableOpacity
-                  style={[styles.actionButton, styles.unassignButton, { backgroundColor: theme.error }]}
+                  style={[styles.actionButton, { backgroundColor: theme.error }]}
                   activeOpacity={0.8}
                   onPress={handleUnassign}
                   disabled={unassigning}
@@ -288,13 +323,6 @@ const styles = StyleSheet.create({
   headerInfo: { flex: 1 },
   bedTitle: { fontSize: 20, fontWeight: '700' },
   wardTitle: { fontSize: 14, marginTop: 2 },
-  statusBadge: {
-    borderRadius: radius.md,
-    paddingHorizontal: spacing.sm,
-    paddingVertical: spacing.xs,
-    borderWidth: 1,
-  },
-  statusText: { fontSize: 12, fontWeight: '600' },
   section: {
     borderRadius: radius.lg,
     borderWidth: 1,
@@ -330,7 +358,6 @@ const styles = StyleSheet.create({
     borderRadius: radius.md,
     paddingVertical: spacing.md,
   },
-  unassignButton: { backgroundColor: '#dc2626' },
   actionButtonText: { color: '#fff', fontSize: 15, fontWeight: '600' },
   errorText: { fontSize: 15, marginTop: spacing.md },
   retryText: { fontWeight: '600', fontSize: 15, marginTop: spacing.sm },

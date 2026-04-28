@@ -39,19 +39,19 @@ export const assignPatient = async (req: Request, res: Response, next: NextFunct
       User.findById(patientId),
       Ward.findById(wardId),
     ]);
-    if (!patient) return next(new ApiError.notFound('Patient not found'));
-    if (!ward) return next(new ApiError.notFound('Ward not found'));
+    if (!patient) return next(ApiError.notFound('Patient not found'));
+    if (!ward) return next(ApiError.notFound('Ward not found'));
 
     const existingAssignment = await WardAssignment.findOne({
       patientId,
       status: 'active',
     });
     if (existingAssignment) {
-      return next(new ApiError.conflict('Patient already has an active ward assignment'));
+      return next(ApiError.conflict('Patient already has an active ward assignment'));
     }
 
     if (ward.currentOccupancy >= ward.totalBeds) {
-      return next(new ApiError.conflict(`Ward ${ward.name} is at full capacity (${ward.currentOccupancy}/${ward.totalBeds} beds)`));
+      return next(ApiError.conflict(`Ward ${ward.name} is at full capacity (${ward.currentOccupancy}/${ward.totalBeds} beds)`));
     }
 
     const assignment = await WardAssignment.findOneAndUpdate(
@@ -73,7 +73,7 @@ export const assignPatient = async (req: Request, res: Response, next: NextFunct
     );
 
     if (!assignment.assignedDate || assignment.status !== 'active') {
-      return next(new ApiError.conflict(`Bed ${bedNumber} in Ward ${ward.name} is already occupied`));
+      return next(ApiError.conflict(`Bed ${bedNumber} in Ward ${ward.name} is already occupied`));
     }
 
     await Ward.findByIdAndUpdate(wardId, { $inc: { currentOccupancy: 1 } });
@@ -94,7 +94,7 @@ export const getWardAssignments = async (req: Request, res: Response, next: Next
     const limit = parseInt(req.query.limit as string) || 50;
 
     const ward = await Ward.findById(wardId);
-    if (!ward) return next(new ApiError.notFound('Ward not found'));
+    if (!ward) return next(ApiError.notFound('Ward not found'));
 
     const [assignments, totalCount] = await Promise.all([
       WardAssignment.find({ wardId })
@@ -116,17 +116,17 @@ export const getAssignmentById = async (req: Request, res: Response, next: NextF
   try {
     const id = req.params.id as string;
     if (!mongoose.Types.ObjectId.isValid(id)) {
-      return next(new ApiError.badRequest('Invalid assignment ID'));
+      return next(ApiError.badRequest('Invalid assignment ID'));
     }
 
     const assignment = await WardAssignment.findById(id)
       .populate('patientId', 'name email phone dateOfBirth')
       .populate('wardId', 'name type');
 
-    if (!assignment) return next(new ApiError.notFound('Assignment not found'));
+    if (!assignment) return next(ApiError.notFound('Assignment not found'));
 
     // Verify patient is assigned to a ward (404 prevents info leakage)
-    if (!assignment.wardId) return next(new ApiError.notFound('Patient is not assigned to any ward'));
+    if (!assignment.wardId) return next(ApiError.notFound('Patient is not assigned to any ward'));
 
     res.json({ success: true, data: { assignment } });
   } catch (err) {
@@ -141,11 +141,11 @@ export const updateAssignment = async (req: Request, res: Response, next: NextFu
   try {
     const id = req.params.id as string;
     if (!mongoose.Types.ObjectId.isValid(id)) {
-      return next(new ApiError.badRequest('Invalid assignment ID'));
+      return next(ApiError.badRequest('Invalid assignment ID'));
     }
 
     const assignment = await WardAssignment.findById(id);
-    if (!assignment) return next(new ApiError.notFound('Assignment not found'));
+    if (!assignment) return next(ApiError.notFound('Assignment not found'));
 
     if (req.body.notes !== undefined) assignment.notes = req.body.notes;
     if (req.body.expectedDischarge !== undefined) assignment.expectedDischarge = new Date(req.body.expectedDischarge);
@@ -168,14 +168,14 @@ export const dischargePatient = async (req: Request, res: Response, next: NextFu
   try {
     const id = req.params.id as string;
     if (!mongoose.Types.ObjectId.isValid(id)) {
-      return next(new ApiError.badRequest('Invalid assignment ID'));
+      return next(ApiError.badRequest('Invalid assignment ID'));
     }
 
     const assignment = await WardAssignment.findById(id);
-    if (!assignment) return next(new ApiError.notFound('Assignment not found'));
+    if (!assignment) return next(ApiError.notFound('Assignment not found'));
 
     if (assignment.status !== 'active') {
-      return next(new ApiError.badRequest(`Assignment is already '${assignment.status}' and cannot be discharged`));
+      return next(ApiError.badRequest(`Assignment is already '${assignment.status}' and cannot be discharged`));
     }
 
     assignment.status = 'discharged';
@@ -202,7 +202,7 @@ export const getWardStats = async (req: Request, res: Response, next: NextFuncti
     const filter: Record<string, unknown> = {};
     if (wardId) {
       if (!mongoose.Types.ObjectId.isValid(wardId)) {
-        return next(new ApiError.badRequest('Invalid ward ID'));
+        return next(ApiError.badRequest('Invalid ward ID'));
       }
       filter.wardId = new mongoose.Types.ObjectId(wardId);
     }
@@ -261,10 +261,10 @@ export const getBedStatuses = async (req: Request, res: Response, next: NextFunc
 
     if (wardId) {
       if (!mongoose.Types.ObjectId.isValid(wardId)) {
-        return next(new ApiError.badRequest('Invalid ward ID'));
+        return next(ApiError.badRequest('Invalid ward ID'));
       }
       const ward = await Ward.findById(wardId);
-      if (!ward) return next(new ApiError.notFound('Ward not found'));
+      if (!ward) return next(ApiError.notFound('Ward not found'));
     }
 
     const wards = wardId
@@ -344,11 +344,11 @@ export const getWardPatients = async (req: Request, res: Response, next: NextFun
     const limit = parseInt(req.query.limit as string) || 50;
 
     if (!mongoose.Types.ObjectId.isValid(wardId)) {
-      return next(new ApiError.badRequest('Invalid ward ID'));
+      return next(ApiError.badRequest('Invalid ward ID'));
     }
 
     const ward = await Ward.findById(wardId);
-    if (!ward) return next(new ApiError.notFound('Ward not found'));
+    if (!ward) return next(ApiError.notFound('Ward not found'));
 
     const [assignments, totalCount] = await Promise.all([
       WardAssignment.find({
@@ -395,7 +395,7 @@ export const getPatientById = async (req: Request, res: Response, next: NextFunc
     const patientId = req.params.patientId as string;
 
     if (!mongoose.Types.ObjectId.isValid(patientId)) {
-      return next(new ApiError.badRequest('Invalid patient ID'));
+      return next(ApiError.badRequest('Invalid patient ID'));
     }
 
     const assignment = await WardAssignment.findOne({
@@ -405,7 +405,7 @@ export const getPatientById = async (req: Request, res: Response, next: NextFunc
       .populate<{ patientId: PopulatedPatient }>('patientId', 'name email phone dateOfBirth gender bloodType diagnosis')
       .populate<{ wardId: PopulatedWard }>('wardId', 'name type');
 
-    if (!assignment) return next(new ApiError.notFound('Patient not found'));
+    if (!assignment) return next(ApiError.notFound('Patient not found'));
 
     const patientData = {
       _id: (assignment.patientId as PopulatedPatient | null)?._id?.toString(),
@@ -442,7 +442,7 @@ export const getAllPatients = async (req: Request, res: Response, next: NextFunc
     const filter: Record<string, unknown> = { status: 'active' };
     if (wardId) {
       if (!mongoose.Types.ObjectId.isValid(wardId)) {
-        return next(new ApiError.badRequest('Invalid ward ID'));
+        return next(ApiError.badRequest('Invalid ward ID'));
       }
       filter.wardId = new mongoose.Types.ObjectId(wardId);
     }

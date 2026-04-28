@@ -1,57 +1,63 @@
 // =============================================================================
 // Hospital Management App - Comprehensive Color System
-// Medical-professional teal-based palette with full dark mode support
+// "Pulse" Premium Medical Management — Navy/Indigo + Coral accents
 // All text/background combinations meet WCAG AA contrast requirements (4.5:1)
 // =============================================================================
 
 // -----------------------------------------------------------------------------
-// Primary Brand Colors - Teal/Cyan (Medical Professionalism)
+// Primary Brand Colors - Navy / Indigo (Premium Medical Management)
 // -----------------------------------------------------------------------------
 const primary = {
-  50:  '#e6f7f7',
-  100: '#b3e6e6',
-  200: '#80d4d4',
-  300: '#4dc3c3',
-  400: '#26b5b5',
-  500: '#0d9488', // Main primary
-  600: '#0b7a71',
-  700: '#086060',
-  800: '#054748',
-  900: '#023032',
+  50:  '#E8EDF5',
+  100: '#C5D1E6',
+  200: '#9EB4D2',
+  300: '#7698BE',
+  400: '#4E7BAA',
+  500: '#365F96',
+  600: '#1B2A4A', // Main primary
+  700: '#15213A',
+  800: '#0F182A',
+  900: '#0A101C',
 };
 
-const primaryLight = '#0d9488';
-const primaryDark  = '#2dd4bf';
+const primaryLight = '#1B2A4A';
+const primaryDark  = '#5B8DEF';
+
+// -----------------------------------------------------------------------------
+// Accent Colors - Warm Coral
+// -----------------------------------------------------------------------------
+const accentLight = '#F4795B';
+const accentDark  = '#FF9473';
 
 // -----------------------------------------------------------------------------
 // Semantic Status Colors
 // -----------------------------------------------------------------------------
 const success = {
-  light: '#16a34a',
-  dark:  '#4ade80',
-  bgLight: '#dcfce7',
-  bgDark:  '#14532d',
+  light: '#1A8C4E',
+  dark:  '#4ADE80',
+  bgLight: '#E6F5EC',
+  bgDark:  '#0F2D1A',
 };
 
 const warning = {
-  light: '#d97706',
-  dark:  '#fbbf24',
-  bgLight: '#fef3c7',
-  bgDark:  '#78350f',
+  light: '#D97706',
+  dark:  '#FBBF24',
+  bgLight: '#FEF3C7',
+  bgDark:  '#422006',
 };
 
 const error = {
-  light: '#dc2626',
-  dark:  '#f87171',
-  bgLight: '#fee2e2',
-  bgDark:  '#7f1d1d',
+  light: '#DC3545',
+  dark:  '#F87171',
+  bgLight: '#FEE2E2',
+  bgDark:  '#450A0A',
 };
 
 const info = {
-  light: '#2563eb',
-  dark:  '#60a5fa',
-  bgLight: '#dbeafe',
-  bgDark:  '#1e3a8a',
+  light: '#3B82F6',
+  dark:  '#60A5FA',
+  bgLight: '#DBEAFE',
+  bgDark:  '#172554',
 };
 
 // -----------------------------------------------------------------------------
@@ -88,14 +94,14 @@ const grayDark = {
 // Surface / Card Backgrounds
 // -----------------------------------------------------------------------------
 const surface = {
-  light:        '#ffffff',
-  secondary:   '#f9fafb',
-  tertiary:    '#f3f4f6',
-  elevated:    '#ffffff', // Cards with shadow
-  dark:         '#0f172a',
-  darkSecondary:'#1e293b',
-  darkTertiary: '#334155',
-  darkElevated: '#1e293b',
+  light:        '#FFFFFF',
+  secondary:   '#F0F3F9',
+  tertiary:    '#E8ECF4',
+  elevated:    '#FFFFFF', // Cards with shadow
+  dark:         '#141A26',
+  darkSecondary:'#1A2030',
+  darkTertiary: '#1E2436',
+  darkElevated: '#1E2436',
 };
 
 // -----------------------------------------------------------------------------
@@ -107,8 +113,8 @@ const overlay = {
 };
 
 const divider = {
-  light: '#e5e7eb',
-  dark:  '#374151',
+  light: '#E2E7F0',
+  dark:  '#2A3040',
 };
 
 // -----------------------------------------------------------------------------
@@ -116,18 +122,18 @@ const divider = {
 // -----------------------------------------------------------------------------
 const tabBar = {
   light: {
-    background:    '#ffffff',
-    border:        '#e5e7eb',
-    inactive:      '#9ca3af',
+    background:    '#FFFFFF',
+    border:        '#E2E7F0',
+    inactive:      '#8998B8',
     active:        primaryLight,
-    activeBg:      '#e6f7f7',
+    activeBg:      '#EEF1F8',
   },
   dark: {
-    background:    '#0f172a',
-    border:        '#334155',
-    inactive:      '#64748b',
+    background:    '#141A26',
+    border:        '#2A3040',
+    inactive:      '#5B6B8A',
     active:        primaryDark,
-    activeBg:      '#134e4a',
+    activeBg:      '#1A2740',
   },
 };
 
@@ -136,28 +142,28 @@ const tabBar = {
 // -----------------------------------------------------------------------------
 const input = {
   light: {
-    background:     '#ffffff',
-    border:         '#d1d5db',
-    borderFocused:  primaryLight,
-    placeholder:    '#9ca3af',
-    text:           '#111827',
-    textSecondary:  '#6b7280',
-    error:          '#dc2626',
-    errorBorder:    '#ef4444',
-    disabled:       '#f3f4f6',
-    disabledText:   '#9ca3af',
+    background:     '#FFFFFF',
+    border:         '#D0D8E5',
+    borderFocused:  '#365F96',
+    placeholder:    '#8998B8',
+    text:           '#0F182A',
+    textSecondary:  '#5B6B8A',
+    error:          '#DC3545',
+    errorBorder:    '#F87171',
+    disabled:       '#F0F3F9',
+    disabledText:   '#8998B8',
   },
   dark: {
-    background:     '#1e293b',
-    border:         '#475569',
-    borderFocused:  primaryDark,
-    placeholder:    '#64748b',
-    text:           '#f9fafb',
-    textSecondary:  '#9ca3af',
-    error:          '#f87171',
-    errorBorder:    '#ef4444',
-    disabled:       '#334155',
-    disabledText:   '#64748b',
+    background:     '#1A2030',
+    border:         '#3A4055',
+    borderFocused:  '#5B8DEF',
+    placeholder:    '#5B6B8A',
+    text:           '#F0F2F8',
+    textSecondary:  '#8899B8',
+    error:          '#F87171',
+    errorBorder:    '#F87171',
+    disabled:       '#1E2436',
+    disabledText:   '#5B6B8A',
   },
 };
 
@@ -166,20 +172,22 @@ const input = {
 // -----------------------------------------------------------------------------
 const badge = {
   light: {
-    success:  { text: '#166534', background: '#dcfce7', border: '#bbf7d0' },
-    warning:  { text: '#92400e', background: '#fef3c7', border: '#fde68a' },
-    error:    { text: '#991b1b', background: '#fee2e2', border: '#fecaca' },
-    info:     { text: '#1e40af', background: '#dbeafe', border: '#bfdbfe' },
-    neutral:  { text: '#374151', background: '#f3f4f6', border: '#e5e7eb' },
-    primary:  { text: '#0d9488', background: '#ccfbf1', border: '#99f6e4' },
+    success:  { text: '#166534', background: '#E6F5EC', border: '#A2E6BD' },
+    warning:  { text: '#92400E', background: '#FEF3C7', border: '#FDE68A' },
+    error:    { text: '#991B1B', background: '#FEE2E2', border: '#FECACA' },
+    info:     { text: '#1E40AF', background: '#DBEAFE', border: '#BFDBFE' },
+    neutral:  { text: '#374151', background: '#F0F3F9', border: '#D0D8E5' },
+    primary:  { text: '#1B2A4A', background: '#EEF1F8', border: '#C5D1E6' },
+    accent:   { text: '#B83A1E', background: '#FFF0EB', border: '#FFD0C0' },
   },
   dark: {
-    success:  { text: '#4ade80', background: '#14532d', border: '#166534' },
-    warning:  { text: '#fbbf24', background: '#78350f', border: '#92400e' },
-    error:    { text: '#f87171', background: '#7f1d1d', border: '#991b1b' },
-    info:     { text: '#60a5fa', background: '#1e3a8a', border: '#1e40af' },
-    neutral:  { text: '#d1d5db', background: '#374151', border: '#4b5563' },
-    primary:  { text: '#2dd4bf', background: '#134e4a', border: '#0d9488' },
+    success:  { text: '#4ADE80', background: '#0F2D1A', border: '#1A4A2A' },
+    warning:  { text: '#FBBF24', background: '#422006', border: '#78350F' },
+    error:    { text: '#F87171', background: '#450A0A', border: '#7F1D1D' },
+    info:     { text: '#60A5FA', background: '#172554', border: '#1E3A8A' },
+    neutral:  { text: '#D1D5DB', background: '#1A2030', border: '#3A4055' },
+    primary:  { text: '#5B8DEF', background: '#1A2740', border: '#365F96' },
+    accent:   { text: '#FF9473', background: '#3D1F16', border: '#5A2D20' },
   },
 };
 
@@ -189,66 +197,78 @@ const badge = {
 const button = {
   light: {
     primary: {
-      background:    primaryLight,
-      backgroundPressed: '#0b7a71',
-      text:          '#ffffff',
-      border:        primaryLight,
+      background:          '#1B2A4A',
+      backgroundPressed:   '#15213A',
+      text:                '#FFFFFF',
+      border:              '#1B2A4A',
+    },
+    accent: {
+      background:          '#F4795B',
+      backgroundPressed:   '#E0694A',
+      text:                '#FFFFFF',
+      border:              '#F4795B',
     },
     secondary: {
-      background:    '#f3f4f6',
-      backgroundPressed: '#e5e7eb',
-      text:          '#374151',
-      border:        '#d1d5db',
+      background:          '#F0F3F9',
+      backgroundPressed:   '#E8ECF4',
+      text:                '#1B2A4A',
+      border:              '#D0D8E5',
     },
     outline: {
-      background:    'transparent',
-      backgroundPressed: '#f3f4f6',
-      text:          primaryLight,
-      border:        primaryLight,
+      background:          'transparent',
+      backgroundPressed:   '#F0F3F9',
+      text:                '#1B2A4A',
+      border:              '#1B2A4A',
     },
     ghost: {
-      background:    'transparent',
-      backgroundPressed: '#f3f4f6',
-      text:          primaryLight,
-      border:        'transparent',
+      background:          'transparent',
+      backgroundPressed:   '#F0F3F9',
+      text:                '#1B2A4A',
+      border:              'transparent',
     },
     danger: {
-      background:    '#dc2626',
-      backgroundPressed: '#b91c1c',
-      text:          '#ffffff',
-      border:        '#dc2626',
+      background:          '#DC3545',
+      backgroundPressed:   '#B91C1C',
+      text:                '#FFFFFF',
+      border:              '#DC3545',
     },
   },
   dark: {
     primary: {
-      background:    primaryDark,
-      backgroundPressed: '#14b8a6',
-      text:          '#0f172a',
-      border:        primaryDark,
+      background:          '#5B8DEF',
+      backgroundPressed:   '#7AA5F5',
+      text:                '#0A0E17',
+      border:              '#5B8DEF',
+    },
+    accent: {
+      background:          '#FF9473',
+      backgroundPressed:   '#FFAD94',
+      text:                '#0A0E17',
+      border:              '#FF9473',
     },
     secondary: {
-      background:    '#334155',
-      backgroundPressed: '#475569',
-      text:          '#f3f4f6',
-      border:        '#475569',
+      background:          '#1A2030',
+      backgroundPressed:   '#1E2436',
+      text:                '#5B8DEF',
+      border:              '#3A4055',
     },
     outline: {
-      background:    'transparent',
-      backgroundPressed: '#1e293b',
-      text:          primaryDark,
-      border:        primaryDark,
+      background:          'transparent',
+      backgroundPressed:   '#1A2030',
+      text:                '#5B8DEF',
+      border:              '#5B8DEF',
     },
     ghost: {
-      background:    'transparent',
-      backgroundPressed: '#1e293b',
-      text:          primaryDark,
-      border:        'transparent',
+      background:          'transparent',
+      backgroundPressed:   '#1A2030',
+      text:                '#5B8DEF',
+      border:              'transparent',
     },
     danger: {
-      background:    '#ef4444',
-      backgroundPressed: '#dc2626',
-      text:          '#ffffff',
-      border:        '#ef4444',
+      background:          '#F87171',
+      backgroundPressed:   '#DC2626',
+      text:                '#0A0E17',
+      border:              '#F87171',
     },
   },
 };
@@ -259,18 +279,22 @@ const button = {
 export const Colors = {
   light: {
     // Core
-    text:             gray[900],
-    textSecondary:    gray[500],
-    textTertiary:     gray[400],
-    background:       '#ffffff',
+    text:             '#0F182A',
+    textSecondary:    '#5B6B8A',
+    textTertiary:     '#8998B8',
+    background:       '#F5F7FB',
     surface:          surface.light,
     surfaceSecondary:  surface.secondary,
     surfaceTertiary:  surface.tertiary,
 
     // Brand
     primary:          primaryLight,
-    primaryPressed:   '#0b7a71',
-    primaryMuted:     '#ccfbf1',
+    primaryPressed:   '#15213A',
+    primaryMuted:     '#EEF1F8',
+
+    // Accent
+    accent:           accentLight,
+    accentPressed:    '#E0694A',
 
     // Semantic
     success:          success.light,
@@ -283,9 +307,9 @@ export const Colors = {
     infoBg:           info.bgLight,
 
     // Neutral
-    border:           gray[300],
+    border:           '#D0D8E5',
     divider:          divider.light,
-    placeholder:      gray[400],
+    placeholder:      '#8998B8',
 
     // Tab Bar
     tabBarBackground: tabBar.light.background,
@@ -310,23 +334,27 @@ export const Colors = {
     overlay:          overlay.light,
 
     // Card shadow
-    cardShadow:       'rgba(0, 0, 0, 0.08)',
+    cardShadow:       'rgba(27, 42, 74, 0.06)',
   },
 
   dark: {
     // Core
-    text:             grayDark[900],
-    textSecondary:    grayDark[500],
-    textTertiary:     grayDark[400],
-    background:       '#0a0a0f',
+    text:             '#F0F2F8',
+    textSecondary:    '#8899B8',
+    textTertiary:     '#5B6B8A',
+    background:       '#0A0E17',
     surface:          surface.dark,
     surfaceSecondary:  surface.darkSecondary,
     surfaceTertiary:  surface.darkTertiary,
 
     // Brand
     primary:          primaryDark,
-    primaryPressed:   '#14b8a6',
-    primaryMuted:     '#134e4a',
+    primaryPressed:   '#7AA5F5',
+    primaryMuted:     '#1A2740',
+
+    // Accent
+    accent:           accentDark,
+    accentPressed:    '#FFAD94',
 
     // Semantic
     success:          success.dark,
@@ -339,9 +367,9 @@ export const Colors = {
     infoBg:           info.bgDark,
 
     // Neutral
-    border:           grayDark[200],
+    border:           '#3A4055',
     divider:          divider.dark,
-    placeholder:      grayDark[400],
+    placeholder:      '#5B6B8A',
 
     // Tab Bar
     tabBarBackground: tabBar.dark.background,
@@ -366,7 +394,7 @@ export const Colors = {
     overlay:          overlay.dark,
 
     // Card shadow
-    cardShadow:       'rgba(0, 0, 0, 0.4)',
+    cardShadow:       'rgba(27, 42, 74, 0.35)',
   },
 };
 
@@ -377,6 +405,8 @@ export {
   primary,
   primaryLight,
   primaryDark,
+  accentLight,
+  accentDark,
   success,
   warning,
   error,
@@ -397,7 +427,7 @@ export {
 // Usage: getBadgeColors('success', 'light') or getBadgeColors('success', 'dark')
 // -----------------------------------------------------------------------------
 export function getBadgeColors(
-  status: 'success' | 'warning' | 'error' | 'info' | 'neutral' | 'primary',
+  status: 'success' | 'warning' | 'error' | 'info' | 'neutral' | 'primary' | 'accent',
   theme: 'light' | 'dark'
 ) {
   return badge[theme][status];
@@ -408,7 +438,7 @@ export function getBadgeColors(
 // Usage: getButtonColors('primary', 'light') or getButtonColors('primary', 'dark')
 // -----------------------------------------------------------------------------
 export function getButtonColors(
-  variant: 'primary' | 'secondary' | 'outline' | 'ghost' | 'danger',
+  variant: 'primary' | 'secondary' | 'outline' | 'ghost' | 'danger' | 'accent',
   theme: 'light' | 'dark'
 ) {
   return button[theme][variant];

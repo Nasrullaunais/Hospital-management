@@ -1,11 +1,7 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState } from 'react';
 import {
   View,
   Text,
-  TextInput,
-  TouchableOpacity,
-  ActivityIndicator,
-  StyleSheet,
   ScrollView,
   Alert,
   KeyboardAvoidingView,
@@ -13,46 +9,19 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
-import Colors from '@/constants/Colors';
+import { Colors } from '@/constants/Colors';
 import { useColorScheme } from '@/components/useColorScheme';
+import { spacing, radius, shadows } from '@/constants/ThemeTokens';
+import { Input } from '@/components/ui/Input';
+import { Button } from '@/components/ui/Button';
 import { departmentService } from '@/features/departments/services/department.service';
 import { doctorService } from '@/features/doctors/services/doctor.service';
 import { ApiError } from '@/shared/types';
 
-const makeStyles = (colorScheme: 'light' | 'dark') => StyleSheet.create({
-  container: { flex: 1, backgroundColor: Colors[colorScheme].background },
-  content: { padding: 20, paddingBottom: 40 },
-  title: { fontSize: 24, fontWeight: '700', color: Colors[colorScheme].text, marginBottom: 4 },
-  subtitle: { fontSize: 14, color: Colors[colorScheme].textSecondary, marginBottom: 24 },
-  label: { fontSize: 13, fontWeight: '600', color: Colors[colorScheme].textSecondary, marginBottom: 6, marginTop: 12 },
-  input: {
-    backgroundColor: Colors[colorScheme].surface,
-    borderWidth: 1,
-    borderColor: Colors[colorScheme].border,
-    borderRadius: 8,
-    paddingHorizontal: 14,
-    paddingVertical: 12,
-    fontSize: 15,
-  },
-  textArea: {
-    minHeight: 100,
-    paddingTop: 12,
-  },
-  submitButton: {
-    backgroundColor: Colors[colorScheme].primary,
-    borderRadius: 10,
-    paddingVertical: 16,
-    alignItems: 'center',
-    marginTop: 28,
-  },
-  submitButtonDisabled: { opacity: 0.6 },
-  submitButtonText: { color: '#fff', fontSize: 16, fontWeight: '600' },
-});
-
 export default function AddDepartmentScreen() {
   const router = useRouter();
   const colorScheme = useColorScheme() ?? 'light';
-  const styles = useMemo(() => makeStyles(colorScheme), [colorScheme]);
+  const colors = Colors[colorScheme];
 
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
@@ -115,75 +84,95 @@ export default function AddDepartmentScreen() {
   };
 
   return (
-    <SafeAreaView edges={['bottom']} style={{ flex: 1 }}>
+    <SafeAreaView edges={['bottom']} style={{ flex: 1, backgroundColor: colors.background }}>
       <KeyboardAvoidingView
         style={{ flex: 1 }}
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       >
-        <ScrollView style={styles.container} contentContainerStyle={styles.content}>
-        <Text style={styles.title}>Add New Department</Text>
-        <Text style={styles.subtitle}>
-          Create a new hospital department.
-        </Text>
+        <ScrollView contentContainerStyle={{ padding: spacing.md }}>
+          <Text style={{ fontSize: 24, fontWeight: '700', color: colors.text, marginBottom: 4 }}>
+            Add New Department
+          </Text>
+          <Text style={{ fontSize: 14, color: colors.textSecondary, marginBottom: spacing.lg }}>
+            Create a new hospital department.
+          </Text>
 
-        <Text style={styles.label}>Department Name</Text>
-        <TextInput
-          style={styles.input}
-          placeholder="e.g. Cardiology, Neurology"
-          value={name}
-          onChangeText={setName}
-          autoCapitalize="words"
-        />
+          {/* Department Details Section */}
+          <View
+            style={{
+              backgroundColor: colors.surface,
+              borderRadius: radius.lg,
+              padding: spacing.lg,
+              marginBottom: spacing.md,
+              ...shadows.card,
+            }}
+          >
+            <Text
+              style={{
+                fontSize: 14,
+                fontWeight: '600',
+                color: colors.textSecondary,
+                textTransform: 'uppercase',
+                letterSpacing: 1,
+                marginBottom: spacing.md,
+              }}
+            >
+              DEPARTMENT DETAILS
+            </Text>
 
-        <Text style={styles.label}>Location</Text>
-        <TextInput
-          style={styles.input}
-          placeholder="e.g. Building A, Floor 3"
-          value={location}
-          onChangeText={setLocation}
-        />
+            <Input
+              label="Department Name"
+              placeholder="e.g. Cardiology, Neurology"
+              value={name}
+              onChangeText={setName}
+              autoCapitalize="words"
+            />
 
-        <Text style={styles.label}>Phone Number</Text>
-        <TextInput
-          style={styles.input}
-          placeholder="e.g. +1 234 567 8900"
-          value={phone}
-          onChangeText={setPhone}
-          keyboardType="phone-pad"
-        />
+            <Input
+              label="Location"
+              placeholder="e.g. Building A, Floor 3"
+              value={location}
+              onChangeText={setLocation}
+            />
 
-        <Text style={styles.label}>Description</Text>
-        <TextInput
-          style={[styles.input, styles.textArea]}
-          placeholder="Brief description of the department"
-          value={description}
-          onChangeText={setDescription}
-          multiline
-          numberOfLines={4}
-          textAlignVertical="top"
-        />
+            <Input
+              label="Phone Number"
+              placeholder="e.g. +1 234 567 8900"
+              value={phone}
+              onChangeText={setPhone}
+              keyboardType="phone-pad"
+            />
 
-        <Text style={styles.label}>Head Doctor ID (Optional)</Text>
-        <TextInput
-          style={styles.input}
-          placeholder="MongoDB _id of the head doctor"
-          value={headDoctorId}
-          onChangeText={setHeadDoctorId}
-          autoCapitalize="none"
-          autoCorrect={false}
-        />
+            <Input
+              label="Description"
+              placeholder="Brief description of the department"
+              value={description}
+              onChangeText={setDescription}
+              multiline
+              numberOfLines={4}
+              textAlignVertical="top"
+              containerStyle={{ minHeight: 100 }}
+            />
 
-        <TouchableOpacity
-          style={[styles.submitButton, submitting && styles.submitButtonDisabled]}
-          onPress={handleSubmit}
-          disabled={submitting}
-        >
-          {submitting ? (
-            <ActivityIndicator color="#fff" />
-          ) : (
-            <Text style={styles.submitButtonText}>Create Department</Text>
-          )}
-        </TouchableOpacity>
+            <Input
+              label="Head Doctor ID (Optional)"
+              placeholder="MongoDB _id of the head doctor"
+              value={headDoctorId}
+              onChangeText={setHeadDoctorId}
+              autoCapitalize="none"
+              autoCorrect={false}
+            />
+          </View>
+
+          <Button
+            title="Create Department"
+            variant="accent"
+            size="lg"
+            fullWidth
+            loading={submitting}
+            onPress={handleSubmit}
+            style={{ marginTop: spacing.lg }}
+          />
         </ScrollView>
       </KeyboardAvoidingView>
     </SafeAreaView>

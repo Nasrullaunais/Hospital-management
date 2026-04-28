@@ -1,6 +1,7 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import {
   ActivityIndicator,
+  Alert,
   Image,
   ScrollView,
   StyleSheet,
@@ -15,7 +16,8 @@ import { medicineService } from '@/features/pharmacy/services/medicine.service';
 import type { Medicine } from '@/shared/types';
 import Colors from '@/constants/Colors';
 import { useColorScheme } from '@/components/useColorScheme';
-import { spacing, radius, shadows } from '@/constants/ThemeTokens';
+import { Badge } from '@/components/ui';
+import { spacing, radius, shadows, typography } from '@/constants/ThemeTokens';
 import { LOW_STOCK_THRESHOLD, EXPIRY_WARNING_DAYS } from '@/shared/constants/pharmacy';
 import { getImageUrl } from '@/shared/utils/getImageUrl';
 
@@ -37,12 +39,30 @@ export default function MedicineDetailScreen() {
       .finally(() => setLoading(false));
   }, [id]);
 
-  const isExpiringSoon = (dateStr: string) => {
+  const isExpiringSoon = useCallback((dateStr: string) => {
     const daysUntil = (new Date(dateStr).getTime() - Date.now()) / (1000 * 60 * 60 * 24);
     return daysUntil <= EXPIRY_WARNING_DAYS;
-  };
+  }, []);
 
-  const isLowStock = (qty: number) => qty < LOW_STOCK_THRESHOLD;
+  const isLowStock = useCallback((qty: number) => qty < LOW_STOCK_THRESHOLD, []);
+
+  const handleDelete = useCallback(() => {
+    if (!medicine) return;
+    Alert.alert(
+      'Delete Medicine',
+      `Are you sure you want to delete ${medicine.name}? This action cannot be undone.`,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Delete',
+          style: 'destructive',
+          onPress: () => {
+            router.back();
+          },
+        },
+      ],
+    );
+  }, [medicine, router]);
 
   if (loading) {
     return (
@@ -77,7 +97,6 @@ export default function MedicineDetailScreen() {
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: theme.background }]} edges={['bottom']}>
       <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
-        {/* Image */}
         <View style={[styles.imageContainer, { backgroundColor: theme.surfaceTertiary }]}>
           {medicine.packagingImageUrl ? (
             <Image
@@ -93,27 +112,17 @@ export default function MedicineDetailScreen() {
           )}
         </View>
 
-        {/* Status Badges */}
         <View style={styles.badgeRow}>
-          {lowStock && (
-            <View style={[styles.badge, { backgroundColor: theme.errorBg, borderColor: theme.error }]}>
-              <Text style={[styles.badgeText, { color: theme.error }]}>Low Stock</Text>
-            </View>
-          )}
-          {expiringSoon && (
-            <View style={[styles.badge, { backgroundColor: theme.warningBg, borderColor: theme.warning }]}>
-              <Text style={[styles.badgeText, { color: theme.warning }]}>Expiring Soon</Text>
-            </View>
-          )}
-          {!lowStock && !expiringSoon && (
-            <View style={[styles.badge, { backgroundColor: theme.successBg, borderColor: theme.success }]}>
-              <Text style={[styles.badgeText, { color: theme.success }]}>In Stock</Text>
-            </View>
+          {lowStock ? (
+            <Badge label="Low Stock" variant="error" size="md" />
+          ) : expiringSoon ? (
+            <Badge label="Expiring Soon" variant="warning" size="md" />
+          ) : (
+            <Badge label="In Stock" variant="success" size="md" />
           )}
         </View>
 
-        {/* Details Card */}
-        <View style={[styles.card, { backgroundColor: theme.surface, borderColor: theme.border }]}>
+        <View style={[styles.card, { backgroundColor: theme.surface, ...shadows.card }]}>
           <Text style={[styles.name, { color: theme.text }]}>{medicine.name}</Text>
           <Text style={[styles.category, { color: theme.textSecondary }]}>{medicine.category}</Text>
 
@@ -121,11 +130,11 @@ export default function MedicineDetailScreen() {
 
           <View style={styles.infoRow}>
             <View style={styles.infoItem}>
-              <Text style={[styles.infoLabel, { color: theme.textSecondary }]}>Price</Text>
+              <Text style={[styles.infoLabel, { color: theme.textSecondary }]}>PRICE</Text>
               <Text style={[styles.infoValue, { color: theme.success }]}>${medicine.price.toFixed(2)}</Text>
             </View>
             <View style={styles.infoItem}>
-              <Text style={[styles.infoLabel, { color: theme.textSecondary }]}>Stock</Text>
+              <Text style={[styles.infoLabel, { color: theme.textSecondary }]}>STOCK</Text>
               <Text style={[styles.infoValue, { color: lowStock ? theme.error : theme.text }]}>
                 {medicine.stockQuantity} units
               </Text>
@@ -136,13 +145,13 @@ export default function MedicineDetailScreen() {
 
           <View style={styles.infoRow}>
             <View style={styles.infoItem}>
-              <Text style={[styles.infoLabel, { color: theme.textSecondary }]}>Expiry Date</Text>
+              <Text style={[styles.infoLabel, { color: theme.textSecondary }]}>EXPIRY DATE</Text>
               <Text style={[styles.infoValue, { color: expiringSoon ? theme.warning : theme.text }]}>
                 {new Date(medicine.expiryDate).toLocaleDateString()}
               </Text>
             </View>
             <View style={styles.infoItem}>
-              <Text style={[styles.infoLabel, { color: theme.textSecondary }]}>Added</Text>
+              <Text style={[styles.infoLabel, { color: theme.textSecondary }]}>ADDED</Text>
               <Text style={[styles.infoValue, { color: theme.textSecondary }]}>
                 {medicine.createdAt ? new Date(medicine.createdAt).toLocaleDateString() : 'N/A'}
               </Text>
@@ -150,7 +159,6 @@ export default function MedicineDetailScreen() {
           </View>
         </View>
 
-        {/* Expiry Warning */}
         {expiringSoon && (
           <View style={[styles.warningCard, { backgroundColor: theme.warningBg, borderColor: theme.warning }]}>
             <Feather name="alert-triangle" size={20} color={theme.warning} />
@@ -160,7 +168,6 @@ export default function MedicineDetailScreen() {
           </View>
         )}
 
-        {/* Low Stock Warning */}
         {lowStock && (
           <View style={[styles.warningCard, { backgroundColor: theme.errorBg, borderColor: theme.error }]}>
             <Feather name="alert-circle" size={20} color={theme.error} />
@@ -169,6 +176,25 @@ export default function MedicineDetailScreen() {
             </Text>
           </View>
         )}
+
+        <View style={styles.actionRow}>
+          <TouchableOpacity
+            style={[styles.actionBtn, styles.editBtn, { backgroundColor: theme.primary }]}
+            onPress={() => router.push(`/(pharmacist)/pharmacy/add-medicine`)}
+            activeOpacity={0.7}
+          >
+            <Feather name="edit-2" size={18} color="#FFFFFF" />
+            <Text style={styles.actionBtnText}>Edit</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[styles.actionBtn, styles.deleteBtn, { backgroundColor: theme.error }]}
+            onPress={handleDelete}
+            activeOpacity={0.7}
+          >
+            <Feather name="trash-2" size={18} color="#FFFFFF" />
+            <Text style={styles.actionBtnText}>Delete</Text>
+          </TouchableOpacity>
+        </View>
       </ScrollView>
     </SafeAreaView>
   );
@@ -181,23 +207,21 @@ const styles = StyleSheet.create({
   imageContainer: {
     borderRadius: radius.lg,
     overflow: 'hidden',
-    height: 240,
+    height: 260,
     marginBottom: spacing.md,
   },
   image: { width: '100%', height: '100%' },
   imagePlaceholder: { flex: 1, justifyContent: 'center', alignItems: 'center' },
-  placeholderText: { marginTop: spacing.sm, fontSize: 14 },
+  placeholderText: { marginTop: spacing.sm, fontSize: typography.sm },
   badgeRow: { flexDirection: 'row', gap: spacing.sm, marginBottom: spacing.md },
-  badge: { paddingHorizontal: spacing.sm, paddingVertical: spacing.xs, borderRadius: radius.full, borderWidth: 1 },
-  badgeText: { fontSize: 12, fontWeight: '700' },
-  card: { padding: spacing.md, borderRadius: radius.lg, borderWidth: 1, ...shadows.card },
-  name: { fontSize: 24, fontWeight: '700', marginBottom: spacing.xs },
-  category: { fontSize: 14, marginBottom: spacing.md },
+  card: { padding: spacing.lg, borderRadius: radius.lg, ...shadows.card },
+  name: { fontSize: 22, fontWeight: '700', marginBottom: spacing.xs },
+  category: { fontSize: typography.sm, marginBottom: spacing.md },
   divider: { height: 1, backgroundColor: '#e5e5e5', marginVertical: spacing.md },
   infoRow: { flexDirection: 'row' },
   infoItem: { flex: 1 },
-  infoLabel: { fontSize: 12, marginBottom: spacing.xs },
-  infoValue: { fontSize: 16, fontWeight: '600' },
+  infoLabel: { fontSize: typography.xs, marginBottom: spacing.xs, textTransform: 'uppercase', letterSpacing: 0.5 },
+  infoValue: { fontSize: typography.md, fontWeight: '600' },
   warningCard: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -208,6 +232,23 @@ const styles = StyleSheet.create({
     marginTop: spacing.md,
   },
   warningText: { flex: 1, fontSize: 13, fontWeight: '500' },
+  actionRow: {
+    flexDirection: 'row',
+    gap: spacing.md,
+    marginTop: spacing.lg,
+  },
+  actionBtn: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    height: 48,
+    borderRadius: radius.md,
+    gap: spacing.sm,
+  },
+  editBtn: {},
+  deleteBtn: {},
+  actionBtnText: { color: '#FFFFFF', fontSize: 15, fontWeight: '600' },
   errorText: { marginTop: spacing.sm },
   retryButton: { marginTop: spacing.md, borderRadius: radius.md, paddingHorizontal: spacing.md, paddingVertical: spacing.sm },
   retryButtonText: { color: '#fff', fontWeight: '600' },

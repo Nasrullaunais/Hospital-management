@@ -9,18 +9,20 @@ import {
   RefreshControl,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { SymbolView } from 'expo-symbols';
+import { Feather } from '@expo/vector-icons';
+import { useRouter } from 'expo-router';
 import { invoiceService } from '@/features/billing/services/invoice.service';
 import { InvoiceCard } from '@/features/billing/components';
 import { useAuth } from '@/shared/context/AuthContext';
 import type { Invoice } from '@/shared/types';
-import Colors from '@/constants/Colors';
+import { Colors } from '@/constants/Colors';
 import { useColorScheme } from '@/components/useColorScheme';
-import { spacing } from '@/constants/ThemeTokens';
+import { spacing, radius, shadows } from '@/constants/ThemeTokens';
 import { TAB_BAR_HEIGHT } from '@/shared/constants/Config';
 
 export default function BillingScreen() {
   const { user } = useAuth();
+  const router = useRouter();
   const isAdmin = user?.role === 'admin';
   const colorScheme = useColorScheme() ?? 'light';
   const theme = Colors[colorScheme];
@@ -82,8 +84,12 @@ export default function BillingScreen() {
     return (
       <SafeAreaView edges={['top', 'bottom']} style={[styles.container, { backgroundColor: theme.background }]}>
         <View style={styles.center}>
+          <Feather name="alert-circle" size={48} color={theme.error} />
           <Text style={[styles.errorText, { color: theme.error }]}>{error}</Text>
-          <TouchableOpacity onPress={fetchInvoices}>
+          <TouchableOpacity
+            onPress={fetchInvoices}
+            style={[styles.retryButton, { borderColor: theme.primary }]}
+          >
             <Text style={[styles.retryText, { color: theme.primary }]}>Retry</Text>
           </TouchableOpacity>
         </View>
@@ -92,27 +98,32 @@ export default function BillingScreen() {
   }
 
   return (
-    <SafeAreaView edges={['top', 'bottom']} style={[styles.container, { backgroundColor: theme.background }]}>
-      {loading && invoices.length > 0 && (
-        <View style={styles.loadingOverlay}>
-          <ActivityIndicator size="large" color={theme.primary} />
-        </View>
-      )}
+    <SafeAreaView
+      edges={['top', 'bottom']}
+      style={[styles.container, { backgroundColor: theme.surfaceTertiary }]}
+    >
       <FlatList
         data={invoices}
         keyExtractor={(item) => item._id}
         renderItem={renderInvoice}
-        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
+        refreshControl={
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={theme.primary} />
+        }
         contentContainerStyle={invoices.length === 0 ? styles.emptyContainer : styles.listContainer}
         ListHeaderComponent={
-          <Text style={[styles.header, { color: theme.text }]}>{isAdmin ? 'All Invoices' : 'My Bills'}</Text>
+          <Text style={[styles.header, { color: theme.text }]}>
+            {isAdmin ? 'All Invoices' : 'My Bills'}
+          </Text>
         }
         ListEmptyComponent={
           <View style={styles.emptyContent}>
-            <SymbolView name={{ ios: 'doc.text.fill', android: 'receipt_long', web: 'receipt_long' }} tintColor={theme.textTertiary} size={48} />
-            <Text style={[styles.emptyText, { color: theme.textSecondary }]}>No invoices found.</Text>
+            <Feather name="file-text" size={48} color={theme.textTertiary} />
+            <Text style={[styles.emptyText, { color: theme.textSecondary }]}>
+              No invoices found.
+            </Text>
           </View>
         }
+        showsVerticalScrollIndicator={false}
       />
     </SafeAreaView>
   );
@@ -121,21 +132,17 @@ export default function BillingScreen() {
 const styles = StyleSheet.create({
   container: { flex: 1 },
   center: { flex: 1, justifyContent: 'center', alignItems: 'center' },
-  loadingOverlay: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    zIndex: 10,
-    backgroundColor: 'rgba(255, 255, 255, 0.7)',
-    alignItems: 'center',
-    padding: 8,
-  },
   listContainer: { padding: spacing.md, paddingBottom: TAB_BAR_HEIGHT + spacing.md },
-  emptyContainer: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: 24 },
-  header: { fontSize: 22, fontWeight: '700', marginBottom: 12, paddingHorizontal: 4 },
-  errorText: { fontSize: 15, marginBottom: 12 },
+  emptyContainer: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: spacing.xl },
+  header: { fontSize: 22, fontWeight: '700', marginBottom: spacing.md, paddingHorizontal: spacing.xs },
+  errorText: { fontSize: 15, marginBottom: spacing.sm },
+  retryButton: {
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.sm,
+    borderRadius: radius.md,
+    borderWidth: 1,
+  },
   retryText: { fontWeight: '600', fontSize: 15 },
-  emptyContent: { justifyContent: 'center', alignItems: 'center', gap: 8 },
+  emptyContent: { justifyContent: 'center', alignItems: 'center', gap: spacing.sm },
   emptyText: { fontSize: 16 },
 });

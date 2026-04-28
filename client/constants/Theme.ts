@@ -41,12 +41,13 @@ export const Spacing = {
 // -----------------------------------------------------------------------------
 export const borderRadius = {
   none:  0,
-  xs:    4,
+  xs:    6,
   sm:    8,
   md:    12,
   lg:    16,
   xl:    20,
   xxl:   24,
+  '2xl': 28,
   full:  9999,
 } as const;
 
@@ -54,11 +55,12 @@ export type BorderRadiusKey = keyof typeof borderRadius;
 
 // Common radius presets
 export const BorderRadius = {
-  sm:   borderRadius.xs,  // 4
-  md:   borderRadius.sm,  // 8
-  lg:   borderRadius.md,  // 12
-  xl:   borderRadius.lg,  // 16
-  pill: borderRadius.full, // 9999
+  sm:   borderRadius.sm,   // 8
+  md:   borderRadius.md,   // 12
+  lg:   borderRadius.lg,   // 16
+  xl:   borderRadius.xl,   // 20
+  xxl:  borderRadius['2xl'], // 28
+  pill: borderRadius.full,  // 9999
 } as const;
 
 // -----------------------------------------------------------------------------
@@ -127,35 +129,35 @@ export const shadows = {
     elevation: 0,
   },
   xs: {
-    shadowColor: '#000',
+    shadowColor: '#1B2A4A',
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.05,
     shadowRadius: 2,
     elevation: 1,
   },
   sm: {
-    shadowColor: '#000',
+    shadowColor: '#1B2A4A',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.08,
     shadowRadius: 4,
     elevation: 2,
   },
   md: {
-    shadowColor: '#000',
+    shadowColor: '#1B2A4A',
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.10,
     shadowRadius: 8,
     elevation: 4,
   },
   lg: {
-    shadowColor: '#000',
+    shadowColor: '#1B2A4A',
     shadowOffset: { width: 0, height: 8 },
     shadowOpacity: 0.12,
     shadowRadius: 16,
     elevation: 8,
   },
   xl: {
-    shadowColor: '#000',
+    shadowColor: '#1B2A4A',
     shadowOffset: { width: 0, height: 12 },
     shadowOpacity: 0.15,
     shadowRadius: 24,
@@ -164,6 +166,21 @@ export const shadows = {
 } as const;
 
 export type ShadowKey = keyof typeof shadows;
+
+// -----------------------------------------------------------------------------
+// Animation Presets
+// -----------------------------------------------------------------------------
+export const animations = {
+  springDefault: { type: 'spring' as const, damping: 20, stiffness: 200, mass: 0.5 },
+  springGentle: { type: 'spring' as const, damping: 25, stiffness: 170, mass: 0.4 },
+  springBouncy: { type: 'spring' as const, damping: 12, stiffness: 200, mass: 0.6 },
+  timingFast: { type: 'timing' as const, duration: 200 },
+  timingNormal: { type: 'timing' as const, duration: 300 },
+  timingSlow: { type: 'timing' as const, duration: 500 },
+  pressScale: { from: 0.97, to: 1 },
+  fadeIn: { from: 0, to: 1 },
+  slideUp: { from: 24, to: 0 },
+} as const;
 
 // -----------------------------------------------------------------------------
 // Common Typography Presets
@@ -290,6 +307,7 @@ export const Theme = {
   shadows,
   typography,
   zIndex,
+  animations,
 } as const;
 
 export default Theme;

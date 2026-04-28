@@ -16,9 +16,19 @@ import {
   type BedStatus,
   type PatientMedication,
 } from '@/features/wardReceptionist/services/wardReceptionist.service';
+import { Badge } from '@/components/ui';
 import Colors from '@/constants/Colors';
 import { useColorScheme } from '@/components/useColorScheme';
-import { spacing, radius } from '@/constants/ThemeTokens';
+import { spacing, radius, shadows } from '@/constants/ThemeTokens';
+
+function getInitials(name: string): string {
+  return name
+    .split(' ')
+    .map((part) => part.charAt(0))
+    .join('')
+    .toUpperCase()
+    .slice(0, 2);
+}
 
 export default function PatientDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -87,7 +97,7 @@ export default function PatientDetailScreen() {
           onPress: async () => {
             setUnassigning(true);
             try {
-              await wardReceptionistService.unassignPatient(bed.patientId!);
+              await wardReceptionistService.unassignPatient(bed.bedId);
               router.back();
             } catch (err) {
               console.error('[PatientDetail] unassign error:', err);
@@ -135,37 +145,47 @@ export default function PatientDetailScreen() {
     );
   }
 
+  const patientName = bed.patientName ?? 'Unknown Patient';
+  const initials = getInitials(patientName);
+  const patientIdDisplay = bed.patientId ?? id;
+
   return (
     <ErrorBoundary>
       <>
         <Stack.Screen
           options={{
-            title: bed.patientName ?? 'Patient Details',
+            title: patientName,
             headerShown: true,
           }}
         />
         <SafeAreaView edges={['bottom']} style={[styles.container, { backgroundColor: theme.background }]}>
           <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
-            {/* Patient Info Header */}
-            <View style={[styles.headerCard, { backgroundColor: theme.surface, borderColor: theme.primary }]}>
-              <View style={styles.headerRow}>
-                <View style={[styles.patientIcon, { backgroundColor: theme.primaryLight }]}>
-                  <Feather name="user" size={28} color={theme.primary} />
+            {/* Profile Header */}
+            <View style={[styles.headerCard, { backgroundColor: theme.surface }, shadows.card]}>
+              <View style={styles.profileRow}>
+                <View style={[styles.profileAvatar, { backgroundColor: theme.primaryMuted }]}>
+                  <Text style={[styles.profileInitials, { color: theme.primary }]}>{initials}</Text>
                 </View>
-                <View style={styles.headerInfo}>
-                  <Text style={[styles.patientName, { color: theme.text }]}>
-                    {bed.patientName ?? 'Unknown Patient'}
+                <View style={styles.profileInfo}>
+                  <Text style={[styles.profileName, { color: theme.text }]}>
+                    {patientName}
                   </Text>
-                  <Text style={[styles.wardInfo, { color: theme.textSecondary }]}>
-                    {bed.wardName} • Bed #{bed.bedNumber}
+                  <Text style={[styles.profileId, { color: theme.textSecondary }]}>
+                    ID: {patientIdDisplay}
                   </Text>
+                  <View style={styles.profileMeta}>
+                    <Feather name="map-pin" size={12} color={theme.textTertiary} />
+                    <Text style={[styles.profileMetaText, { color: theme.textSecondary }]}>
+                      {bed.wardName} • Bed #{bed.bedNumber}
+                    </Text>
+                  </View>
                 </View>
               </View>
             </View>
 
             {/* Assignment Details */}
-            <View style={[styles.section, { backgroundColor: theme.surface, borderColor: theme.border }]}>
-              <Text style={[styles.sectionTitle, { color: theme.text }]}>Assignment Details</Text>
+            <View style={[styles.section, { backgroundColor: theme.surface, borderColor: theme.border }, shadows.card]}>
+              <Text style={[styles.sectionTitle, { color: theme.text }]}>Admission Details</Text>
 
               <View style={styles.infoRow}>
                 <Feather name="calendar" size={18} color={theme.textSecondary} />
@@ -199,7 +219,7 @@ export default function PatientDetailScreen() {
             </View>
 
             {/* Medications Section */}
-            <View style={[styles.section, { backgroundColor: theme.surface, borderColor: theme.border }]}>
+            <View style={[styles.section, { backgroundColor: theme.surface, borderColor: theme.border }, shadows.card]}>
               <Text style={[styles.sectionTitle, { color: theme.text }]}>Current Medications</Text>
 
               {medicationsLoading ? (
@@ -228,11 +248,7 @@ export default function PatientDetailScreen() {
                         <Text style={[styles.medicationName, { color: theme.text }]}>
                           {med.medicationName}
                         </Text>
-                        <View style={[styles.medStatusBadge, { backgroundColor: theme.successLight }]}>
-                          <Text style={[styles.medStatusText, { color: theme.success }]}>
-                            {med.status}
-                          </Text>
-                        </View>
+                        <Badge label={med.status} variant="success" size="sm" />
                       </View>
                       <View style={styles.medicationDetails}>
                         <View style={styles.medDetailItem}>
@@ -261,7 +277,7 @@ export default function PatientDetailScreen() {
             {/* Unassign Action */}
             <View style={styles.actions}>
               <TouchableOpacity
-                style={[styles.actionButton, styles.unassignButton, { backgroundColor: theme.error }]}
+                style={[styles.actionButton, { backgroundColor: theme.error }]}
                 activeOpacity={0.8}
                 onPress={handleUnassign}
                 disabled={unassigning}
@@ -289,25 +305,46 @@ const styles = StyleSheet.create({
   content: { padding: spacing.md },
   headerCard: {
     borderRadius: radius.lg,
-    borderWidth: 2,
     padding: spacing.lg,
     marginBottom: spacing.md,
+    borderWidth: 1,
+    borderColor: 'transparent',
   },
-  headerRow: {
+  profileRow: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.md,
   },
-  patientIcon: {
-    width: 56,
-    height: 56,
-    borderRadius: radius.lg,
+  profileAvatar: {
+    width: 72,
+    height: 72,
+    borderRadius: radius.full,
     justifyContent: 'center',
     alignItems: 'center',
   },
-  headerInfo: { flex: 1 },
-  patientName: { fontSize: 20, fontWeight: '700' },
-  wardInfo: { fontSize: 14, marginTop: 2 },
+  profileInitials: {
+    fontSize: 24,
+    fontWeight: '700',
+  },
+  profileInfo: {
+    flex: 1,
+    gap: spacing.xs,
+  },
+  profileName: {
+    fontSize: 20,
+    fontWeight: '700',
+  },
+  profileId: {
+    fontSize: 13,
+  },
+  profileMeta: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
+  },
+  profileMetaText: {
+    fontSize: 13,
+  },
   section: {
     borderRadius: radius.lg,
     borderWidth: 1,
@@ -354,12 +391,6 @@ const styles = StyleSheet.create({
     marginBottom: spacing.sm,
   },
   medicationName: { fontSize: 15, fontWeight: '600' },
-  medStatusBadge: {
-    borderRadius: radius.sm,
-    paddingHorizontal: spacing.sm,
-    paddingVertical: spacing.xs / 2,
-  },
-  medStatusText: { fontSize: 11, fontWeight: '600', textTransform: 'capitalize' },
   medicationDetails: {
     flexDirection: 'row',
     gap: spacing.lg,
@@ -381,7 +412,6 @@ const styles = StyleSheet.create({
     borderRadius: radius.md,
     paddingVertical: spacing.md,
   },
-  unassignButton: { backgroundColor: '#dc2626' },
   actionButtonText: { color: '#fff', fontSize: 15, fontWeight: '600' },
   errorText: { fontSize: 15, marginTop: spacing.md },
   retryText: { fontWeight: '600', fontSize: 15, marginTop: spacing.sm },

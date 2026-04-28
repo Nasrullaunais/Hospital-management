@@ -9,7 +9,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Feather } from '@expo/vector-icons';
-import { Card, EmptyState, ErrorState } from '@/components/ui';
+import { Card, Badge, EmptyState, ErrorState } from '@/components/ui';
 import {
   wardReceptionistService,
   type PatientMedication,
@@ -44,7 +44,6 @@ export default function MedicationsListScreen() {
         (bed) => bed.status === 'occupied' && bed.patientId,
       );
 
-      // Fetch medications for each patient in parallel
       const patientIds = occupiedBeds
         .map((bed) => bed.patientId)
         .filter((id): id is string => !!id);
@@ -55,7 +54,6 @@ export default function MedicationsListScreen() {
         ),
       );
 
-      // Flatten and join with patient info
       const allMedications: MedicationWithPatient[] = [];
 
       occupiedBeds.forEach((bed, index) => {
@@ -71,7 +69,6 @@ export default function MedicationsListScreen() {
         });
       });
 
-      // Sort by patient name, then medication name
       allMedications.sort((a, b) => {
         const patientCompare = a.patientName.localeCompare(b.patientName);
         if (patientCompare !== 0) return patientCompare;
@@ -95,94 +92,76 @@ export default function MedicationsListScreen() {
     setRefreshing(false);
   }, [fetchData]);
 
-  const renderMedicationCard = ({ item }: { item: MedicationWithPatient }) => (
-    <Card style={[styles.medicationCard, { borderColor: theme.border }]} testID={`medication-card-${item._id}`}>
-      <View style={styles.cardHeader}>
-        <View style={styles.patientInfo}>
-          <Text style={[styles.patientName, { color: theme.text }]}>
-            {item.patientName}
-          </Text>
-          <Text style={[styles.bedInfo, { color: theme.textSecondary }]}>
-            {item.wardName} • Bed {item.bedNumber}
-          </Text>
-        </View>
-        <View
-          style={[
-            styles.statusBadge,
-            {
-              backgroundColor:
-                item.status === 'active' ? theme.successBg : theme.surfaceTertiary,
-            },
-          ]}
-        >
-          <Text
-            style={[
-              styles.statusText,
-              { color: item.status === 'active' ? theme.success : theme.textSecondary },
-            ]}
-          >
-            {item.status}
-          </Text>
-        </View>
-      </View>
+  const getMedStatusVariant = useCallback((status: string): 'success' | 'warning' | 'neutral' => {
+    switch (status) {
+      case 'active':
+        return 'success';
+      case 'pending':
+        return 'warning';
+      case 'discontinued':
+        return 'neutral';
+      default:
+        return 'neutral';
+    }
+  }, []);
 
-      <View style={[styles.divider, { backgroundColor: theme.divider }]} />
+  const renderMedicationCard = ({ item }: { item: MedicationWithPatient }) => {
+    const statusVariant = getMedStatusVariant(item.status);
 
-      <View style={styles.medicationDetails}>
-        <View style={styles.medicationRow}>
-          <Feather name="circle" size={12} color={theme.primary} style={styles.bulletIcon} />
-          <Text style={[styles.medicationLabel, { color: theme.textSecondary }]}>
-            Medication:
-          </Text>
-          <Text style={[styles.medicationValue, { color: theme.text }]}>
-            {item.medicationName}
-          </Text>
-        </View>
-
-        <View style={styles.medicationRow}>
-          <Feather name="circle" size={12} color={theme.primary} style={styles.bulletIcon} />
-          <Text style={[styles.medicationLabel, { color: theme.textSecondary }]}>
-            Dosage:
-          </Text>
-          <Text style={[styles.medicationValue, { color: theme.text }]}>
-            {item.dosage}
-          </Text>
-        </View>
-
-        <View style={styles.medicationRow}>
-          <Feather name="circle" size={12} color={theme.primary} style={styles.bulletIcon} />
-          <Text style={[styles.medicationLabel, { color: theme.textSecondary }]}>
-            Frequency:
-          </Text>
-          <Text style={[styles.medicationValue, { color: theme.text }]}>
-            {item.frequency}
-          </Text>
-        </View>
-
-        <View style={styles.medicationRow}>
-          <Feather name="circle" size={12} color={theme.primary} style={styles.bulletIcon} />
-          <Text style={[styles.medicationLabel, { color: theme.textSecondary }]}>
-            Route:
-          </Text>
-          <Text style={[styles.medicationValue, { color: theme.text }]}>
-            {item.route}
-          </Text>
-        </View>
-
-        {item.notes && (
-          <View style={styles.medicationRow}>
-            <Feather name="circle" size={12} color={theme.textTertiary} style={styles.bulletIcon} />
-            <Text style={[styles.medicationLabel, { color: theme.textSecondary }]}>
-              Notes:
+    return (
+      <Card style={styles.medicationCard} testID={`medication-card-${item._id}`}>
+        <View style={styles.cardHeader}>
+          <View style={styles.patientInfo}>
+            <Text style={[styles.patientName, { color: theme.text }]}>
+              {item.patientName}
             </Text>
-            <Text style={[styles.medicationValue, { color: theme.textSecondary }]}>
-              {item.notes}
+            <Text style={[styles.bedInfo, { color: theme.textSecondary }]}>
+              {item.wardName} • Bed {item.bedNumber}
             </Text>
           </View>
-        )}
-      </View>
-    </Card>
-  );
+          <Badge
+            label={item.status}
+            variant={statusVariant}
+            size="sm"
+          />
+        </View>
+
+        <View style={[styles.divider, { backgroundColor: theme.divider }]} />
+
+        <View style={styles.medicationDetails}>
+          <Text style={[styles.medicationName, { color: theme.text }]}>
+            {item.medicationName}
+          </Text>
+
+          <View style={styles.medicationMeta}>
+            <View style={styles.metaItem}>
+              <Feather name="droplet" size={13} color={theme.textTertiary} />
+              <Text style={[styles.metaLabel, { color: theme.textSecondary }]}>Dosage</Text>
+              <Text style={[styles.metaValue, { color: theme.text }]}>{item.dosage}</Text>
+            </View>
+
+            <View style={styles.metaItem}>
+              <Feather name="clock" size={13} color={theme.textTertiary} />
+              <Text style={[styles.metaLabel, { color: theme.textSecondary }]}>Frequency</Text>
+              <Text style={[styles.metaValue, { color: theme.text }]}>{item.frequency}</Text>
+            </View>
+
+            <View style={styles.metaItem}>
+              <Feather name="navigation" size={13} color={theme.textTertiary} />
+              <Text style={[styles.metaLabel, { color: theme.textSecondary }]}>Route</Text>
+              <Text style={[styles.metaValue, { color: theme.text }]}>{item.route}</Text>
+            </View>
+          </View>
+
+          {item.notes && (
+            <Text style={[styles.notes, { color: theme.textSecondary }]}>
+              {item.notes}
+            </Text>
+          )}
+        </View>
+      </Card>
+    );
+  };
 
   if (loading) {
     return (
@@ -260,7 +239,6 @@ const styles = StyleSheet.create({
   },
   medicationCard: {
     borderRadius: radius.lg,
-    borderWidth: 1,
     padding: spacing.lg,
     ...shadows.card,
   },
@@ -272,25 +250,30 @@ const styles = StyleSheet.create({
   patientInfo: { flex: 1 },
   patientName: { fontSize: 16, fontWeight: '600' },
   bedInfo: { fontSize: 13, marginTop: 2 },
-  statusBadge: {
-    paddingHorizontal: spacing.sm,
-    paddingVertical: spacing.xs,
-    borderRadius: radius.full,
-    marginLeft: spacing.sm,
-  },
-  statusText: { fontSize: 11, fontWeight: '600', textTransform: 'capitalize' },
   divider: { height: 1, marginVertical: spacing.md },
   medicationDetails: { gap: spacing.sm },
-  medicationRow: {
+  medicationName: {
+    fontSize: 16,
+    fontWeight: '600',
+    marginBottom: spacing.xs,
+  },
+  medicationMeta: {
     flexDirection: 'row',
-    alignItems: 'flex-start',
+    flexWrap: 'wrap',
+    gap: spacing.md,
   },
-  bulletIcon: {
-    marginRight: spacing.sm,
-    marginTop: 3,
+  metaItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
   },
-  medicationLabel: { fontSize: 13, minWidth: 75 },
-  medicationValue: { fontSize: 13, flex: 1, fontWeight: '500' },
+  metaLabel: { fontSize: 13 },
+  metaValue: { fontSize: 13, fontWeight: '500' },
+  notes: {
+    fontSize: 13,
+    fontStyle: 'italic',
+    marginTop: spacing.xs,
+  },
   emptyContainer: {
     flex: 1,
     justifyContent: 'center',

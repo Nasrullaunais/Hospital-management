@@ -12,7 +12,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Feather } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { wardReceptionistService, type BedStatus } from '@/features/wardReceptionist/services/wardReceptionist.service';
-import { EmptyState, ErrorState } from '@/components/ui';
+import { Badge, EmptyState, ErrorState } from '@/components/ui';
 import Colors from '@/constants/Colors';
 import { useColorScheme } from '@/components/useColorScheme';
 import { spacing, radius, shadows, typography } from '@/constants/ThemeTokens';
@@ -47,51 +47,57 @@ export default function BedListScreen() {
     setRefreshing(false);
   }, [fetchBedStatuses]);
 
-  const getStatusStyle = useCallback((status: BedStatus['status']) => {
+  const getStatusBadgeVariant = useCallback((status: BedStatus['status']): 'success' | 'error' | 'warning' | 'info' | 'neutral' => {
+    switch (status) {
+      case 'vacant':
+        return 'success';
+      case 'occupied':
+        return 'error';
+      case 'maintenance':
+        return 'warning';
+      case 'reserved':
+        return 'neutral';
+      default:
+        return 'neutral';
+    }
+  }, []);
+
+  const getStatusLabel = useCallback((status: BedStatus['status']) => {
     switch (status) {
       case 'occupied':
-        return {
-          bg: theme.infoBg,
-          border: theme.info,
-          text: theme.info,
-          label: 'Occupied',
-        };
+        return 'Occupied';
       case 'vacant':
-        return {
-          bg: theme.successBg,
-          border: theme.success,
-          text: theme.success,
-          label: 'Available',
-        };
+        return 'Available';
       case 'maintenance':
-        return {
-          bg: theme.warningBg,
-          border: theme.warning,
-          text: theme.warning,
-          label: 'Maintenance',
-        };
+        return 'Maintenance';
       case 'reserved':
-        return {
-          bg: theme.surfaceTertiary,
-          border: theme.border,
-          text: theme.textSecondary,
-          label: 'Reserved',
-        };
+        return 'Reserved';
       default:
-        return {
-          bg: theme.surfaceTertiary,
-          border: theme.border,
-          text: theme.textSecondary,
-          label: status,
-        };
+        return status;
+    }
+  }, []);
+
+  const getStatusBorderColor = useCallback((status: BedStatus['status']) => {
+    switch (status) {
+      case 'occupied':
+        return theme.error;
+      case 'vacant':
+        return theme.success;
+      case 'maintenance':
+        return theme.warning;
+      case 'reserved':
+        return theme.border;
+      default:
+        return theme.border;
     }
   }, [theme]);
 
   const renderBed = useCallback(({ item }: { item: BedStatus }) => {
-    const statusStyle = getStatusStyle(item.status);
+    const badgeVariant = getStatusBadgeVariant(item.status);
+    const borderColor = getStatusBorderColor(item.status);
     const patientDisplay = item.patientName
       ? item.patientName.length > 20
-        ? item.patientName.slice(0, 20) + '…'
+        ? item.patientName.slice(0, 20) + '\u2026'
         : item.patientName
       : null;
 
@@ -101,7 +107,7 @@ export default function BedListScreen() {
           styles.bedCard,
           {
             backgroundColor: theme.surface,
-            borderColor: statusStyle.border,
+            borderColor: borderColor,
           },
         ]}
         onPress={() => router.push({
@@ -115,9 +121,11 @@ export default function BedListScreen() {
           <View style={[styles.bedNumberBadge, { backgroundColor: theme.surfaceTertiary }]}>
             <Text style={[styles.bedNumberText, { color: theme.text }]}>#{item.bedNumber}</Text>
           </View>
-          <View style={[styles.statusBadge, { backgroundColor: statusStyle.bg, borderColor: statusStyle.border }]}>
-            <Text style={[styles.statusText, { color: statusStyle.text }]}>{statusStyle.label}</Text>
-          </View>
+          <Badge
+            label={getStatusLabel(item.status)}
+            variant={badgeVariant}
+            size="sm"
+          />
         </View>
 
         <View style={styles.bedInfo}>
@@ -136,9 +144,9 @@ export default function BedListScreen() {
         </View>
       </TouchableOpacity>
     );
-  }, [theme, router, getStatusStyle]);
+  }, [theme, router, getStatusBadgeVariant, getStatusLabel, getStatusBorderColor]);
 
-  const keyExtractor = useCallback((item: BedStatus) => item._id, []);
+  const keyExtractor = useCallback((item: BedStatus) => `${item._id}-${item.bedNumber}`, []);
 
   const ListEmptyComponent = (
     <EmptyState
@@ -213,16 +221,6 @@ const styles = StyleSheet.create({
   bedNumberText: {
     fontSize: 13,
     fontWeight: '700',
-  },
-  statusBadge: {
-    borderRadius: radius.md,
-    paddingHorizontal: spacing.sm,
-    paddingVertical: spacing.xs,
-    borderWidth: 1,
-  },
-  statusText: {
-    fontSize: 11,
-    fontWeight: '600',
   },
   bedInfo: { gap: spacing.xs },
   wardName: {

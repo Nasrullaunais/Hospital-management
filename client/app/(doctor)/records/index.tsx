@@ -12,15 +12,33 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { SymbolView } from 'expo-symbols';
+import { Feather } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import Colors from '@/constants/Colors';
 import { useColorScheme } from '@/components/useColorScheme';
 import { recordService } from '@/features/records/services/record.service';
 import { useAuth } from '@/shared/context/AuthContext';
 import { Config } from '@/shared/constants/Config';
+import { spacing, radius, shadows } from '@/constants/ThemeTokens';
+import { Badge } from '@/components/ui';
 import type { PopulatedMedicalRecord } from '@/shared/types';
 
 const TAB_BAR_HEIGHT = 70;
+
+function getInitials(name: string): string {
+  return name
+    .split(' ')
+    .map((n) => n[0])
+    .slice(0, 2)
+    .join('')
+    .toUpperCase();
+}
+
+function getRecordTypeBadge(record: PopulatedMedicalRecord): { label: string; variant: 'info' | 'success' | 'accent' } {
+  if (record.labReportUrl) return { label: 'Lab', variant: 'info' };
+  if (record.prescription) return { label: 'Rx', variant: 'success' };
+  return { label: 'Visit', variant: 'accent' };
+}
 
 export default function RecordsScreen() {
   const { user } = useAuth();
@@ -77,56 +95,47 @@ export default function RecordsScreen() {
       month: 'long',
       day: 'numeric',
     });
+    const recordBadge = getRecordTypeBadge(item);
+    const patientName = isPatientView
+      ? `Dr. ${item.doctorId.userId.name}`
+      : item.patientId.name;
+    const patientInitials = getInitials(patientName);
 
     return (
       <TouchableOpacity
         activeOpacity={0.7}
         onPress={() => router.push(`/(doctor)/records/${item._id}`)}
       >
-        <View style={[styles.card, { backgroundColor: colors.surface }]}>
-          <View style={styles.cardHeader}>
-            <View style={styles.dateRow}>
-              <SymbolView name={{ ios: 'calendar', android: 'event', web: 'event' }} tintColor={colors.textSecondary} size={13} />
-              <Text style={[styles.dateText, { color: colors.textSecondary }]}>{displayDate}</Text>
+        <View style={[styles.card, { backgroundColor: colors.surface, shadowColor: '#1B2A4A' }]}>
+          <View style={styles.cardTop}>
+            <View style={[styles.avatarCircle, { backgroundColor: colors.primaryMuted }]}>
+              <Text style={[styles.avatarText, { color: colors.primary }]}>{patientInitials}</Text>
             </View>
+            <View style={styles.cardInfo}>
+              <Text style={[styles.patientName, { color: colors.text }]} numberOfLines={1}>
+                {isPatientView ? patientName : item.patientId.name}
+              </Text>
+              <View style={styles.dateRow}>
+                <Feather name="calendar" size={12} color={colors.textTertiary} />
+                <Text style={[styles.dateText, { color: colors.textSecondary }]}>{displayDate}</Text>
+              </View>
+            </View>
+            <Badge label={recordBadge.label} variant={recordBadge.variant} size="sm" />
           </View>
-
-          {isPatientView ? (
-            <View style={styles.subLabelRow}>
-              <SymbolView name={{ ios: 'stethoscope', android: 'medical_services', web: 'medical_services' }} tintColor={colors.primary} size={16} />
-              <Text style={[styles.subLabel, { color: colors.primary }]}>
-                Dr. {item.doctorId.userId.name} · {item.doctorId.specialization}
-              </Text>
-            </View>
-          ) : (
-            <View style={styles.subLabelRow}>
-              <SymbolView name={{ ios: 'person', android: 'person', web: 'person' }} tintColor={colors.primary} size={16} />
-              <Text style={[styles.subLabel, { color: colors.primary }]}>
-                {item.patientId.name}
-              </Text>
-            </View>
-          )}
 
           <View style={[styles.divider, { backgroundColor: colors.divider }]} />
 
-          <View style={styles.diagnosisSection}>
-            <Text style={[styles.diagnosisLabel, { color: colors.textSecondary }]}>Diagnosis</Text>
-            <Text style={[styles.diagnosisValue, { color: colors.text }]}>{item.diagnosis}</Text>
-          </View>
-
-          {item.prescription ? (
-            <View style={styles.prescriptionSection}>
-              <Text style={[styles.prescriptionLabel, { color: colors.textSecondary }]}>Prescription</Text>
-              <Text style={[styles.prescriptionValue, { color: colors.text }]}>{item.prescription}</Text>
-            </View>
-          ) : null}
+          <Text style={[styles.diagnosisLabel, { color: colors.textSecondary }]}>Diagnosis</Text>
+          <Text style={[styles.diagnosisValue, { color: colors.text }]} numberOfLines={2}>
+            {item.diagnosis}
+          </Text>
 
           {item.labReportUrl ? (
             <TouchableOpacity
               style={[styles.reportButton, { backgroundColor: colors.infoBg, borderColor: colors.info }]}
               onPress={() => void openLabReport(item.labReportUrl!)}
             >
-              <SymbolView name={{ ios: 'doc.text', android: 'description', web: 'description' }} tintColor={colors.info} size={16} />
+              <Feather name="file-text" size={14} color={colors.info} />
               <Text style={[styles.reportButtonText, { color: colors.info }]}>View Lab Report</Text>
             </TouchableOpacity>
           ) : null}
@@ -156,7 +165,7 @@ export default function RecordsScreen() {
             style={[styles.addButton, { backgroundColor: colors.primary }]}
             onPress={() => router.push('/(doctor)/records/add-record')}
           >
-            <SymbolView name={{ ios: 'plus', android: 'add', web: 'add' }} tintColor="#fff" size={16} />
+            <Feather name="plus" size={16} color="#fff" />
             <Text style={styles.addButtonText}>Add Record</Text>
           </TouchableOpacity>
         ) : null}
@@ -171,11 +180,7 @@ export default function RecordsScreen() {
         refreshing={refreshing}
         ListEmptyComponent={
           <View style={styles.emptyState}>
-            <SymbolView
-              name={{ ios: 'doc.text.magnifyingglass', android: 'search', web: 'search' }}
-              tintColor={colors.textTertiary}
-              size={48}
-            />
+            <Feather name="file-text" size={48} color={colors.textTertiary} />
             <Text style={[styles.emptyText, { color: colors.textSecondary }]}>
               {user?.role === 'doctor' ? 'No records created yet.' : 'No medical history found.'}
             </Text>
@@ -199,8 +204,8 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingHorizontal: 16,
-    paddingVertical: 16,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.md,
     borderBottomWidth: 1,
   },
   title: {
@@ -213,7 +218,7 @@ const styles = StyleSheet.create({
     gap: 4,
     paddingHorizontal: 14,
     paddingVertical: 8,
-    borderRadius: 8,
+    borderRadius: radius.md,
   },
   addButtonText: {
     color: '#fff',
@@ -221,16 +226,16 @@ const styles = StyleSheet.create({
     fontSize: 14,
   },
   list: {
-    padding: 16,
-    paddingBottom: TAB_BAR_HEIGHT + 16,
+    padding: spacing.md,
+    paddingBottom: TAB_BAR_HEIGHT + spacing.md,
     gap: 12,
   },
   emptyContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    padding: 40,
-    paddingBottom: TAB_BAR_HEIGHT + 16,
+    padding: spacing.xl,
+    paddingBottom: TAB_BAR_HEIGHT + spacing.md,
   },
   emptyState: {
     alignItems: 'center',
@@ -241,17 +246,37 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   card: {
-    borderRadius: 12,
-    padding: 16,
-    marginBottom: 12,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.06,
-    shadowRadius: 4,
-    elevation: 2,
-  },
-  cardHeader: {
+    borderRadius: radius.lg,
+    padding: spacing.md,
     marginBottom: 8,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.08,
+    shadowRadius: 12,
+    elevation: 3,
+  },
+  cardTop: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  avatarCircle: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  avatarText: {
+    fontSize: 16,
+    fontWeight: '700',
+  },
+  cardInfo: {
+    flex: 1,
+  },
+  patientName: {
+    fontSize: 16,
+    fontWeight: '700',
+    marginBottom: 2,
   },
   dateRow: {
     flexDirection: 'row',
@@ -262,22 +287,9 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: '500',
   },
-  subLabelRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    marginBottom: 12,
-  },
-  subLabel: {
-    fontSize: 14,
-    fontWeight: '700',
-  },
   divider: {
     height: 1,
-    marginBottom: 12,
-  },
-  diagnosisSection: {
-    marginBottom: 12,
+    marginVertical: 12,
   },
   diagnosisLabel: {
     fontSize: 11,
@@ -287,31 +299,17 @@ const styles = StyleSheet.create({
     marginBottom: 4,
   },
   diagnosisValue: {
-    fontSize: 16,
-    lineHeight: 22,
-  },
-  prescriptionSection: {
-    marginBottom: 12,
-  },
-  prescriptionLabel: {
-    fontSize: 11,
-    fontWeight: '600',
-    textTransform: 'uppercase',
-    letterSpacing: 0.5,
-    marginBottom: 4,
-  },
-  prescriptionValue: {
-    fontSize: 16,
-    lineHeight: 22,
+    fontSize: 15,
+    lineHeight: 21,
   },
   reportButton: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     gap: 6,
-    marginTop: 8,
+    marginTop: 12,
     borderWidth: 1,
-    borderRadius: 8,
+    borderRadius: radius.md,
     paddingVertical: 10,
   },
   reportButtonText: {
