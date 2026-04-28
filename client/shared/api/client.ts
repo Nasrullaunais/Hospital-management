@@ -2,6 +2,11 @@ import axios, { type AxiosError, type InternalAxiosRequestConfig } from 'axios';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Config } from '../constants/Config';
 import { getFriendlyErrorMessage, withRetry } from '../services/errorService';
+import {
+  getSecureAuthToken,
+  deleteSecureAuthToken,
+  ASYNC_USER_KEY,
+} from '../services/secureStorage';
 
 export const AUTH_TOKEN_KEY = '@hospital_auth_token';
 
@@ -25,7 +30,7 @@ export const apiClient = axios.create({
 
 apiClient.interceptors.request.use(
   async (config: InternalAxiosRequestConfig) => {
-    const token = await AsyncStorage.getItem(AUTH_TOKEN_KEY);
+    const token = await getSecureAuthToken();
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
     }
@@ -40,7 +45,8 @@ apiClient.interceptors.response.use(
     const errorInfo = getFriendlyErrorMessage(error);
 
     if (error.response?.status === 401) {
-      await AsyncStorage.removeItem(AUTH_TOKEN_KEY);
+      await deleteSecureAuthToken();
+      await AsyncStorage.removeItem(ASYNC_USER_KEY);
       _clearSession?.();
     }
 

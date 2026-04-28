@@ -1,10 +1,16 @@
 import React, { createContext, useContext, useEffect, useRef, useState, useCallback } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { apiClient, AUTH_TOKEN_KEY, registerClearSession } from '../api/client';
+import { apiClient, registerClearSession } from '../api/client';
 import { ENDPOINTS } from '../api/endpoints';
 import type { User, AuthResponse } from '../types';
 import type { RegisterPayload } from '@/features/auth/services/auth.service';
 import { authService } from '@/features/auth/services/auth.service';
+import {
+  setSecureAuthToken,
+  getSecureAuthToken,
+  deleteSecureAuthToken,
+  ASYNC_USER_KEY,
+} from '../services/secureStorage';
 
 // ── Context types ──────────────────────────────────────────────────────────────
 
@@ -44,41 +50,66 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // ── On mount: restore session from AsyncStorage ──────────────────────────────
+  // ── On mount: restore session from secure storage ───────────────────────────
   useEffect(() => {
     const restoreSession = async () => {
       try {
-        const [storedToken, storedUser] = await AsyncStorage.multiGet([
-          AUTH_TOKEN_KEY,
-          '@hospital_user',
-        ]);
+        const storedToken = await getSecureAuthToken();
+        const storedUser = await AsyncStorage.getItem(ASYNC_USER_KEY);
 
-        const tokenFromStorage = storedToken[1];
-
-        if (!tokenFromStorage) {
-          if (storedUser[1]) {
-            await AsyncStorage.removeItem('@hospital_user');
+        if (!storedToken) {
+          if (storedUser) {
+            await AsyncStorage.removeItem(ASYNC_USER_KEY);
           }
+          setIsLoading(false);
           return;
         }
 
-        setToken(tokenFromStorage);
+        setToken(storedToken);
 
-        try {
-          const response = await apiClient.get<{ success: boolean; data: { user: User } }>(
-            ENDPOINTS.PATIENTS.ME,
-          );
-          const validatedUser = response.data.data.user;
-          await AsyncStorage.setItem('@hospital_user', JSON.stringify(validatedUser));
-          setUser(validatedUser);
-        } catch {
-          await AsyncStorage.multiRemove([AUTH_TOKEN_KEY, '@hospital_user']);
-          setToken(null);
-          setUser(null);
+        if (storedUser) {
+          try {
+            const cachedUser = JSON.parse(storedUser) as User;
+
+            if (cachedUser.role !== 'patient') {
+              setUser(cachedUser);
+              setIsLoading(false);
+              return;
+            }
+
+            const response = await apiClient.get<{ success: boolean; data: { user: User } }>(
+              ENDPOINTS.PATIENTS.ME,
+            );
+            const validatedUser = response.data.data.user;
+            await AsyncStorage.setItem(ASYNC_USER_KEY, JSON.stringify(validatedUser));
+            setUser(validatedUser);
+          } catch (err) {
+            console.error('restoreSession: Session validation failed:', err);
+            await deleteSecureAuthToken();
+            await AsyncStorage.removeItem(ASYNC_USER_KEY);
+            setToken(null);
+            setUser(null);
+          }
+        } else {
+          try {
+            const response = await apiClient.get<{ success: boolean; data: { user: User } }>(
+              ENDPOINTS.PATIENTS.ME,
+            );
+            const validatedUser = response.data.data.user;
+            await AsyncStorage.setItem(ASYNC_USER_KEY, JSON.stringify(validatedUser));
+            setUser(validatedUser);
+          } catch (err) {
+            console.error('restoreSession: Failed to fetch user profile:', err);
+            await deleteSecureAuthToken();
+            await AsyncStorage.removeItem(ASYNC_USER_KEY);
+            setToken(null);
+            setUser(null);
+          }
         }
-      } catch {
-        // Corrupted storage — clear and start fresh
-        await AsyncStorage.multiRemove([AUTH_TOKEN_KEY, '@hospital_user']);
+      } catch (err) {
+        console.error('restoreSession: Corrupted storage:', err);
+        await deleteSecureAuthToken();
+        await AsyncStorage.removeItem(ASYNC_USER_KEY);
         setToken(null);
         setUser(null);
       } finally {
@@ -98,10 +129,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     const { token: newToken, user: newUser } = response.data.data;
 
-    await AsyncStorage.multiSet([
-      [AUTH_TOKEN_KEY, newToken],
-      ['@hospital_user', JSON.stringify(newUser)],
-    ]);
+    await setSecureAuthToken(newToken);
+    await AsyncStorage.setItem(ASYNC_USER_KEY, JSON.stringify(newUser));
 
     setToken(newToken);
     setUser(newUser);
@@ -111,10 +140,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const register = useCallback(async (payload: RegisterPayload) => {
     const { token: newToken, user: newUser } = await authService.register(payload);
 
-    await AsyncStorage.multiSet([
-      [AUTH_TOKEN_KEY, newToken],
-      ['@hospital_user', JSON.stringify(newUser)],
-    ]);
+    await setSecureAuthToken(newToken);
+    await AsyncStorage.setItem(ASYNC_USER_KEY, JSON.stringify(newUser));
 
     setToken(newToken);
     setUser(newUser);
@@ -122,7 +149,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   // ── Logout ───────────────────────────────────────────────────────────────────
   const logout = useCallback(async () => {
-    await AsyncStorage.multiRemove([AUTH_TOKEN_KEY, '@hospital_user']);
+    try {
+      await apiClient.post(ENDPOINTS.AUTH.LOGOUT);
+    } catch {
+      // ignore — logout should succeed even if server call fails
+    }
+    await deleteSecureAuthToken();
+    await AsyncStorage.removeItem(ASYNC_USER_KEY);
     setToken(null);
     setUser(null);
   }, []);
@@ -134,10 +167,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         ENDPOINTS.PATIENTS.ME,
       );
       const updatedUser = response.data.data.user;
-      await AsyncStorage.setItem('@hospital_user', JSON.stringify(updatedUser));
+      await AsyncStorage.setItem(ASYNC_USER_KEY, JSON.stringify(updatedUser));
       setUser(updatedUser);
-    } catch {
-      // If the request fails (e.g., token expired), the response interceptor handles it
+    } catch (err) {
+      console.error('refreshUser: Failed to refresh user:', err);
     }
   }, []);
 

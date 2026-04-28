@@ -3,22 +3,24 @@
 // Hospital Management App - Stack-based navigation with custom bottom tabs
 // =============================================================================
 
-import React from 'react';
+import React, { useRef, useEffect } from 'react';
 import {
   View,
   Text,
-  TouchableOpacity,
+  Pressable,
+  Animated,
   StyleSheet,
 } from 'react-native';
+import { Feather } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useColorScheme } from '@/components/useColorScheme';
 import { Colors } from '@/constants/Colors';
-import { spacing, radius } from '@/constants/ThemeTokens';
+import { spacing, radius, shadows } from '@/constants/ThemeTokens';
 
 export interface TabItem {
   key: string;
   title: string;
-  icon: string; // emoji or SF Symbol name for web
+  icon: keyof typeof Feather.glyphMap;
 }
 
 interface CustomTabBarProps {
@@ -32,88 +34,129 @@ export function CustomTabBar({ activeTab, onTabPress, tabs }: CustomTabBarProps)
   const theme = Colors[colorScheme];
   const insets = useSafeAreaInsets();
 
+  const activeIndex = tabs.findIndex((t) => t.key === activeTab);
+  const animatedIndex = useRef(new Animated.Value(activeIndex >= 0 ? activeIndex : 0)).current;
+
+  useEffect(() => {
+    const targetIndex = activeIndex >= 0 ? activeIndex : 0;
+    Animated.spring(animatedIndex, {
+      toValue: targetIndex,
+      useNativeDriver: true,
+      damping: 20,
+      stiffness: 200,
+      mass: 0.5,
+    }).start();
+  }, [activeIndex, animatedIndex]);
+
+  const pillOpacity = animatedIndex.interpolate({
+    inputRange: [0, tabs.length - 1],
+    outputRange: [1, 1],
+  });
+
   return (
     <View
       style={[
         styles.tabBar,
         {
-          backgroundColor: theme.tabBarBackground,
-          borderTopColor: theme.tabBarBorder,
-          paddingBottom: insets.bottom > 0 ? insets.bottom : spacing.md,
+          backgroundColor: theme.surface,
+          paddingBottom: insets.bottom > 0 ? insets.bottom : spacing.sm,
+          ...shadows.card,
         },
       ]}
     >
-      {tabs.map((tab) => {
-        const isActive = activeTab === tab.key;
-        return (
-          <TouchableOpacity
-            key={tab.key}
-            style={styles.tabItem}
-            onPress={() => onTabPress(tab.key)}
-            activeOpacity={0.7}
-          >
-            <View style={styles.iconWrapper}>
+      <View style={styles.tabsRow}>
+        {tabs.map((tab, index) => {
+          const isActive = activeTab === tab.key;
+          return (
+            <Pressable
+              key={tab.key}
+              style={({ pressed }) => [
+                styles.tabItem,
+                {
+                  transform: [{ scale: pressed ? 0.95 : 1 }],
+                },
+              ]}
+              onPress={() => activeTab !== tab.key && onTabPress(tab.key)}
+            >
+              <View style={styles.iconWrapper}>
+                <View
+                  style={[
+                    styles.pillBackground,
+                    {
+                      backgroundColor: theme.tabBarActiveBg,
+                      opacity: isActive ? 1 : 0,
+                    },
+                  ]}
+                />
+                <Feather
+                  name={tab.icon}
+                  size={20}
+                  color={isActive ? theme.tabBarActive : theme.tabBarInactive}
+                />
+                {isActive && (
+                  <View
+                    style={[
+                      styles.coralDot,
+                      { backgroundColor: theme.accent },
+                    ]}
+                  />
+                )}
+              </View>
               <Text
                 style={[
-                  styles.tabIcon,
-                  { color: isActive ? theme.tabBarActive : theme.tabBarInactive },
+                  styles.tabLabel,
+                  {
+                    color: isActive ? theme.tabBarActive : theme.tabBarInactive,
+                    fontWeight: isActive ? '600' : '500',
+                  },
                 ]}
+                numberOfLines={1}
               >
-                {tab.icon}
+                {tab.title}
               </Text>
-              {isActive && (
-                <View style={[styles.activeIndicator, { backgroundColor: theme.tabBarActive }]} />
-              )}
-            </View>
-            <Text
-              style={[
-                styles.tabLabel,
-                { color: isActive ? theme.tabBarActive : theme.tabBarInactive },
-                isActive && styles.activeLabel,
-              ]}
-              numberOfLines={1}
-            >
-              {tab.title}
-            </Text>
-          </TouchableOpacity>
-        );
-      })}
+            </Pressable>
+          );
+        })}
+      </View>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
   tabBar: {
-    flexDirection: 'row',
-    borderTopWidth: 1,
+    borderTopWidth: 0,
     paddingTop: spacing.sm,
+  },
+  tabsRow: {
+    flexDirection: 'row',
+    height: 56,
   },
   tabItem: {
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    gap: spacing.xs,
+    gap: 2,
   },
   iconWrapper: {
     alignItems: 'center',
     justifyContent: 'center',
-    height: 28,
+    width: 44,
+    height: 36,
   },
-  tabIcon: {
-    fontSize: 20,
-  },
-  activeIndicator: {
+  pillBackground: {
     position: 'absolute',
-    bottom: -4,
-    width: 4,
-    height: 4,
-    borderRadius: 2,
+    width: 40,
+    height: 32,
+    borderRadius: radius.full,
+  },
+  coralDot: {
+    position: 'absolute',
+    bottom: 0,
+    width: 3,
+    height: 3,
+    borderRadius: 1.5,
   },
   tabLabel: {
-    fontSize: 11,
-    fontWeight: '500',
-  },
-  activeLabel: {
-    fontWeight: '600',
+    fontSize: 10,
   },
 });

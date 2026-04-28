@@ -8,6 +8,7 @@ export interface IMedicalRecord extends Document {
   diagnosis: string;
   prescription?: string;
   dateRecorded: Date;
+  /** File reference with protocol: 's3://...' | 'local://...' | legacy '/uploads/...' */
   labReportUrl?: string;
   createdAt: Date;
   updatedAt: Date;
@@ -51,5 +52,9 @@ const medicalRecordSchema = new Schema<IMedicalRecord>(
 
 medicalRecordSchema.index({ patientId: 1, dateRecorded: -1 });
 medicalRecordSchema.index({ doctorId: 1 });
+medicalRecordSchema.index(
+  { patientId: 1, appointmentId: 1 },
+  { unique: true, sparse: true, partialFilterExpression: { appointmentId: { $type: 'objectId' } } },
+);
 
 export const MedicalRecord = mongoose.model<IMedicalRecord>('MedicalRecord', medicalRecordSchema);

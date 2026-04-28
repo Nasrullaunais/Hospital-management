@@ -17,7 +17,7 @@ import type { Ward } from '@/shared/types';
 import { useAuth } from '@/shared/context/AuthContext';
 import Colors from '@/constants/Colors';
 import { useColorScheme } from '@/components/useColorScheme';
-import { spacing, radius, shadows } from '@/constants/ThemeTokens';
+import { spacing, radius, shadows, typography } from '@/constants/ThemeTokens';
 
 const TAB_BAR_HEIGHT = 70;
 
@@ -158,11 +158,11 @@ export default function WardListScreen() {
     <SafeAreaView edges={['top', 'bottom']} style={[styles.container, { backgroundColor: theme.background }]}>
       {user?.role === 'admin' && (
         <TouchableOpacity
-          style={[styles.addButton, { backgroundColor: theme.primary }]}
+          style={[styles.addButton, { backgroundColor: theme.accent }]}
           onPress={() => router.push('/(admin)/wards/add')}
           activeOpacity={0.8}
         >
-          <Feather name="plus" size={18} color="#fff" style={{ marginRight: spacing.xs }} />
+          <Feather name="plus" size={18} color="#fff" style={{ marginRight: spacing.sm }} />
           <Text style={styles.addButtonText}>Add Ward</Text>
         </TouchableOpacity>
       )}
@@ -197,7 +197,7 @@ const styles = StyleSheet.create({
   list: { padding: spacing.md },
   emptyList: { flex: 1 },
   emptyContainer: { flexGrow: 1, justifyContent: 'center', alignItems: 'center' },
-  emptyText: { fontSize: 16, marginTop: spacing.md },
+  emptyText: { fontSize: typography.md, marginTop: spacing.md },
   searchContainer: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -207,32 +207,33 @@ const styles = StyleSheet.create({
     borderRadius: radius.md,
     borderWidth: 1,
     gap: spacing.sm,
+    minHeight: 48,
   },
   searchInput: {
     flex: 1,
     paddingVertical: spacing.md,
-    fontSize: 15,
+    fontSize: typography.sm,
   },
   card: {
-    marginBottom: spacing.md,
+    marginBottom: 12,
     borderRadius: radius.lg,
-    padding: spacing.md,
+    padding: spacing.lg,
     borderWidth: 1,
     ...shadows.card,
   },
   header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: spacing.sm },
   headerInfo: { flex: 1 },
-  wardName: { fontSize: 17, fontWeight: '700' },
+  wardName: { fontSize: typography.md, fontWeight: typography.semibold },
   departmentName: { fontSize: 13, marginTop: 2 },
   badge: { borderRadius: radius.md, paddingHorizontal: spacing.sm, paddingVertical: spacing.xs, borderWidth: 1 },
-  badgeText: { fontSize: 11, fontWeight: '600' },
+  badgeText: { fontSize: 11, fontWeight: typography.semibold },
   typeContainer: { flexDirection: 'row', marginBottom: spacing.sm },
   typeLabel: { fontSize: 13 },
-  typeValue: { fontSize: 13, fontWeight: '600' },
+  typeValue: { fontSize: 13, fontWeight: typography.semibold },
   bedsContainer: { marginTop: spacing.xs },
   bedsInfo: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: spacing.xs },
-  bedsLabel: { fontSize: 12 },
-  bedsValue: { fontSize: 12, fontWeight: '600' },
+  bedsLabel: { fontSize: typography.xs },
+  bedsValue: { fontSize: typography.xs, fontWeight: typography.semibold },
   progressBar: { height: 6, borderRadius: 3, overflow: 'hidden' },
   progressFill: { height: '100%', borderRadius: 3 },
   addButton: {
@@ -241,10 +242,12 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     marginHorizontal: spacing.md,
     marginTop: spacing.md,
+    marginBottom: spacing.xs,
     borderRadius: radius.md,
-    paddingVertical: spacing.md,
+    height: 52,
+    ...shadows.button,
   },
-  addButtonText: { color: '#fff', fontSize: 15, fontWeight: '600' },
-  errorText: { fontSize: 15, marginTop: spacing.md },
-  retryText: { fontWeight: '600', fontSize: 15, marginTop: spacing.sm },
+  addButtonText: { color: '#fff', fontSize: typography.sm, fontWeight: typography.semibold },
+  errorText: { fontSize: typography.sm, marginTop: spacing.md },
+  retryText: { fontWeight: typography.semibold, fontSize: typography.sm, marginTop: spacing.sm },
 });

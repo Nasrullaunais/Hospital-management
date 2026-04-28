@@ -1,28 +1,29 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState } from 'react';
 import {
   View,
   Text,
-  TextInput,
-  TouchableOpacity,
-  StyleSheet,
   ScrollView,
   Alert,
-  ActivityIndicator,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
-import Colors from '@/constants/Colors';
+import { Colors } from '@/constants/Colors';
 import { useColorScheme } from '@/components/useColorScheme';
-import { invoiceService, CreateInvoicePayload } from '@/features/billing/services/invoice.service';
+import { spacing, radius, shadows } from '@/constants/ThemeTokens';
+import { Input } from '@/components/ui/Input';
+import { Button } from '@/components/ui/Button';
+import { invoiceService, ValidCreateInvoicePayload } from '@/features/billing/services/invoice.service';
 
 export default function CreateInvoiceScreen() {
   const router = useRouter();
   const colorScheme = useColorScheme() ?? 'light';
-  const styles = useMemo(() => makeStyles(colorScheme), [colorScheme]);
+  const colors = Colors[colorScheme];
 
   const [patientId, setPatientId] = useState('');
   const [totalAmount, setTotalAmount] = useState('');
   const [appointmentId, setAppointmentId] = useState('');
   const [loading, setLoading] = useState(false);
+  const [validating, setValidating] = useState(false);
   const [errors, setErrors] = useState<{ patientId?: string; totalAmount?: string }>({});
 
   const validate = () => {
@@ -42,11 +43,16 @@ export default function CreateInvoiceScreen() {
   };
 
   const handleSubmit = async () => {
-    if (!validate()) return;
+    setValidating(true);
+    if (!validate()) {
+      setValidating(false);
+      return;
+    }
+    setValidating(false);
 
     setLoading(true);
     try {
-      const payload: CreateInvoicePayload = {
+      const payload: ValidCreateInvoicePayload = {
         patientId: patientId.trim(),
         totalAmount: parseFloat(totalAmount),
         appointmentId: appointmentId.trim() || undefined,
@@ -64,115 +70,90 @@ export default function CreateInvoiceScreen() {
   };
 
   return (
-    <ScrollView style={styles.container}>
-      <View style={styles.card}>
-        <Text style={styles.title}>Create New Invoice</Text>
+    <SafeAreaView edges={['bottom']} style={{ flex: 1, backgroundColor: colors.background }}>
+      <ScrollView contentContainerStyle={{ padding: spacing.md }}>
+        <Text style={{ fontSize: 24, fontWeight: '700', color: colors.text, marginBottom: 4 }}>
+          Create New Invoice
+        </Text>
+        <Text style={{ fontSize: 14, color: colors.textSecondary, marginBottom: spacing.lg }}>
+          Generate a new invoice for a patient.
+        </Text>
 
-        <View style={styles.field}>
-          <Text style={styles.label}>Patient ID *</Text>
-          <TextInput
-            style={[styles.input, errors.patientId && styles.inputError]}
+        {/* Invoice Details Section */}
+        <View
+          style={{
+            backgroundColor: colors.surface,
+            borderRadius: radius.lg,
+            padding: spacing.lg,
+            marginBottom: spacing.md,
+            ...shadows.card,
+          }}
+        >
+          <Text
+            style={{
+              fontSize: 14,
+              fontWeight: '600',
+              color: colors.textSecondary,
+              textTransform: 'uppercase',
+              letterSpacing: 1,
+              marginBottom: spacing.md,
+            }}
+          >
+            INVOICE DETAILS
+          </Text>
+
+          <Input
+            label="Patient ID *"
+            placeholder="Enter patient ID"
             value={patientId}
             onChangeText={(text) => {
               setPatientId(text);
               if (errors.patientId) setErrors({ ...errors, patientId: undefined });
             }}
-            placeholder="Enter patient ID"
-            placeholderTextColor="#9ca3af"
+            error={errors.patientId}
             autoCapitalize="none"
           />
-          {errors.patientId && <Text style={styles.errorText}>{errors.patientId}</Text>}
-        </View>
 
-        <View style={styles.field}>
-          <Text style={styles.label}>Total Amount ($) *</Text>
-          <TextInput
-            style={[styles.input, errors.totalAmount && styles.inputError]}
+          <Input
+            label="Total Amount *"
+            placeholder="0.00"
             value={totalAmount}
             onChangeText={(text) => {
               setTotalAmount(text);
               if (errors.totalAmount) setErrors({ ...errors, totalAmount: undefined });
             }}
-            placeholder="0.00"
-            placeholderTextColor="#9ca3af"
+            error={errors.totalAmount}
             keyboardType="decimal-pad"
           />
-          {errors.totalAmount && <Text style={styles.errorText}>{errors.totalAmount}</Text>}
-        </View>
 
-        <View style={styles.field}>
-          <Text style={styles.label}>Appointment ID (optional)</Text>
-          <TextInput
-            style={styles.input}
+          <Input
+            label="Appointment ID (Optional)"
+            placeholder="Enter appointment ID if applicable"
             value={appointmentId}
             onChangeText={setAppointmentId}
-            placeholder="Enter appointment ID if applicable"
-            placeholderTextColor="#9ca3af"
             autoCapitalize="none"
           />
         </View>
 
-        <TouchableOpacity
-          style={[styles.submitButton, loading && styles.submitButtonDisabled]}
+        <Button
+          title="Create Invoice"
+          variant="accent"
+          size="lg"
+          fullWidth
+          loading={loading}
           onPress={handleSubmit}
-          disabled={loading}
-        >
-          {loading ? (
-            <ActivityIndicator color="#fff" />
-          ) : (
-            <Text style={styles.submitButtonText}>Create Invoice</Text>
-          )}
-        </TouchableOpacity>
+          style={{ marginTop: spacing.lg }}
+        />
 
-        <TouchableOpacity style={styles.cancelButton} onPress={() => router.back()}>
-          <Text style={styles.cancelButtonText}>Cancel</Text>
-        </TouchableOpacity>
-      </View>
-    </ScrollView>
+        <Button
+          title="Cancel"
+          variant="outline"
+          size="md"
+          fullWidth
+          onPress={() => router.back()}
+          style={{ marginTop: spacing.sm }}
+        />
+      </ScrollView>
+    </SafeAreaView>
   );
 }
-
-const makeStyles = (colorScheme: 'light' | 'dark') => StyleSheet.create({
-  container: { flex: 1, backgroundColor: Colors[colorScheme].background },
-  card: {
-    backgroundColor: Colors[colorScheme].surface,
-    borderRadius: 12,
-    padding: 20,
-    margin: 16,
-    shadowColor: '#000',
-    shadowOpacity: 0.08,
-    shadowRadius: 8,
-    elevation: 3,
-  },
-  title: { fontSize: 22, fontWeight: '700', color: Colors[colorScheme].text, marginBottom: 20 },
-  field: { marginBottom: 16 },
-  label: { fontSize: 14, fontWeight: '600', color: Colors[colorScheme].textSecondary, marginBottom: 6 },
-  input: {
-    backgroundColor: Colors[colorScheme].inputBackground,
-    borderWidth: 1,
-    borderColor: Colors[colorScheme].inputBorder,
-    borderRadius: 8,
-    paddingHorizontal: 14,
-    paddingVertical: 12,
-    fontSize: 16,
-    color: Colors[colorScheme].inputText,
-  },
-  inputError: { borderColor: Colors[colorScheme].inputError },
-  errorText: { color: Colors[colorScheme].error, fontSize: 12, marginTop: 4 },
-  submitButton: {
-    backgroundColor: Colors[colorScheme].primary,
-    borderRadius: 8,
-    paddingVertical: 14,
-    alignItems: 'center',
-    marginTop: 8,
-  },
-  submitButtonDisabled: { opacity: 0.6 },
-  submitButtonText: { color: '#fff', fontWeight: '600', fontSize: 16 },
-  cancelButton: {
-    borderRadius: 8,
-    paddingVertical: 14,
-    alignItems: 'center',
-    marginTop: 12,
-  },
-  cancelButtonText: { color: Colors[colorScheme].textSecondary, fontWeight: '600', fontSize: 16 },
-});

@@ -9,6 +9,7 @@ export interface IDoctor extends Document {
   experienceYears: number;
   consultationFee: number;
   availability: 'Available' | 'Unavailable' | 'On Leave';
+  /** File reference with protocol: 's3://...' | 'local://...' | legacy '/uploads/...' */
   licenseDocumentUrl: string;
   createdAt: Date;
   updatedAt: Date;

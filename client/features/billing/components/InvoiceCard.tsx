@@ -1,4 +1,4 @@
-import React, { useCallback, useMemo } from 'react';
+import React, { useCallback } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, Alert } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import * as DocumentPicker from 'expo-document-picker';
@@ -7,6 +7,9 @@ import { invoiceService } from '@/features/billing/services/invoice.service';
 import Colors from '@/constants/Colors';
 import { useColorScheme } from '@/components/useColorScheme';
 import { spacing, radius, shadows } from '@/constants/ThemeTokens';
+import { getPaymentStatusStyle } from '@/shared/utils/statusStyles';
+
+const FORM_FIELD_RECEIPT = 'paymentReceipt' as const;
 
 interface InvoiceCardProps {
   invoice: Invoice;
@@ -18,18 +21,7 @@ export function InvoiceCard({ invoice, isAdmin, onUpdate }: InvoiceCardProps) {
   const colorScheme = useColorScheme() ?? 'light';
   const theme = Colors[colorScheme];
 
-  const statusStyle = useMemo(() => {
-    switch (invoice.paymentStatus) {
-      case 'Unpaid':
-        return { bg: theme.errorBg, text: theme.error };
-      case 'Pending Verification':
-        return { bg: theme.warningBg, text: theme.warning };
-      case 'Paid':
-        return { bg: theme.successBg, text: theme.success };
-      default:
-        return { bg: theme.surfaceTertiary, text: theme.textSecondary };
-    }
-  }, [invoice.paymentStatus, theme]);
+  const statusStyle = getPaymentStatusStyle(invoice.paymentStatus, theme);
 
   const handleUploadReceipt = useCallback(async () => {
     try {
@@ -56,22 +48,24 @@ export function InvoiceCard({ invoice, isAdmin, onUpdate }: InvoiceCardProps) {
           onPress: async () => {
             try {
               const formData = new FormData();
-              formData.append('paymentReceipt', {
+              formData.append(FORM_FIELD_RECEIPT, {
                 uri: file.uri,
                 name: file.name,
                 type: file.mimeType || 'application/octet-stream',
-              } as any);
+              } as unknown as Blob);
 
               const updated = await invoiceService.uploadPaymentReceipt(invoice._id, formData);
               onUpdate(updated);
               Alert.alert('Success', 'Receipt uploaded successfully. Awaiting verification.');
-            } catch (err) {
+            } catch (err: unknown) {
+              console.error('handleUploadReceipt - upload failed:', err);
               Alert.alert('Error', err instanceof Error ? err.message : 'Upload failed.');
             }
           },
         },
       ]);
-    } catch (err) {
+    } catch (err: unknown) {
+      console.error('handleUploadReceipt - document pick failed:', err);
       Alert.alert('Error', 'Failed to pick document.');
     }
   }, [invoice._id, onUpdate]);
@@ -85,7 +79,7 @@ export function InvoiceCard({ invoice, isAdmin, onUpdate }: InvoiceCardProps) {
           try {
             const updated = await invoiceService.verifyPayment(invoice._id);
             onUpdate(updated);
-          } catch (err) {
+          } catch (err: unknown) {
             Alert.alert('Error', err instanceof Error ? err.message : 'Verification failed.');
           }
         },
@@ -104,7 +98,7 @@ export function InvoiceCard({ invoice, isAdmin, onUpdate }: InvoiceCardProps) {
             await invoiceService.deleteInvoice(invoice._id);
             Alert.alert('Success', 'Invoice deleted.');
             onUpdate({ ...invoice, _deleted: true } as Invoice & { _deleted: boolean });
-          } catch (err) {
+          } catch (err: unknown) {
             Alert.alert('Error', err instanceof Error ? err.message : 'Delete failed.');
           }
         },

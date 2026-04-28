@@ -5,7 +5,7 @@ import type { Request } from 'express';
 import { ApiError } from '../utils/ApiError.js';
 
 // ── Ensure uploads directory exists ───────────────────────────────────────────
-const UPLOADS_DIR = path.resolve(process.env['UPLOADS_DIR'] ?? 'uploads');
+const UPLOADS_DIR = path.resolve(import.meta.dirname, '../../..', process.env['UPLOADS_DIR'] ?? 'uploads');
 if (!fs.existsSync(UPLOADS_DIR)) {
   fs.mkdirSync(UPLOADS_DIR, { recursive: true });
 }

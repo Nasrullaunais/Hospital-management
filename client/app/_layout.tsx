@@ -3,6 +3,7 @@ import { useFonts } from 'expo-font';
 import { Stack } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { useEffect, useCallback } from 'react';
+import { ActivityIndicator, View } from 'react-native';
 import 'react-native-reanimated';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 
@@ -46,16 +47,18 @@ export default function RootLayout() {
     }
   }, [loaded]);
 
-  if (!loaded) {
-    return null;
-  }
-
   return (
     <ToastProvider>
       <ToastSetup>
         <SafeAreaProvider>
           <AuthProvider>
-            <RootLayoutNav />
+            {!loaded ? (
+              <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+                <ActivityIndicator size="large" />
+              </View>
+            ) : (
+              <RootLayoutNav />
+            )}
           </AuthProvider>
         </SafeAreaProvider>
       </ToastSetup>
@@ -74,6 +77,7 @@ function RootLayoutNav() {
         <Stack.Screen name="(doctor)" />
         <Stack.Screen name="(pharmacist)" />
         <Stack.Screen name="(admin)" />
+        <Stack.Screen name="(receptionist)" />
         <Stack.Screen name="login" />
         <Stack.Screen name="register" />
       </Stack>

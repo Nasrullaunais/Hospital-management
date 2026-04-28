@@ -38,7 +38,7 @@ export default function RecordListScreen({ patientId, onPressRecord }: Props) {
       setError(null);
       const data = await recordService.getPatientHistory(targetPatientId);
       setRecords(data);
-    } catch (err) {
+    } catch (err: unknown) {
       setError(err instanceof Error ? err.message : 'Failed to load records.');
     }
   }, [targetPatientId]);
@@ -68,7 +68,7 @@ export default function RecordListScreen({ patientId, onPressRecord }: Props) {
         activeOpacity={0.7}
       >
         <Text style={[styles.diagnosis, { color: theme.text }]} numberOfLines={2}>
-          {item.diagnosis}
+          {item.diagnosis || 'No diagnosis recorded'}
         </Text>
         <View style={styles.dateRow}>
           <Feather name="calendar" size={13} color={theme.textTertiary} />

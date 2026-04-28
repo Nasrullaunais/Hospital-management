@@ -36,7 +36,8 @@ export default function BookAppointmentScreen() {
   const [showDoctorPicker, setShowDoctorPicker] = useState(false);
   const [doctors, setDoctors] = useState<Doctor[]>([]);
   const [loadingDoctors, setLoadingDoctors] = useState(false);
-  const [date, setDate] = useState(new Date(Date.now() + 24 * 60 * 60 * 1000));
+  const MS_PER_DAY = 24 * 60 * 60 * 1000;
+  const [date, setDate] = useState(new Date(Date.now() + MS_PER_DAY));
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [showTimePicker, setShowTimePicker] = useState(false);
   const [reason, setReason] = useState('');
@@ -46,7 +47,7 @@ export default function BookAppointmentScreen() {
   // Fetch doctor details if doctorId is provided
   useEffect(() => {
     if (paramDoctorId) {
-      doctorService.getDoctorById(paramDoctorId).then(setSelectedDoctor).catch(() => {});
+      doctorService.getDoctorById(paramDoctorId)      .catch((err: unknown) => console.warn('Failed to pre-load doctor details:', err));
     }
   }, [paramDoctorId]);
 
@@ -56,8 +57,9 @@ export default function BookAppointmentScreen() {
       setLoadingDoctors(true);
       const data = await doctorService.getDoctors({ availability: 'Available' });
       setDoctors(data);
-    } catch {
-      // Silently fail
+    } catch (err: unknown) {
+      console.error('fetchDoctors failed:', err);
+      Alert.alert('Error', 'Failed to load doctors. Please try again.');
     } finally {
       setLoadingDoctors(false);
     }
@@ -104,7 +106,8 @@ export default function BookAppointmentScreen() {
       if (!result.canceled && result.assets.length > 0) {
         setSelectedFile(result.assets[0]);
       }
-    } catch {
+    } catch (err: unknown) {
+      console.error('pickDocument failed:', err);
       Alert.alert('Error', 'Failed to pick document.');
     }
   };
@@ -135,14 +138,14 @@ export default function BookAppointmentScreen() {
           uri: selectedFile.uri,
           name: selectedFile.name,
           type: selectedFile.mimeType ?? 'application/octet-stream',
-        } as any);
+        } as unknown as Blob);
       }
 
       await appointmentService.bookAppointment(formData);
       Alert.alert('Success', 'Appointment booked successfully!', [
         { text: 'OK', onPress: () => router.back() },
       ]);
-    } catch (err) {
+    } catch (err: unknown) {
       const message =
         err instanceof Error ? err.message : 'Failed to book appointment. Please try again.';
       Alert.alert('Booking Failed', message);
@@ -180,7 +183,7 @@ export default function BookAppointmentScreen() {
               <View style={[styles.readOnlyInput, { backgroundColor: colors.successBg, borderColor: colors.success }]}>
                 <Feather name="check-circle" size={16} color={colors.success} style={{ marginRight: 8 }} />
                 <Text style={[styles.readOnlyText, { color: colors.success }]}>
-                  Dr. {(selectedDoctor.userId as any)?.name || 'Selected'}
+                  Dr. {selectedDoctor.userId?.name || 'Selected'}
                 </Text>
               </View>
             ) : (
@@ -191,7 +194,7 @@ export default function BookAppointmentScreen() {
               >
                 <Feather name="search" size={16} color={colors.textTertiary} />
                 <Text style={[styles.doctorPickerText, { color: colors.textSecondary }]}>
-                  {selectedDoctor ? `Dr. ${(selectedDoctor.userId as any)?.name || 'Selected'}` : 'Select a doctor'}
+                  {selectedDoctor ? `Dr. ${selectedDoctor.userId?.name || 'Selected'}` : 'Select a doctor'}
                 </Text>
                 <Feather name="chevron-right" size={16} color={colors.textTertiary} style={{ marginLeft: 'auto' }} />
               </TouchableOpacity>
@@ -287,7 +290,7 @@ export default function BookAppointmentScreen() {
       <Modal visible={showDoctorPicker} animationType="slide" transparent>
         <View style={styles.modalOverlay}>
           <View style={[styles.modalContent, { backgroundColor: colors.surface }]}>
-            <View style={styles.modalHeader}>
+            <View style={[styles.modalHeader, { borderBottomColor: colors.border }]}>
               <Text style={[styles.modalTitle, { color: colors.text }]}>Select Doctor</Text>
               <TouchableOpacity onPress={() => setShowDoctorPicker(false)}>
                 <Feather name="x" size={24} color={colors.text} />
@@ -300,7 +303,7 @@ export default function BookAppointmentScreen() {
                 data={doctors}
                 keyExtractor={(item) => item._id}
                 renderItem={({ item }) => {
-                  const doctorName = (item.userId as any)?.name || 'Unknown';
+                  const doctorName = item.userId?.name || 'Unknown';
                   const isSelected = item._id === doctorId;
                   return (
                     <TouchableOpacity
@@ -313,7 +316,7 @@ export default function BookAppointmentScreen() {
                     >
                       <View style={[styles.doctorAvatar, { backgroundColor: colors.primary }]}>
                         <Text style={styles.doctorAvatarText}>
-                          {doctorName.split(' ').map((n: string) => n[0]).slice(0, 2).join('')}
+                          {doctorName.split(' ').map((n: string) => n[0] ?? '').slice(0, 2).join('')}
                         </Text>
                       </View>
                       <View style={styles.doctorInfo}>
@@ -444,7 +447,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     padding: spacing.lg,
     borderBottomWidth: 1,
-    borderBottomColor: '#e5e7eb',
+    borderBottomColor: '#E5E7EB',
   },
   modalTitle: {
     fontSize: 20,

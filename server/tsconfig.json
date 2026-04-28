@@ -44,7 +44,7 @@
 
     // Bun runtime
     "moduleDetection": "force",
-    "types": ["bun-types", "node"]
+    "types": ["bun-types", "node", "vitest"]
   },
   "include": ["src/**/*"],
   "exclude": ["node_modules", "dist"]

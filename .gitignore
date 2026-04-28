@@ -60,6 +60,12 @@ bun-debug.log*
 coverage/
 .nyc_output/
 
+# Agentic / AI tooling
+.sisyphus/
+.opencode/
+.claude/
+.playwright-mcp/
+
 # Misc
 *.orig
 *.bak

@@ -3,7 +3,7 @@
  */
 import { apiClient } from '@/shared/api/client';
 import { ENDPOINTS } from '@/shared/api/endpoints';
-import type { ApiSuccessResponse } from '@/shared/types';
+import type { ApiSuccessResponse, PendingPrescription, PrescriptionStatus } from '@/shared/types';
 
 export interface PrescriptionItem {
   medicineId: string;
@@ -13,14 +13,8 @@ export interface PrescriptionItem {
   instructions?: string;
 }
 
-export interface Prescription {
-  _id: string;
-  patientId: string | { _id: string; name: string; email: string };
-  doctorId: string | { _id: string; specialization: string; userId?: { name: string } };
-  items: PrescriptionItem[];
-  notes?: string;
-  status: 'active' | 'fulfilled' | 'cancelled';
-  createdAt: string;
+export interface Prescription extends Omit<PendingPrescription, 'status'> {
+  status: PrescriptionStatus;
   updatedAt: string;
 }
 
@@ -48,6 +42,13 @@ export const prescriptionService = {
     const res = await apiClient.post<ApiSuccessResponse<Prescription>>(
       ENDPOINTS.PRESCRIPTIONS.BASE,
       data,
+    );
+    return res.data.data;
+  },
+
+  getPrescriptionsByRecordId: async (recordId: string): Promise<Prescription[]> => {
+    const res = await apiClient.get<ApiSuccessResponse<Prescription[]>>(
+      ENDPOINTS.PRESCRIPTIONS.BY_RECORD(recordId),
     );
     return res.data.data;
   },

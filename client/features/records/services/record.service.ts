@@ -15,12 +15,12 @@ export const recordService = {
   /**
    * Create a new medical record for a patient. Doctor only.
    * Pass FormData to include a lab report PDF/image.
+   * Returns a populated record shape since the server populates doctorId.
    */
-  createRecord: async (payload: FormData): Promise<MedicalRecord> => {
-    const res = await apiClient.post<ApiSuccessResponse<{ record: MedicalRecord }>>(
+  createRecord: async (payload: FormData): Promise<PopulatedMedicalRecord> => {
+    const res = await apiClient.post<ApiSuccessResponse<{ record: PopulatedMedicalRecord }>>(
       ENDPOINTS.RECORDS.BASE,
       payload,
-      { headers: { 'Content-Type': 'multipart/form-data' } },
     );
     return res.data.data.record;
   },
@@ -47,11 +47,10 @@ export const recordService = {
   },
 
   /**
-   * Fetch a single medical record by its ID.
-   * Ownership enforced on backend — patients can only see own records.
+   * Fetch a single medical record by its ID (populated with doctor and patient).
    */
-  getRecordById: async (id: string): Promise<MedicalRecord> => {
-    const res = await apiClient.get<ApiSuccessResponse<{ record: MedicalRecord }>>(
+  getRecordById: async (id: string): Promise<PopulatedMedicalRecord> => {
+    const res = await apiClient.get<ApiSuccessResponse<{ record: PopulatedMedicalRecord }>>(
       ENDPOINTS.RECORDS.BY_ID(id),
     );
     return res.data.data.record;

@@ -1,11 +1,8 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState } from 'react';
 import {
   View,
   Text,
-  TextInput,
   TouchableOpacity,
-  ActivityIndicator,
-  StyleSheet,
   ScrollView,
   Alert,
   KeyboardAvoidingView,
@@ -13,67 +10,18 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
-import Colors from '@/constants/Colors';
+import { Colors } from '@/constants/Colors';
 import { useColorScheme } from '@/components/useColorScheme';
+import { spacing, radius, shadows } from '@/constants/ThemeTokens';
+import { Input } from '@/components/ui/Input';
+import { Button } from '@/components/ui/Button';
 import { wardService } from '@/features/wards/services/ward.service';
-
-const WARD_TYPES = ['general', 'private', 'icu', 'emergency'] as const;
-
-const makeStyles = (colorScheme: 'light' | 'dark') => StyleSheet.create({
-  container: { flex: 1, backgroundColor: Colors[colorScheme].surfaceTertiary },
-  content: { padding: 20, paddingBottom: 40 },
-  title: { fontSize: 24, fontWeight: '700', color: Colors[colorScheme].text, marginBottom: 4 },
-  subtitle: { fontSize: 14, color: Colors[colorScheme].textSecondary, marginBottom: 24 },
-  label: { fontSize: 13, fontWeight: '600', color: Colors[colorScheme].textSecondary, marginBottom: 6, marginTop: 12 },
-  input: {
-    backgroundColor: Colors[colorScheme].surface,
-    borderWidth: 1,
-    borderColor: Colors[colorScheme].border,
-    borderRadius: 8,
-    paddingHorizontal: 14,
-    paddingVertical: 12,
-    fontSize: 15,
-  },
-  typeContainer: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 8,
-  },
-  typeButton: {
-    paddingHorizontal: 16,
-    paddingVertical: 10,
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: Colors[colorScheme].border,
-    backgroundColor: Colors[colorScheme].surface,
-  },
-  typeButtonActive: {
-    borderColor: Colors[colorScheme].primary,
-    backgroundColor: Colors[colorScheme].infoBg,
-  },
-  typeButtonText: {
-    fontSize: 13,
-    fontWeight: '600',
-    color: Colors[colorScheme].textSecondary,
-  },
-  typeButtonTextActive: {
-    color: Colors[colorScheme].primary,
-  },
-  submitButton: {
-    backgroundColor: Colors[colorScheme].primary,
-    borderRadius: 10,
-    paddingVertical: 16,
-    alignItems: 'center',
-    marginTop: 28,
-  },
-  submitButtonDisabled: { opacity: 0.6 },
-  submitButtonText: { color: '#fff', fontSize: 16, fontWeight: '600' },
-});
+import { WARD_TYPES } from '@/shared/constants/wardTypes';
 
 export default function AddWardScreen() {
   const router = useRouter();
   const colorScheme = useColorScheme() ?? 'light';
-  const styles = useMemo(() => makeStyles(colorScheme), [colorScheme]);
+  const colors = Colors[colorScheme];
 
   const [departmentId, setDepartmentId] = useState('');
   const [name, setName] = useState('');
@@ -83,10 +31,25 @@ export default function AddWardScreen() {
   const [submitting, setSubmitting] = useState(false);
 
   const handleSubmit = async () => {
-    if (!departmentId.trim()) return Alert.alert('Validation', 'Department ID is required.');
-    if (!name.trim()) return Alert.alert('Validation', 'Ward name is required.');
-    if (!totalBeds.trim() || Number(totalBeds) <= 0)
-      return Alert.alert('Validation', 'Valid total beds count is required.');
+    const validationErrors: string[] = [];
+    if (!departmentId.trim()) validationErrors.push('Department ID is required.');
+    if (!name.trim()) validationErrors.push('Ward name is required.');
+    if (!totalBeds.trim() || Number(totalBeds) <= 0) {
+      validationErrors.push('Valid total beds count is required (must be greater than 0).');
+    }
+    const occupancy = Number(currentOccupancy);
+    const beds = Number(totalBeds);
+    if (!isNaN(occupancy) && occupancy < 0) {
+      validationErrors.push('Current occupancy cannot be negative.');
+    }
+    if (!isNaN(occupancy) && !isNaN(beds) && beds > 0 && occupancy > beds) {
+      validationErrors.push(`Current occupancy (${occupancy}) cannot exceed total beds (${beds}).`);
+    }
+
+    if (validationErrors.length > 0) {
+      Alert.alert('Validation', validationErrors.join('\n'));
+      return;
+    }
 
     setSubmitting(true);
     try {
@@ -108,79 +71,127 @@ export default function AddWardScreen() {
   };
 
   return (
-    <SafeAreaView edges={['bottom']} style={{ flex: 1 }}>
+    <SafeAreaView edges={['bottom']} style={{ flex: 1, backgroundColor: colors.background }}>
       <KeyboardAvoidingView
         style={{ flex: 1 }}
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       >
-        <ScrollView style={styles.container} contentContainerStyle={styles.content}>
-        <Text style={styles.title}>Add New Ward</Text>
-        <Text style={styles.subtitle}>
-          Create a new hospital ward.
-        </Text>
+        <ScrollView contentContainerStyle={{ padding: spacing.md }}>
+          <Text style={{ fontSize: 24, fontWeight: '700', color: colors.text, marginBottom: 4 }}>
+            Add New Ward
+          </Text>
+          <Text style={{ fontSize: 14, color: colors.textSecondary, marginBottom: spacing.lg }}>
+            Create a new hospital ward.
+          </Text>
 
-        <Text style={styles.label}>Department ID</Text>
-        <TextInput
-          style={styles.input}
-          placeholder="MongoDB _id of the parent department"
-          value={departmentId}
-          onChangeText={setDepartmentId}
-          autoCapitalize="none"
-          autoCorrect={false}
-        />
-
-        <Text style={styles.label}>Ward Name</Text>
-        <TextInput
-          style={styles.input}
-          placeholder="e.g. Ward A, ICU Block 1"
-          value={name}
-          onChangeText={setName}
-        />
-
-        <Text style={styles.label}>Ward Type</Text>
-        <View style={styles.typeContainer}>
-          {WARD_TYPES.map((t) => (
-            <TouchableOpacity
-              key={t}
-              style={[styles.typeButton, type === t && styles.typeButtonActive]}
-              onPress={() => setType(t)}
+          {/* Ward Details Section */}
+          <View
+            style={{
+              backgroundColor: colors.surface,
+              borderRadius: radius.lg,
+              padding: spacing.lg,
+              marginBottom: spacing.md,
+              ...shadows.card,
+            }}
+          >
+            <Text
+              style={{
+                fontSize: 14,
+                fontWeight: '600',
+                color: colors.textSecondary,
+                textTransform: 'uppercase',
+                letterSpacing: 1,
+                marginBottom: spacing.md,
+              }}
             >
-              <Text style={[styles.typeButtonText, type === t && styles.typeButtonTextActive]}>
-                {t.toUpperCase()}
+              WARD DETAILS
+            </Text>
+
+            <Input
+              label="Department ID"
+              placeholder="MongoDB _id of the parent department"
+              value={departmentId}
+              onChangeText={setDepartmentId}
+              autoCapitalize="none"
+              autoCorrect={false}
+            />
+
+            <Input
+              label="Ward Name"
+              placeholder="e.g. Ward A, ICU Block 1"
+              value={name}
+              onChangeText={setName}
+            />
+
+            {/* Ward Type Selector */}
+            <View style={{ marginBottom: spacing.md }}>
+              <Text
+                style={{
+                  fontSize: 12,
+                  fontWeight: '600',
+                  textTransform: 'uppercase',
+                  letterSpacing: 0.8,
+                  color: colors.textSecondary,
+                  marginBottom: spacing.sm,
+                }}
+              >
+                Ward Type
               </Text>
-            </TouchableOpacity>
-          ))}
-        </View>
+              <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm }}>
+                {WARD_TYPES.map((t) => (
+                  <TouchableOpacity
+                    key={t}
+                    onPress={() => setType(t)}
+                    activeOpacity={0.7}
+                    style={{
+                      paddingHorizontal: spacing.md,
+                      paddingVertical: 10,
+                      borderRadius: radius.md,
+                      borderWidth: 1,
+                      borderColor: type === t ? colors.primary : colors.border,
+                      backgroundColor: type === t ? colors.primaryMuted : colors.surface,
+                    }}
+                  >
+                    <Text
+                      style={{
+                        fontSize: 13,
+                        fontWeight: '600',
+                        color: type === t ? colors.primary : colors.textSecondary,
+                      }}
+                    >
+                      {t.toUpperCase()}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+            </View>
 
-        <Text style={styles.label}>Total Beds</Text>
-        <TextInput
-          style={styles.input}
-          placeholder="e.g. 20"
-          value={totalBeds}
-          onChangeText={setTotalBeds}
-          keyboardType="number-pad"
-        />
+            <Input
+              label="Total Beds"
+              placeholder="e.g. 20"
+              value={totalBeds}
+              onChangeText={setTotalBeds}
+              keyboardType="number-pad"
+            />
 
-        <Text style={styles.label}>Current Occupancy (Optional)</Text>
-        <TextInput
-          style={styles.input}
-          placeholder="e.g. 0"
-          value={currentOccupancy}
-          onChangeText={setCurrentOccupancy}
-          keyboardType="number-pad"
-        />
+            <Input
+              label="Current Occupancy (Optional)"
+              placeholder="e.g. 0"
+              value={currentOccupancy}
+              onChangeText={setCurrentOccupancy}
+              keyboardType="number-pad"
+            />
+          </View>
 
-        <TouchableOpacity
-          style={[styles.submitButton, submitting && styles.submitButtonDisabled]}
-          onPress={handleSubmit}
-          disabled={submitting}
-        >
-          {submitting ? (
-            <ActivityIndicator color="#fff" />
-          ) : (
-            <Text style={styles.submitButtonText}>Create Ward</Text>
-          )}
-        </TouchableOpacity>
+          <Button
+            title="Create Ward"
+            variant="accent"
+            size="lg"
+            fullWidth
+            loading={submitting}
+            onPress={handleSubmit}
+            style={{ marginTop: spacing.lg }}
+          />
         </ScrollView>
       </KeyboardAvoidingView>
     </SafeAreaView>

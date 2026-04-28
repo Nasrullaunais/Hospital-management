@@ -1,0 +1,303 @@
+{
+  "nodes": [
+    {
+      "id": "android_icon_monochrome",
+      "label": "Android Monochrome Icon",
+      "file_type": "image",
+      "source_file": "client/assets/images/android-icon-monochrome.png",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "favicon",
+      "label": "Favicon Icon",
+      "file_type": "image",
+      "source_file": "client/assets/images/favicon.png",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "app_icon",
+      "label": "Main App Icon",
+      "file_type": "image",
+      "source_file": "client/assets/images/icon.png",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "splash_icon",
+      "label": "Splash Screen Icon",
+      "file_type": "image",
+      "source_file": "client/assets/images/splash-icon.png",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "login_creds_screenshot",
+      "label": "Login Credentials Screenshot",
+      "file_type": "image",
+      "source_file": "login-creds.jpg",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": "2026-04-24T20:49:00+05:30",
+      "author": "Android device AQ3A.250226.002",
+      "contributor": null
+    },
+    {
+      "id": "hospital_logo",
+      "label": "Hospital Management System Logo",
+      "file_type": "concept",
+      "source_file": null,
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "seed_script",
+      "label": "Database Seed Script",
+      "file_type": "code",
+      "source_file": "server/src/scripts/seed.ts",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "login_credentials_data",
+      "label": "Login Credentials (Password123)",
+      "file_type": "data",
+      "source_file": "login-creds.jpg",
+      "source_location": "seed.ts lines 1046-1056",
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "cred_admin",
+      "label": "Admin Credential: admin@hospital.com",
+      "file_type": "credential",
+      "source_file": null,
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "cred_pharmacist",
+      "label": "Pharmacist Credential: pharmacist@hospital.com",
+      "file_type": "credential",
+      "source_file": null,
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "cred_receptionist",
+      "label": "Receptionist Credential: receptionist@hospital.com",
+      "file_type": "credential",
+      "source_file": null,
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "cred_doctors",
+      "label": "Doctor Credentials (5 doctors)",
+      "file_type": "credential",
+      "source_file": null,
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "cred_patients",
+      "label": "Patient Credentials (2 patients listed)",
+      "file_type": "credential",
+      "source_file": null,
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    },
+    {
+      "id": "app_adaptive_icon_set",
+      "label": "Android Adaptive Icon Set",
+      "file_type": "concept",
+      "source_file": "client/app.json",
+      "source_location": "lines 21-26",
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null
+    }
+  ],
+  "edges": [
+    {
+      "source": "android_icon_monochrome",
+      "target": "hospital_logo",
+      "relation": "depicts",
+      "confidence": "INFERRED",
+      "confidence_score": 0.8,
+      "source_file": "client/assets/images/android-icon-monochrome.png",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "favicon",
+      "target": "hospital_logo",
+      "relation": "depicts",
+      "confidence": "INFERRED",
+      "confidence_score": 0.8,
+      "source_file": "client/assets/images/favicon.png",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "app_icon",
+      "target": "hospital_logo",
+      "relation": "depicts",
+      "confidence": "INFERRED",
+      "confidence_score": 0.8,
+      "source_file": "client/assets/images/icon.png",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "splash_icon",
+      "target": "hospital_logo",
+      "relation": "depicts",
+      "confidence": "INFERRED",
+      "confidence_score": 0.8,
+      "source_file": "client/assets/images/splash-icon.png",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "login_creds_screenshot",
+      "target": "login_credentials_data",
+      "relation": "depicts",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "login-creds.jpg",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "login_creds_screenshot",
+      "target": "seed_script",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "login-creds.jpg",
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "login_credentials_data",
+      "target": "cred_admin",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": null,
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "login_credentials_data",
+      "target": "cred_pharmacist",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": null,
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "login_credentials_data",
+      "target": "cred_receptionist",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": null,
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "login_credentials_data",
+      "target": "cred_doctors",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": null,
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "login_credentials_data",
+      "target": "cred_patients",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": null,
+      "source_location": null,
+      "weight": 1.0
+    },
+    {
+      "source": "android_icon_monochrome",
+      "target": "app_adaptive_icon_set",
+      "relation": "conceptually_related_to",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "client/app.json",
+      "source_location": "lines 21-26",
+      "weight": 1.0
+    },
+    {
+      "source": "app_icon",
+      "target": "splash_icon",
+      "relation": "conceptually_related_to",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "client/app.json",
+      "source_location": "lines 7,11",
+      "weight": 1.0
+    },
+    {
+      "source": "seed_script",
+      "target": "login_credentials_data",
+      "relation": "references",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "server/src/scripts/seed.ts",
+      "source_location": "lines 1046-1056",
+      "weight": 1.0
+    }
+  ],
+  "hyperedges": [],
+  "input_tokens": 0,
+  "output_tokens": 0
+}

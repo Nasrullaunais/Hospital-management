@@ -1,5 +1,7 @@
 import { body, query } from 'express-validator';
 
+const AVAILABILITIES = ['Available', 'Unavailable', 'On Leave'] as const;
+
 export const createDoctorValidation = [
   body('userId').isMongoId().withMessage('A valid userId (MongoDB ObjectId) is required'),
   body('specialization').trim().notEmpty().withMessage('Specialization is required'),
@@ -14,7 +16,7 @@ export const createDoctorValidation = [
 export const updateDoctorValidation = [
   body('availability')
     .optional()
-    .isIn(['Available', 'Unavailable', 'On Leave'])
+    .isIn(AVAILABILITIES)
     .withMessage('Availability must be: Available, Unavailable, or On Leave'),
   body('consultationFee')
     .optional()
@@ -29,5 +31,7 @@ export const updateDoctorValidation = [
 
 export const listDoctorsValidation = [
   query('specialization').optional().trim(),
-  query('availability').optional().isIn(['Available', 'Unavailable', 'On Leave']),
+  query('availability').optional().isIn(AVAILABILITIES),
+  query('page').optional().isInt({ min: 1 }).toInt(),
+  query('limit').optional().isInt({ min: 1, max: 100 }).toInt(),
 ];

@@ -1,13 +1,41 @@
-import { Request, Response } from 'express';
+import type { Request, Response } from 'express';
 import mongoose from 'mongoose';
 import { Dispense } from './dispense.model.js';
 import { Medicine } from '../pharmacy/medicine.model.js';
 import { Prescription } from '../prescriptions/prescription.model.js';
 import { ApiError } from '../../shared/utils/ApiError.js';
+import { ROLES } from '../../shared/constants/roles.js';
+import { PRESCRIPTION_STATUS } from '../../shared/constants/prescriptionStatus.js';
+
+interface DispensedItemInput {
+  medicineId: string;
+  medicineName: string;
+  quantityDispensed: number;
+}
+
+interface PrescriptionItem {
+  medicineId: mongoose.Types.ObjectId;
+  medicineName: string;
+  dosage: string;
+  quantity: number;
+  instructions?: string;
+}
+
+interface FullDispensedItem {
+  medicineId: string;
+  medicineName: string;
+  dosage: string;
+  quantityPrescribed: number;
+  quantityDispensed: number;
+  instructions: string;
+}
 
 export const dispensePrescription = async (req: Request, res: Response) => {
-  const { prescriptionId, dispensedItems } = req.body;
-  const pharmacistId = req.user!.id;
+  const { prescriptionId, dispensedItems } = req.body as { prescriptionId: string; dispensedItems: DispensedItemInput[] };
+  const pharmacistId = req.user?.id;
+  if (!pharmacistId) {
+    throw new ApiError(401, 'Authentication required');
+  }
 
   if (!prescriptionId || !dispensedItems?.length) {
     throw new ApiError(400, 'prescriptionId and dispensedItems are required');
@@ -15,15 +43,16 @@ export const dispensePrescription = async (req: Request, res: Response) => {
 
   const prescription = await Prescription.findById(prescriptionId);
   if (!prescription) throw new ApiError(404, 'Prescription not found');
-  if (prescription.status !== 'active') {
+  if (prescription.status !== PRESCRIPTION_STATUS.ACTIVE) {
     throw new ApiError(400, `Cannot dispense a prescription with status '${prescription.status}'`);
   }
 
-  // Validate each dispensed item and deduct stock
   const session = await mongoose.startSession();
-  session.startTransaction();
+  let committed = false;
 
   try {
+    session.startTransaction();
+
     for (const item of dispensedItems) {
       if (
         !item.medicineId ||
@@ -33,11 +62,10 @@ export const dispensePrescription = async (req: Request, res: Response) => {
         throw new ApiError(400, 'Each dispensed item must have medicineId and quantityDispensed > 0');
       }
 
-      // Atomic check-and-decrement in a single operation to prevent race conditions
       const medicine = await Medicine.findOneAndUpdate(
         { _id: item.medicineId, stockQuantity: { $gte: item.quantityDispensed } },
         { $inc: { stockQuantity: -item.quantityDispensed } },
-        { new: true, session },
+        { returnDocument: 'after', session },
       );
 
       if (!medicine) {
@@ -50,12 +78,15 @@ export const dispensePrescription = async (req: Request, res: Response) => {
           `Insufficient stock for ${current.name}: available ${current.stockQuantity}, requested ${item.quantityDispensed}`,
         );
       }
+
+      if (item.medicineName && item.medicineName !== medicine.name) {
+        throw new ApiError(400, `Medicine name mismatch for ${medicine.name}: expected '${medicine.name}', got '${item.medicineName}'`);
+      }
     }
 
-    // Build dispensedItems with full details from prescription
-    const fullDispensedItems = dispensedItems.map((item: any) => {
+    const fullDispensedItems: FullDispensedItem[] = dispensedItems.map((item) => {
       const rxItem = prescription.items.find(
-        (pi: any) => pi.medicineId.toString() === item.medicineId,
+        (pi: PrescriptionItem) => pi.medicineId.toString() === item.medicineId,
       );
       return {
         medicineId: item.medicineId,
@@ -67,7 +98,6 @@ export const dispensePrescription = async (req: Request, res: Response) => {
       };
     });
 
-    // Create dispense record
     const dispense = await Dispense.create([{
       prescriptionId,
       patientId: prescription.patientId,
@@ -76,34 +106,72 @@ export const dispensePrescription = async (req: Request, res: Response) => {
       status: 'fulfilled',
     }], { session });
 
-    // Mark prescription as fulfilled
-    prescription.status = 'fulfilled';
+    prescription.status = PRESCRIPTION_STATUS.FULFILLED;
     await prescription.save({ session });
 
     await session.commitTransaction();
-    session.endSession();
+    committed = true;
 
     res.status(201).json({ success: true, data: dispense[0] });
   } catch (err) {
-    await session.abortTransaction();
-    session.endSession();
+    if (!committed) {
+      try {
+        await session.abortTransaction();
+      } catch (abortErr) {
+        console.error('[dispense] abortTransaction failed:', abortErr);
+      }
+    }
     throw err;
+  } finally {
+    await session.endSession();
   }
 };
 
 export const getDispensesByPatient = async (req: Request, res: Response) => {
   const { patientId } = req.params;
 
-  // Ownership check: only the patient themselves or admin can view
-  const isOwner = req.user!.id === patientId || req.user!.role === 'admin';
-  if (!isOwner) {
+  const userId = req.user?.id;
+  const userRole = req.user?.role;
+  if (!userId) {
+    throw new ApiError(401, 'Authentication required');
+  }
+
+  const isPatient = userId === patientId;
+  const isAdmin = userRole === ROLES.ADMIN;
+  const isPharmacist = userRole === ROLES.PHARMACIST;
+
+  const skip = Math.max(0, Number(req.query.skip) || 0);
+  const limit = Math.min(100, Math.max(1, Number(req.query.limit) || 20));
+
+  if (isPharmacist && !isPatient) {
+    const [dispenses, total] = await Promise.all([
+      Dispense.find({ patientId, pharmacistId: userId })
+        .populate('pharmacistId', 'name')
+        .populate('prescriptionId')
+        .sort({ fulfilledAt: -1 })
+        .skip(skip)
+        .limit(limit),
+      Dispense.countDocuments({ patientId, pharmacistId: userId }),
+    ]);
+    return res.json({ success: true, data: { dispenses, total, skip, limit } });
+  }
+  if (!isPatient && !isAdmin) {
     throw new ApiError(403, 'You are not authorized to view these dispense records');
   }
 
-  const dispenses = await Dispense.find({ patientId })
-    .populate('pharmacistId', 'name')
-    .populate('prescriptionId')
-    .sort({ fulfilledAt: -1 });
+  if (!mongoose.Types.ObjectId.isValid(patientId)) {
+    throw new ApiError(400, 'Invalid patient ID format');
+  }
 
-  res.json({ success: true, data: dispenses });
+  const [dispenses, total] = await Promise.all([
+    Dispense.find({ patientId })
+      .populate('pharmacistId', 'name')
+      .populate('prescriptionId')
+      .sort({ fulfilledAt: -1 })
+      .skip(skip)
+      .limit(limit),
+    Dispense.countDocuments({ patientId }),
+  ]);
+
+  res.json({ success: true, data: { dispenses, total, skip, limit } });
 };

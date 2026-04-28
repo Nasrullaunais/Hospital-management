@@ -4,7 +4,7 @@ import { useColorScheme } from '@/components/useColorScheme';
 import { Colors, getBadgeColors } from '@/constants/Colors';
 import { spacing, radius } from '@/constants/ThemeTokens';
 
-export type BadgeVariant = 'success' | 'warning' | 'error' | 'info' | 'neutral' | 'primary';
+export type BadgeVariant = 'success' | 'warning' | 'error' | 'info' | 'neutral' | 'primary' | 'accent';
 
 interface BadgeProps {
   label: string;
@@ -30,8 +30,8 @@ export function Badge({
         {
           backgroundColor: badgeColors.background,
           borderColor: badgeColors.border,
-          paddingVertical: size === 'sm' ? spacing.xs : spacing.sm,
-          paddingHorizontal: size === 'sm' ? spacing.sm : spacing.md,
+          paddingVertical: size === 'sm' ? 2 : spacing.xs,
+          paddingHorizontal: size === 'sm' ? spacing.xs : spacing.sm,
         },
         style,
       ]}
@@ -53,9 +53,8 @@ export function Badge({
 
 const styles = StyleSheet.create({
   badge: {
-    borderRadius: radius.full,
+    borderRadius: radius.xs,
     borderWidth: 1,
-    alignSelf: 'flex-start',
   },
   text: {
     fontWeight: '600',

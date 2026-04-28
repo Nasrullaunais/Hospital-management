@@ -1,4 +1,5 @@
-import React, { useCallback, useEffect, useState, useMemo } from 'react';
+import React, { useCallback, useState, useMemo } from 'react';
+import { useFocusEffect } from 'expo-router';
 import {
   View,
   Text,
@@ -16,6 +17,8 @@ import type { Medicine } from '@/shared/types';
 import Colors from '@/constants/Colors';
 import { useColorScheme } from '@/components/useColorScheme';
 import { spacing, radius, shadows } from '@/constants/ThemeTokens';
+import { LOW_STOCK_THRESHOLD, EXPIRY_WARNING_DAYS } from '@/shared/constants/pharmacy';
+import { getImageUrl } from '@/shared/utils/getImageUrl';
 
 export default function MedicineListScreen() {
   const [medicines, setMedicines] = useState<Medicine[]>([]);
@@ -38,10 +41,12 @@ export default function MedicineListScreen() {
     }
   }, [categoryFilter]);
 
-  useEffect(() => {
-    setLoading(true);
-    fetchMedicines().finally(() => setLoading(false));
-  }, [fetchMedicines]);
+  useFocusEffect(
+    useCallback(() => {
+      setLoading(true);
+      fetchMedicines().finally(() => setLoading(false));
+    }, [fetchMedicines]),
+  );
 
   const onRefresh = useCallback(async () => {
     setRefreshing(true);
@@ -51,10 +56,10 @@ export default function MedicineListScreen() {
 
   const isExpiringSoon = useCallback((dateStr: string) => {
     const daysUntilExpiry = (new Date(dateStr).getTime() - Date.now()) / (1000 * 60 * 60 * 24);
-    return daysUntilExpiry <= 60;
+    return daysUntilExpiry <= EXPIRY_WARNING_DAYS;
   }, []);
 
-  const isLowStock = useCallback((qty: number) => qty < 10, []);
+  const isLowStock = useCallback((qty: number) => qty < LOW_STOCK_THRESHOLD, []);
 
   const getStockBadgeStyle = useCallback((item: Medicine) => {
     const lowStock = isLowStock(item.stockQuantity);
@@ -73,7 +78,7 @@ export default function MedicineListScreen() {
     return (
       <View style={[styles.card, { backgroundColor: theme.surface, borderColor: theme.border }]}>
         {item.packagingImageUrl ? (
-          <Image source={{ uri: item.packagingImageUrl }} style={styles.image} resizeMode="cover" />
+          <Image source={{ uri: getImageUrl(item.packagingImageUrl) }} style={styles.image} resizeMode="cover" />
         ) : (
           <View style={[styles.image, { backgroundColor: theme.surfaceTertiary }]}>
             <Text style={[styles.imagePlaceholderText, { color: theme.textTertiary }]}>Pill</Text>

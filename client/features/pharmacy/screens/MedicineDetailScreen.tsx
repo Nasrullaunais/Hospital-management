@@ -12,6 +12,8 @@ import {
 import { medicineService } from '../services/medicine.service';
 import { useAuth } from '@/shared/context/AuthContext';
 import type { Medicine } from '@/shared/types';
+import { LOW_STOCK_THRESHOLD, EXPIRY_WARNING_DAYS } from '@/shared/constants/pharmacy';
+import { getImageUrl } from '@/shared/utils/getImageUrl';
 
 interface Props {
   medicineId: string;
@@ -76,14 +78,14 @@ export default function MedicineDetailScreen({ medicineId, onDeleted }: Props) {
   const isAdmin = user?.role === 'admin';
   const daysUntilExpiry =
     (new Date(medicine.expiryDate).getTime() - Date.now()) / (1000 * 60 * 60 * 24);
-  const expiringSoon = daysUntilExpiry <= 30;
-  const isLowStock = medicine.stockQuantity < 10;
+  const expiringSoon = daysUntilExpiry <= EXPIRY_WARNING_DAYS;
+  const isLowStock = medicine.stockQuantity < LOW_STOCK_THRESHOLD;
 
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
       {medicine.packagingImageUrl && (
         <Image
-          source={{ uri: medicine.packagingImageUrl }}
+          source={{ uri: getImageUrl(medicine.packagingImageUrl) }}
           style={styles.image}
           resizeMode="contain"
         />

@@ -27,7 +27,7 @@ export function EmptyState({
   return (
     <View style={styles.container}>
       <SymbolView
-        name={{ ios: icon as any, android: icon as any, web: icon as any }}
+        name={icon}
         tintColor={colors.textTertiary}
         size={64}
       />

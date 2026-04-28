@@ -8,12 +8,14 @@ export interface IUser extends Document {
   name: string;
   email: string;
   password: string;
-  role: 'patient' | 'doctor' | 'admin' | 'pharmacist';
+  role: 'patient' | 'doctor' | 'admin' | 'pharmacist' | 'receptionist';
   phone?: string;
   dateOfBirth?: Date;
+  /** File reference with protocol: 's3://...' | 'local://...' | legacy '/uploads/...' */
   idDocumentUrl?: string;
   createdAt: Date;
   updatedAt: Date;
+  lastVisit?: Date;
   // Instance methods
   comparePassword(candidatePassword: string): Promise<boolean>;
 }
@@ -50,8 +52,8 @@ const userSchema = new Schema<IUser>(
     role: {
       type: String,
       enum: {
-        values: ['patient', 'doctor', 'admin', 'pharmacist'],
-        message: 'Role must be patient, doctor, admin, or pharmacist',
+        values: ['patient', 'doctor', 'admin', 'pharmacist', 'receptionist'],
+        message: 'Role must be patient, doctor, admin, pharmacist, or receptionist',
       },
       default: 'patient',
     },
@@ -64,6 +66,13 @@ const userSchema = new Schema<IUser>(
     },
     idDocumentUrl: {
       type: String,
+    },
+    isActive: {
+      type: Boolean,
+      default: true,
+    },
+    lastVisit: {
+      type: Date,
     },
   },
   {
