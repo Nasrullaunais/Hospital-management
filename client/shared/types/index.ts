@@ -86,6 +86,45 @@ export interface PopulatedMedicalRecord extends Omit<MedicalRecord, 'patientId' 
   doctorId: { _id: string; specialization: string; userId: { _id: string; name: string } };
 }
 
+// ── Lab Report ──────────────────────────────────────────────────────────────
+
+export type LabType = 'hematology' | 'biochemistry' | 'microbiology' | 'urinalysis' | 'radiology' | 'serology' | 'pathology' | 'other';
+export type LabReportStatus = 'pending' | 'sample_collected' | 'in_progress' | 'completed' | 'reviewed';
+export type LabResultFlag = 'normal' | 'high' | 'low' | 'critical';
+
+export interface LabResult {
+  parameter: string;
+  value: number;
+  unit: string;
+  normalRange?: string;
+  flag: LabResultFlag;
+}
+
+export interface LabReport {
+  _id: string;
+  patientId: string | User;
+  doctorId: string | Doctor;
+  medicalRecordId?: string;
+  appointmentId?: string;
+  labType: LabType;
+  testDate: string;
+  status: LabReportStatus;
+  results: LabResult[];
+  interpretation?: string;
+  notes?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+// ── Report Generation ────────────────────────────────────────────────────────
+
+export type ReportType = 'lab-report' | 'prescription' | 'medical-certificate';
+
+export interface ReportGenerateResponse {
+  downloadUrl: string;
+  fileKey: string;
+}
+
 // ── Medicine ───────────────────────────────────────────────────────────────────
 
 export interface Medicine {
@@ -116,20 +155,6 @@ export interface Invoice {
   paymentReceiptUrl?: string;
 }
 
-// ── Department ─────────────────────────────────────────────────────────────────
-
-export interface Department {
-  _id: string;
-  name: string;
-  description: string;
-  headDoctorId?: string | { _id: string; userId: string };
-  location: string;
-  phone: string;
-  status: 'active' | 'inactive';
-  createdAt: string;
-  updatedAt: string;
-}
-
 // ── Prescription ─────────────────────────────────────────────────────────────────
 
 export type PrescriptionStatus = 'active' | 'fulfilled' | 'cancelled';
@@ -157,12 +182,13 @@ export type WardStatus = 'available' | 'full' | 'maintenance';
 
 export interface Ward {
   _id: string;
-  departmentId: string | { _id: string; name: string; location: string };
   name: string;
   type: WardType;
   totalBeds: number;
   currentOccupancy: number;
   status: WardStatus;
+  location: string;
+  phone: string;
   createdAt: string;
   updatedAt: string;
 }

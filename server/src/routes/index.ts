@@ -7,11 +7,13 @@ import medicineRoutes from '../modules/pharmacy/medicine.routes.js';
 import invoiceRoutes from '../modules/billing/invoice.routes.js';
 import prescriptionRoutes from '../modules/prescriptions/prescription.routes.js';
 import dispenseRoutes from '../modules/dispensing/dispense.routes.js';
-import departmentRoutes from '../modules/departments/department.routes.js';
 import wardRoutes from '../modules/wards/ward.routes.js';
 import wardAssignmentRoutes from '../modules/wardAssignments/wardAssignment.routes.js';
 import wardMedicationRoutes from '../modules/wardMedications/wardMedication.routes.js';
 import filesRoutes from '../modules/files/files.routes.js';
+import adminRoutes from '../modules/admin/admin.routes.js';
+import labReportRoutes from '../modules/labReports/labReport.routes.js';
+import reportRoutes from '../modules/reports/report.routes.js';
 
 const router = Router();
 
@@ -44,8 +46,10 @@ router.use('/api/doctors', doctorRoutes);
 // Member 3: Appointments
 router.use('/api/appointments', appointmentRoutes);
 
-// Member 4: Medical Records
+// Member 4: Medical Records & Lab Reports
 router.use('/api/records', recordRoutes);
+router.use('/api/lab-reports', labReportRoutes);
+router.use('/api/reports', reportRoutes);
 
 // Member 5: Pharmacy
 router.use('/api/medicines', medicineRoutes);
@@ -57,14 +61,16 @@ router.use('/api/invoices', invoiceRoutes);
 router.use('/api/prescriptions', prescriptionRoutes);
 router.use('/api/dispense', dispenseRoutes);
 
-// Departments & Wards
-router.use('/api/departments', departmentRoutes);
+// Wards
 router.use('/api/wards', wardRoutes);
 router.use('/api/assignments', wardAssignmentRoutes);
 router.use('/api/wardMedications', wardMedicationRoutes);
 
 // Module 7: Files (S3 presigned URLs)
 router.use('/api/files', filesRoutes);
+
+// Admin: User management (receptionists, pharmacists)
+router.use('/api/admin/users', adminRoutes);
 
 // ── 404 Handler ───────────────────────────────────────────────────────────────
 router.use((_req: Request, res: Response) => {

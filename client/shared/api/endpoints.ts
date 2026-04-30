@@ -42,6 +42,20 @@ export const ENDPOINTS = {
     DOCTOR_LOGS: '/records/doctor-logs',
   },
 
+  // Member 4 — Lab Reports & Report Generation
+  LAB_REPORTS: {
+    BASE: '/lab-reports',
+    BY_PATIENT: (patientId: string) => `/lab-reports/patient/${patientId}`,
+    BY_ID: (id: string) => `/lab-reports/${id}`,
+    REVIEW: (id: string) => `/lab-reports/${id}/review`,
+  },
+
+  REPORTS: {
+    LAB_REPORT: '/reports/lab-report',
+    PRESCRIPTION: '/reports/prescription',
+    MEDICAL_CERTIFICATE: '/reports/medical-certificate',
+  },
+
   // Member 5 — Pharmacy
   MEDICINES: {
     BASE: '/medicines',
@@ -68,18 +82,19 @@ export const ENDPOINTS = {
     BY_RECORD: (recordId: string) => `/prescriptions/record/${recordId}`,
   },
 
+  // Admin — Staff Management
+  ADMIN: {
+    USERS: '/admin/users',
+    USER_BY_ID: (id: string) => `/admin/users/${id}`,
+  },
+
   // Member 8 — Dispensing
   DISPENSE: {
     BASE: '/dispense',
     BY_PATIENT: (patientId: string) => `/dispense/patient/${patientId}`,
   },
 
-  // Departments & Wards
-  DEPARTMENTS: {
-    BASE: '/departments',
-    BY_ID: (id: string) => `/departments/${id}`,
-  },
-
+  // Wards
   WARDS: {
     BASE: '/wards',
     BY_ID: (id: string) => `/wards/${id}`,

@@ -97,6 +97,32 @@ export default function DoctorLayout() {
             headerBackTitleVisible: false,
           }}
         />
+
+        {/* Lab Reports (Member 4) */}
+        <Stack.Screen
+          name="lab-reports/add"
+          options={{
+            headerShown: true,
+            title: 'New Lab Report',
+            headerStyle: { backgroundColor: theme.surface },
+            headerTintColor: theme.primary,
+            headerTitleStyle: { fontWeight: '600', fontSize: 16 },
+            headerShadowVisible: false,
+            headerBackTitleVisible: false,
+          }}
+        />
+        <Stack.Screen
+          name="lab-reports/[id]"
+          options={{
+            headerShown: true,
+            title: 'Lab Report',
+            headerStyle: { backgroundColor: theme.surface },
+            headerTintColor: theme.primary,
+            headerTitleStyle: { fontWeight: '600', fontSize: 16 },
+            headerShadowVisible: false,
+            headerBackTitleVisible: false,
+          }}
+        />
       </Stack>
 
       {/* Custom Tab Bar */}

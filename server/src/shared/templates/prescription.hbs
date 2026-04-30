@@ -1,0 +1,431 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<title>Prescription - {{hospitalName}}</title>
+<style>
+  @page { size: A4; margin: 0; }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    color: #2c3e50;
+    font-size: 11px;
+    line-height: 1.5;
+    background: #fff;
+  }
+  .page {
+    width: 210mm;
+    min-height: 297mm;
+    padding: 18mm 16mm 14mm;
+    position: relative;
+  }
+
+  /* ── HEADER ── */
+  .header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    border-bottom: 3px solid #1a5276;
+    padding-bottom: 10px;
+    margin-bottom: 6px;
+  }
+  .header-logo {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .header-logo svg {
+    width: 38px;
+    height: 38px;
+  }
+  .hospital-name {
+    font-size: 18px;
+    font-weight: 700;
+    color: #1a5276;
+    letter-spacing: 1px;
+    line-height: 1.2;
+  }
+  .hospital-sub {
+    font-size: 8px;
+    color: #5d6d7e;
+  }
+  .header-center {
+    text-align: center;
+  }
+  .rx-symbol {
+    font-size: 36px;
+    color: #1a5276;
+    font-weight: 400;
+    line-height: 1;
+  }
+  .header-center h1 {
+    font-size: 16px;
+    color: #1a5276;
+    font-weight: 700;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+  }
+  .header-right {
+    text-align: right;
+    font-size: 8.5px;
+    color: #5d6d7e;
+    line-height: 1.6;
+  }
+  .header-right strong {
+    color: #1a5276;
+  }
+
+  /* ── CONTACT BAR ── */
+  .contact-bar {
+    display: flex;
+    justify-content: space-between;
+    font-size: 8px;
+    color: #7f8c8d;
+    padding-bottom: 8px;
+    border-bottom: 1px dashed #dee2e6;
+    margin-bottom: 14px;
+  }
+
+  /* ── PRESCRIPTION METADATA ── */
+  .rx-meta {
+    display: flex;
+    justify-content: space-between;
+    font-size: 9.5px;
+    margin-bottom: 12px;
+    padding: 6px 10px;
+    background: #f0f4f8;
+    border-radius: 3px;
+  }
+  .rx-meta .meta-item {
+    display: inline-flex;
+    gap: 4px;
+  }
+  .rx-meta .meta-item .ml {
+    color: #5d6d7e;
+  }
+  .rx-meta .meta-item .mv {
+    font-weight: 600;
+    color: #1a5276;
+  }
+
+  /* ── PATIENT & DIAGNOSIS ── */
+  .rx-patient {
+    display: flex;
+    gap: 30px;
+    margin-bottom: 12px;
+    padding: 8px 12px;
+    border: 1px solid #dee2e6;
+    border-radius: 3px;
+    background: #fafcfd;
+  }
+  .rx-patient .field {
+    font-size: 10px;
+  }
+  .rx-patient .field .label {
+    font-weight: 600;
+    color: #1a5276;
+    font-size: 8.5px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+  .rx-patient .field .value {
+    color: #2c3e50;
+    font-size: 11px;
+  }
+
+  .diagnosis-box {
+    margin-bottom: 14px;
+    padding: 7px 12px;
+    background: #eaf2f8;
+    border-left: 4px solid #2980b9;
+    border-radius: 2px;
+    font-size: 10.5px;
+  }
+  .diagnosis-box .dl {
+    font-weight: 600;
+    color: #1a5276;
+    font-size: 9px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+  .diagnosis-box .dv {
+    font-weight: 600;
+    color: #2c3e50;
+    margin-top: 1px;
+  }
+
+  /* ── TABLE ── */
+  .rx-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-bottom: 14px;
+    font-size: 10px;
+  }
+  .rx-table thead th {
+    background: #1a5276;
+    color: #fff;
+    font-weight: 600;
+    font-size: 9px;
+    text-transform: uppercase;
+    letter-spacing: 0.6px;
+    padding: 6px 8px;
+    text-align: left;
+    border: 1px solid #1a5276;
+  }
+  .rx-table thead th:first-child { width: 28px; text-align: center; }
+  .rx-table thead th:nth-child(2) { width: 24%; }
+  .rx-table thead th:nth-child(3) { width: 12%; }
+  .rx-table thead th:nth-child(4) { width: 14%; }
+  .rx-table thead th:nth-child(5) { width: 10%; }
+  .rx-table tbody td {
+    padding: 6px 8px;
+    border: 1px solid #dee2e6;
+    vertical-align: top;
+  }
+  .rx-table tbody tr:nth-child(even) td {
+    background: #f8f9fa;
+  }
+  .rx-table tbody tr:nth-child(odd) td {
+    background: #fff;
+  }
+  .rx-table .num-col {
+    text-align: center;
+    font-weight: 600;
+    color: #1a5276;
+  }
+  .rx-table .medicine-name {
+    font-weight: 600;
+    color: #1a5276;
+  }
+  .rx-table .instructions-text {
+    font-size: 9px;
+    color: #5d6d7e;
+    font-style: italic;
+  }
+
+  /* ── NOTES ── */
+  .rx-notes {
+    margin-bottom: 16px;
+    padding: 8px 12px;
+    background: #fdfefe;
+    border: 1px dashed #bdc3c7;
+    border-radius: 3px;
+    font-size: 9.5px;
+    color: #5d6d7e;
+  }
+  .rx-notes strong {
+    color: #2c3e50;
+  }
+  .rx-notes p {
+    white-space: pre-line;
+    margin-top: 2px;
+  }
+
+  /* ── SIGNATURE ── */
+  .signature-area {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-end;
+    margin-top: 18px;
+    padding-top: 10px;
+    border-top: 1px solid #dee2e6;
+  }
+  .signature-left {
+    flex: 1;
+  }
+  .signature-line {
+    width: 180px;
+    border-bottom: 1px solid #2c3e50;
+    margin-bottom: 3px;
+    height: 28px;
+  }
+  .signature-name {
+    font-weight: 600;
+    font-size: 10px;
+    color: #1a5276;
+  }
+  .signature-title {
+    font-size: 9px;
+    color: #5d6d7e;
+  }
+  .signature-reg {
+    font-size: 8px;
+    color: #7f8c8d;
+    margin-top: 1px;
+  }
+  .signature-right {
+    text-align: right;
+  }
+  .qr-placeholder {
+    width: 80px;
+    height: 80px;
+    border: 1px dashed #bdc3c7;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 7px;
+    color: #95a5a6;
+    border-radius: 3px;
+  }
+
+  /* ── FOOTER ── */
+  .footer {
+    position: absolute;
+    bottom: 11mm;
+    left: 16mm;
+    right: 16mm;
+    text-align: center;
+    font-size: 7.5px;
+    color: #95a5a6;
+    border-top: 1px solid #dee2e6;
+    padding-top: 6px;
+  }
+  .footer strong {
+    color: #7f8c8d;
+  }
+
+  /* ── WATERMARK ── */
+  .watermark {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%) rotate(-30deg);
+    opacity: 0.02;
+    pointer-events: none;
+    z-index: 0;
+    font-size: 120px;
+    font-weight: 700;
+    color: #1a5276;
+    white-space: nowrap;
+  }
+
+  /* ── PAGE BREAK ── */
+  .page-break { page-break-before: always; }
+
+  @media print {
+    body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  }
+</style>
+</head>
+<body>
+<div class="page">
+
+  <!-- Watermark -->
+  <div class="watermark">Rx</div>
+
+  <!-- ── HEADER ── -->
+  <div class="header">
+    <div class="header-logo">
+      <svg viewBox="0 0 40 40" xmlns="http://www.w3.org/2000/svg">
+        <rect x="15" y="4" width="10" height="32" rx="2" fill="#1a5276"/>
+        <rect x="4" y="15" width="32" height="10" rx="2" fill="#1a5276"/>
+      </svg>
+      <div>
+        <div class="hospital-name">{{hospitalName}}</div>
+        <div class="hospital-sub">Excellence in Healthcare &mdash; Since 1987</div>
+      </div>
+    </div>
+    <div class="header-center">
+      <div class="rx-symbol">&#8478;</div>
+      <h1>Prescription</h1>
+    </div>
+    <div class="header-right">
+      <strong>Prescription No.</strong><br />{{prescriptionId}}<br />
+      <strong>Date:</strong> {{reportDate}}
+    </div>
+  </div>
+
+  <!-- ── CONTACT BAR ── -->
+  <div class="contact-bar">
+    <span>{{hospitalAddress}}</span>
+    <span>{{hospitalPhone}}</span>
+  </div>
+
+  <!-- ── RX META ── -->
+  <div class="rx-meta">
+    <span class="meta-item"><span class="ml">Doctor:</span> <span class="mv">{{doctorName}}</span></span>
+    <span class="meta-item"><span class="ml">Specialization:</span> <span class="mv">{{doctorSpecialization}}</span></span>
+    <span class="meta-item"><span class="ml">License:</span> <span class="mv">LIC-{{doctorSpecialization}}-{{prescriptionId}}</span></span>
+  </div>
+
+  <!-- ── PATIENT INFO ── -->
+  <div class="rx-patient">
+    <div class="field">
+      <div class="label">Patient Name</div>
+      <div class="value">{{patientName}}</div>
+    </div>
+    <div class="field">
+      <div class="label">Age</div>
+      <div class="value">{{patientAge}} years</div>
+    </div>
+    <div class="field">
+      <div class="label">Patient ID</div>
+      <div class="value">{{patientId}}</div>
+    </div>
+  </div>
+
+  <!-- ── DIAGNOSIS ── -->
+  <div class="diagnosis-box">
+    <div class="dl">Diagnosis</div>
+    <div class="dv">{{diagnosis}}</div>
+  </div>
+
+  <!-- ── MEDICINES TABLE ── -->
+  <table class="rx-table">
+    <thead>
+      <tr>
+        <th>#</th>
+        <th>Medicine</th>
+        <th>Dosage</th>
+        <th>Frequency</th>
+        <th>Duration</th>
+        <th>Instructions</th>
+      </tr>
+    </thead>
+    <tbody>
+      {{#each medicines}}
+      <tr>
+        <td class="num-col">{{@index}}</td>
+        <td class="medicine-name">{{medicineName}}</td>
+        <td>{{dosage}}</td>
+        <td>{{frequency}}</td>
+        <td>{{duration}}</td>
+        <td class="instructions-text">{{instructions}}</td>
+      </tr>
+      {{/each}}
+    </tbody>
+  </table>
+
+  <!-- ── NOTES ── -->
+  {{#if notes}}
+  <div class="rx-notes">
+    <strong>Additional Instructions:</strong>
+    <p>{{notes}}</p>
+  </div>
+  {{/if}}
+
+  <!-- ── SIGNATURE + QR ── -->
+  <div class="signature-area">
+    <div class="signature-left">
+      <div class="signature-line"></div>
+      <div class="signature-name">{{doctorName}}</div>
+      <div class="signature-title">{{doctorSpecialization}}</div>
+      <div class="signature-reg">Medical License: LIC-{{doctorSpecialization}}-{{prescriptionId}}</div>
+    </div>
+    <div class="signature-right">
+      {{#if qrCodeDataUrl}}
+      <img src="{{qrCodeDataUrl}}" style="width:80px;height:80px;" alt="QR Code" />
+      {{else}}
+      <div class="qr-placeholder">QR Code</div>
+      {{/if}}
+    </div>
+  </div>
+
+  <!-- ── FOOTER ── -->
+  <div class="footer">
+    <span><strong>VALIDITY:</strong> This prescription is valid for 30 days from the date of issue. &bull; <strong>SECURITY:</strong> This is a computer-generated document with a digital watermark.</span>
+  </div>
+
+</div>
+</body>
+</html>

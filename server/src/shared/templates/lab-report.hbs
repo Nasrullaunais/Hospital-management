@@ -1,0 +1,426 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<title>Laboratory Report - {{hospitalName}}</title>
+<style>
+  @page { size: A4; margin: 0; }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    color: #2c3e50;
+    font-size: 11px;
+    line-height: 1.5;
+    background: #fff;
+  }
+  .page {
+    width: 210mm;
+    min-height: 297mm;
+    padding: 20mm 18mm 15mm;
+    position: relative;
+  }
+
+  /* ── HEADER ── */
+  .header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    border-bottom: 3px solid #1a5276;
+    padding-bottom: 10px;
+    margin-bottom: 14px;
+  }
+  .header-logo {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .header-logo svg {
+    width: 40px;
+    height: 40px;
+  }
+  .hospital-name {
+    font-size: 20px;
+    font-weight: 700;
+    color: #1a5276;
+    letter-spacing: 1px;
+    line-height: 1.2;
+  }
+  .hospital-sub {
+    font-size: 8.5px;
+    color: #5d6d7e;
+    letter-spacing: 0.5px;
+  }
+  .header-center {
+    text-align: center;
+  }
+  .header-center h1 {
+    font-size: 18px;
+    color: #1a5276;
+    font-weight: 700;
+    letter-spacing: 2px;
+  }
+  .header-center .lab-type {
+    font-size: 10px;
+    color: #2980b9;
+    font-weight: 600;
+    letter-spacing: 3px;
+    margin-top: 2px;
+  }
+  .header-right {
+    text-align: right;
+    font-size: 9px;
+    color: #5d6d7e;
+  }
+  .header-right strong {
+    color: #1a5276;
+    font-size: 10px;
+  }
+  .report-id-box {
+    background: #1a5276;
+    color: #fff;
+    padding: 4px 10px;
+    border-radius: 3px;
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 1px;
+    display: inline-block;
+    margin-top: 4px;
+  }
+
+  /* ── CONTACT BAR ── */
+  .contact-bar {
+    display: flex;
+    justify-content: space-between;
+    font-size: 8.5px;
+    color: #7f8c8d;
+    margin-bottom: 14px;
+    padding-bottom: 6px;
+    border-bottom: 1px solid #dee2e6;
+  }
+
+  /* ── PATIENT INFO GRID ── */
+  .patient-info {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 3px 20px;
+    background: #f0f4f8;
+    border: 1px solid #dee2e6;
+    border-radius: 4px;
+    padding: 10px 14px;
+    margin-bottom: 14px;
+  }
+  .patient-info .field {
+    display: flex;
+    font-size: 10px;
+    padding: 2px 0;
+  }
+  .patient-info .field .label {
+    font-weight: 600;
+    color: #1a5276;
+    min-width: 95px;
+  }
+  .patient-info .field .value {
+    color: #2c3e50;
+  }
+
+  /* ── TABLE ── */
+  .results-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-bottom: 14px;
+    font-size: 10px;
+  }
+  .results-table thead th {
+    background: #1a5276;
+    color: #fff;
+    font-weight: 600;
+    font-size: 9.5px;
+    text-transform: uppercase;
+    letter-spacing: 0.8px;
+    padding: 7px 10px;
+    text-align: left;
+    border: 1px solid #1a5276;
+  }
+  .results-table tbody td {
+    padding: 6px 10px;
+    border: 1px solid #dee2e6;
+    vertical-align: middle;
+  }
+  .results-table tbody tr:nth-child(even) td {
+    background: #f8f9fa;
+  }
+  .results-table tbody tr:nth-child(odd) td {
+    background: #fff;
+  }
+  .results-table .param-name {
+    font-weight: 600;
+  }
+  .results-table .flag-normal {
+    color: #27ae60;
+    font-weight: 600;
+    font-size: 9px;
+    text-transform: uppercase;
+  }
+  .results-table .flag-abnormal {
+    color: #f39c12;
+    font-weight: 600;
+    font-size: 9px;
+    text-transform: uppercase;
+  }
+  .results-table .flag-critical {
+    color: #e74c3c;
+    font-weight: 700;
+    font-size: 9px;
+    text-transform: uppercase;
+  }
+
+  /* ── INTERPRETATION ── */
+  .interpretation-box {
+    background: #fef9e7;
+    border-left: 4px solid #f39c12;
+    padding: 10px 14px;
+    margin-bottom: 10px;
+    border-radius: 2px;
+  }
+  .interpretation-box h3 {
+    font-size: 10px;
+    color: #1a5276;
+    margin-bottom: 4px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+  }
+  .interpretation-box p {
+    font-size: 10px;
+    color: #2c3e50;
+    white-space: pre-line;
+  }
+
+  /* ── NOTES ── */
+  .notes-section {
+    font-size: 9px;
+    color: #7f8c8d;
+    margin-bottom: 20px;
+    padding: 8px 0;
+    border-top: 1px dashed #dee2e6;
+  }
+  .notes-section strong {
+    color: #5d6d7e;
+  }
+  .notes-section p {
+    white-space: pre-line;
+  }
+
+  /* ── SIGNATURE ── */
+  .signature-area {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-end;
+    margin-top: 20px;
+    padding-top: 12px;
+    border-top: 1px solid #dee2e6;
+  }
+  .signature-left {
+    flex: 1;
+  }
+  .signature-line {
+    width: 200px;
+    border-bottom: 1px solid #2c3e50;
+    margin-bottom: 4px;
+    height: 30px;
+  }
+  .signature-name {
+    font-weight: 600;
+    font-size: 10px;
+    color: #1a5276;
+  }
+  .signature-title {
+    font-size: 9px;
+    color: #5d6d7e;
+  }
+  .signature-stamp {
+    text-align: center;
+  }
+  .signature-stamp svg {
+    width: 60px;
+    height: 60px;
+  }
+
+  /* ── FOOTER ── */
+  .footer {
+    position: absolute;
+    bottom: 12mm;
+    left: 18mm;
+    right: 18mm;
+    text-align: center;
+    font-size: 7.5px;
+    color: #95a5a6;
+    border-top: 1px solid #dee2e6;
+    padding-top: 6px;
+  }
+  .footer strong {
+    color: #7f8c8d;
+  }
+  .page-number {
+    float: right;
+  }
+
+  /* ── WATERMARK ── */
+  .watermark {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    opacity: 0.025;
+    pointer-events: none;
+    z-index: 0;
+  }
+  .watermark svg {
+    width: 400px;
+    height: 400px;
+  }
+
+  @media print {
+    body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  }
+</style>
+</head>
+<body>
+<div class="page">
+
+  <!-- Watermark -->
+  <div class="watermark">
+    <svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+      <path d="M50 10 L60 40 L90 40 L65 60 L75 90 L50 70 L25 90 L35 60 L10 40 L40 40 Z" fill="#1a5276"/>
+    </svg>
+  </div>
+
+  <!-- ── HEADER ── -->
+  <div class="header">
+    <div class="header-logo">
+      <svg viewBox="0 0 40 40" xmlns="http://www.w3.org/2000/svg">
+        <rect x="15" y="4" width="10" height="32" rx="2" fill="#1a5276"/>
+        <rect x="4" y="15" width="32" height="10" rx="2" fill="#1a5276"/>
+      </svg>
+      <div>
+        <div class="hospital-name">{{hospitalName}}</div>
+        <div class="hospital-sub">Excellence in Healthcare &mdash; Since 1987</div>
+      </div>
+    </div>
+    <div class="header-center">
+      <h1>LABORATORY REPORT</h1>
+      <div class="lab-type">{{labType}}</div>
+    </div>
+    <div class="header-right">
+      <strong>Report No.</strong><br />
+      <span class="report-id-box">{{reportId}}</span>
+    </div>
+  </div>
+
+  <!-- ── CONTACT BAR ── -->
+  <div class="contact-bar">
+    <span>{{hospitalAddress}}</span>
+    <span>{{hospitalPhone}}</span>
+    <span>{{reportDate}}</span>
+  </div>
+
+  <!-- ── PATIENT INFO ── -->
+  <div class="patient-info">
+    <div class="field">
+      <span class="label">Patient Name</span>
+      <span class="value">{{patientName}}</span>
+    </div>
+    <div class="field">
+      <span class="label">Patient ID</span>
+      <span class="value">{{patientId}}</span>
+    </div>
+    <div class="field">
+      <span class="label">Age / Gender</span>
+      <span class="value">{{patientAge}} years / {{patientGender}}</span>
+    </div>
+    <div class="field">
+      <span class="label">Referring Doctor</span>
+      <span class="value">{{doctorName}} ({{doctorSpecialization}})</span>
+    </div>
+    <div class="field">
+      <span class="label">Lab Type</span>
+      <span class="value">{{labType}}</span>
+    </div>
+    <div class="field">
+      <span class="label">Test Date</span>
+      <span class="value">{{testDate}}</span>
+    </div>
+  </div>
+
+  <!-- ── RESULTS TABLE ── -->
+  <table class="results-table">
+    <thead>
+      <tr>
+        <th style="width:30%;">Test Parameter</th>
+        <th style="width:14%;">Result</th>
+        <th style="width:12%;">Unit</th>
+        <th style="width:26%;">Reference Range</th>
+        <th style="width:18%;">Flag</th>
+      </tr>
+    </thead>
+    <tbody>
+      {{#each results}}
+      <tr>
+        <td class="param-name">{{parameter}}</td>
+        <td>{{value}}</td>
+        <td>{{unit}}</td>
+        <td>{{normalRange}}</td>
+        <td>
+          {{#if (eq flagClass "normal")}}
+            <span class="flag-normal">&#9679; Normal</span>
+          {{else if (eq flagClass "abnormal")}}
+            <span class="flag-abnormal">&#9679; Abnormal</span>
+          {{else if (eq flagClass "critical")}}
+            <span class="flag-critical">&#9679; Critical</span>
+          {{else}}
+            <span class="flag-{{flagClass}}">&#9679; {{flagClass}}</span>
+          {{/if}}
+        </td>
+      </tr>
+      {{/each}}
+    </tbody>
+  </table>
+
+  <!-- ── INTERPRETATION ── -->
+  <div class="interpretation-box">
+    <h3>Interpretation</h3>
+    <p>{{interpretation}}</p>
+  </div>
+
+  <!-- ── NOTES ── -->
+  {{#if notes}}
+  <div class="notes-section">
+    <strong>Clinical Notes:</strong>
+    <p>{{notes}}</p>
+  </div>
+  {{/if}}
+
+  <!-- ── SIGNATURE ── -->
+  <div class="signature-area">
+    <div class="signature-left">
+      <div class="signature-line"></div>
+      <div class="signature-name">{{doctorName}}</div>
+      <div class="signature-title">{{doctorSpecialization}} &bull; Lifeline Care Hospital</div>
+    </div>
+    <div class="signature-stamp">
+      <svg viewBox="0 0 60 60" xmlns="http://www.w3.org/2000/svg">
+        <circle cx="30" cy="30" r="28" fill="none" stroke="#1a5276" stroke-width="1.5" opacity="0.4"/>
+        <circle cx="30" cy="30" r="20" fill="none" stroke="#1a5276" stroke-width="1" opacity="0.3"/>
+        <text x="30" y="33" text-anchor="middle" font-size="5" fill="#1a5276" opacity="0.5">HOSPITAL STAMP</text>
+      </svg>
+    </div>
+  </div>
+
+  <!-- ── FOOTER ── -->
+  <div class="footer">
+    <span><strong>DISCLAIMER:</strong> This is a computer-generated report. It requires a valid signature from the referring pathologist.</span>
+    <span class="page-number">Page 1 of 1</span>
+  </div>
+
+</div>
+</body>
+</html>

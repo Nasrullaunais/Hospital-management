@@ -120,6 +120,17 @@ export default function RecordDetailScreen() {
     }
   };
 
+  const generateCertificate = async (restFrom?: string, restTo?: string) => {
+    if (!id) return;
+    try {
+      const { reportService } = await import('@/features/records/services/report.service');
+      const result = await reportService.generateMedicalCertificate(id, restFrom, restTo);
+      await Linking.openURL(result.downloadUrl);
+    } catch (err) {
+      Alert.alert('Error', err instanceof Error ? err.message : 'Failed to generate certificate.');
+    }
+  };
+
   if (loading) {
     return (
       <SafeAreaView edges={['top', 'bottom']} style={[styles.container, { backgroundColor: colors.background }]}>
@@ -261,16 +272,65 @@ export default function RecordDetailScreen() {
           )}
         </View>
 
-        {/* Lab Report */}
-        {record.labReportUrl ? (
+        {/* Report Actions */}
+        <View style={styles.reportSection}>
+          <Text style={[styles.cardLabel, { color: colors.textSecondary }]}>Report Actions</Text>
+
+          {/* Generate Medical Certificate */}
           <TouchableOpacity
-            style={[styles.reportButton, { backgroundColor: colors.infoBg, borderColor: colors.info }]}
-            onPress={() => void openLabReport(record.labReportUrl!)}
+            style={[styles.reportActionButton, { backgroundColor: colors.successBg || '#E6F5EC', borderColor: colors.success || '#1A8C4E' }]}
+            onPress={() => {
+              Alert.alert(
+                'Medical Certificate',
+                'Generate a medical certificate for this visit?',
+                [
+                  { text: 'Cancel', style: 'cancel' },
+                  {
+                    text: 'Generate',
+                    onPress: () => {
+                      Alert.prompt
+                        ? Alert.prompt(
+                            'Rest Period (Optional)',
+                            'Enter rest period in days (leave empty to skip):',
+                            [
+                              { text: 'Skip', onPress: () => generateCertificate(undefined, undefined) },
+                              { text: 'Generate', onPress: (days) => generateCertificate(days, days) },
+                            ],
+                            'plain-text',
+                            '',
+                            'number-pad'
+                          )
+                        : generateCertificate(undefined, undefined);
+                    },
+                  },
+                ]
+              );
+            }}
           >
-            <Feather name="file-text" size={16} color={colors.info} />
-            <Text style={[styles.reportButtonText, { color: colors.info }]}>View Lab Report</Text>
+            <Feather name="file-text" size={16} color={colors.success || '#1A8C4E'} />
+            <Text style={[styles.reportActionText, { color: colors.success || '#1A8C4E' }]}>Generate Medical Certificate</Text>
           </TouchableOpacity>
-        ) : null}
+
+          {/* View Uploaded Lab Report (if exists) */}
+          {record.labReportUrl ? (
+            <TouchableOpacity
+              style={[styles.reportActionButton, { backgroundColor: colors.infoBg, borderColor: colors.info }]}
+              onPress={() => void openLabReport(record.labReportUrl!)}
+            >
+              <Feather name="file-text" size={16} color={colors.info} />
+              <Text style={[styles.reportActionText, { color: colors.info }]}>View Uploaded Lab Report</Text>
+            </TouchableOpacity>
+          ) : null}
+
+          {/* Add Lab Report for this Patient */}
+          <TouchableOpacity
+            style={[styles.reportActionButton, { backgroundColor: colors.primaryMuted, borderColor: colors.primary }]}
+            onPress={() => router.push(`/(doctor)/lab-reports/add?patientId=${record.patientId._id}&patientName=${encodeURIComponent(record.patientId.name)}`)}
+          >
+            <Feather name="plus-circle" size={16} color={colors.primary} />
+            <Text style={[styles.reportActionText, { color: colors.primary }]}>Add Lab Report for Patient</Text>
+          </TouchableOpacity>
+        </View>
 
         {/* Edit Actions */}
         {editing ? (
@@ -425,6 +485,9 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     fontSize: 14,
   },
+  reportSection: {
+    gap: 8,
+  },
   editActions: {
     flexDirection: 'row',
     gap: 12,
@@ -501,5 +564,21 @@ const styles = StyleSheet.create({
     fontStyle: 'italic',
     marginLeft: 24,
     marginTop: 2,
+  },
+  reportSection: {
+    gap: 10,
+  },
+  reportActionButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    borderWidth: 1.5,
+    borderRadius: radius.md,
+    paddingVertical: 12,
+  },
+  reportActionText: {
+    fontWeight: '600',
+    fontSize: 14,
   },
 });
