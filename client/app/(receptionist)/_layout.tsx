@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { ActivityIndicator, View, StyleSheet } from 'react-native';
+import { ActivityIndicator, View, Text, StyleSheet } from 'react-native';
 import { Redirect, Stack, useRouter, usePathname } from 'expo-router';
 import Colors from '@/constants/Colors';
 import { useColorScheme } from '@/components/useColorScheme';
@@ -18,11 +18,11 @@ export default function ReceptionistLayout() {
   const [activeTab, setActiveTab] = useState('index');
 
   const tabs: TabItem[] = [
-    { key: 'index', title: 'Dashboard', icon: '🏠' },
-    { key: 'beds', title: 'Beds', icon: '🛏️' },
-    { key: 'patients', title: 'Patients', icon: '👥' },
-    { key: 'medications', title: 'Medications', icon: '💊' },
-    { key: 'profile', title: 'Profile', icon: '👤' },
+    { key: 'index', title: 'Dashboard', icon: 'home' },
+    { key: 'beds', title: 'Beds', icon: 'layers' },
+    { key: 'patients', title: 'Patients', icon: 'users' },
+    { key: 'medications', title: 'Medications', icon: 'package' },
+    { key: 'profile', title: 'Profile', icon: 'user' },
   ];
 
   useEffect(() => {
@@ -35,14 +35,16 @@ export default function ReceptionistLayout() {
 
   const handleTabPress = (tabKey: string) => {
     setActiveTab(tabKey);
-    const path = tabKey === 'index' ? '/(receptionist)' : `/(receptionist)/${tabKey}`;
-    router.push(path as any);
+    const path: string = tabKey === 'index' ? '/(receptionist)' : `/(receptionist)/${tabKey}`;
+    router.push(path);
   };
 
   if (isLoading) {
     return (
-      <View style={[styles.loading, { backgroundColor: theme.background }]}>
-        <ActivityIndicator size="large" color={theme.primary} />
+      <View style={[styles.loading, { backgroundColor: theme.primary }]}>
+        <Text style={styles.loadingTitle}>Pulse</Text>
+        <Text style={styles.loadingSubtitle}>Ward Portal</Text>
+        <ActivityIndicator size="large" color="#FFFFFF" style={styles.loadingSpinner} />
       </View>
     );
   }
@@ -55,6 +57,14 @@ export default function ReceptionistLayout() {
     return <Redirect href={getRoleHomeRoute(user.role) ?? '/login'} />;
   }
 
+  const detailHeaderOptions = {
+    headerTintColor: theme.primary,
+    headerTitleStyle: { fontWeight: '600' as const, fontSize: 16 },
+    headerStyle: { backgroundColor: theme.surface },
+    headerShadowVisible: false,
+    headerBackTitleVisible: false,
+  };
+
   return (
     <View style={styles.container}>
       <Stack
@@ -65,9 +75,9 @@ export default function ReceptionistLayout() {
       >
         {/* Main tab screens */}
         <Stack.Screen name="index" options={{ headerShown: false }} />
-        <Stack.Screen name="beds" options={{ headerShown: false }} />
-        <Stack.Screen name="patients" options={{ headerShown: false }} />
-        <Stack.Screen name="medications" options={{ headerShown: false }} />
+        <Stack.Screen name="beds/index" options={{ headerShown: false }} />
+        <Stack.Screen name="patients/index" options={{ headerShown: false }} />
+        <Stack.Screen name="medications/index" options={{ headerShown: false }} />
         <Stack.Screen name="profile" options={{ headerShown: false }} />
 
         {/* Detail pages with headers */}
@@ -75,30 +85,24 @@ export default function ReceptionistLayout() {
           name="beds/[id]"
           options={{
             headerShown: true,
-            title: 'Bed Details',
-            headerStyle: { backgroundColor: theme.surface },
-            headerTintColor: theme.text,
-            headerShadowVisible: false,
+            title: 'Bed Info',
+            ...detailHeaderOptions,
           }}
         />
         <Stack.Screen
           name="patients/[id]"
           options={{
             headerShown: true,
-            title: 'Patient Details',
-            headerStyle: { backgroundColor: theme.surface },
-            headerTintColor: theme.text,
-            headerShadowVisible: false,
+            title: 'Patient Info',
+            ...detailHeaderOptions,
           }}
         />
         <Stack.Screen
-          name="medications/[id]"
+          name="patients/assign"
           options={{
             headerShown: true,
-            title: 'Medication Details',
-            headerStyle: { backgroundColor: theme.surface },
-            headerTintColor: theme.text,
-            headerShadowVisible: false,
+            title: 'Assign Patient',
+            ...detailHeaderOptions,
           }}
         />
       </Stack>
@@ -117,5 +121,21 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
+  },
+  loadingTitle: {
+    fontSize: 36,
+    fontWeight: '700',
+    color: '#FFFFFF',
+    letterSpacing: 1,
+  },
+  loadingSubtitle: {
+    fontSize: 14,
+    fontWeight: '500',
+    color: 'rgba(255,255,255,0.7)',
+    marginTop: 4,
+    marginBottom: 24,
+  },
+  loadingSpinner: {
+    marginTop: 8,
   },
 });

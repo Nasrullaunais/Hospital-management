@@ -6,7 +6,8 @@ import { Feather } from '@expo/vector-icons';
 import Colors from '@/constants/Colors';
 import { useColorScheme } from '@/components/useColorScheme';
 import { Card, Button, Badge } from '@/components/ui';
-import { spacing } from '@/constants/ThemeTokens';
+import { spacing, radius, shadows, typography } from '@/constants/ThemeTokens';
+import { LOW_STOCK_THRESHOLD, EXPIRY_WARNING_DAYS, ONE_DAY_MS } from '@/shared/constants/pharmacy';
 import { medicineService } from '@/features/pharmacy/services/medicine.service';
 import { dispensingService } from '@/features/dispensing/services/dispensing.service';
 import type { Medicine } from '@/shared/types';
@@ -35,12 +36,12 @@ export default function PharmacistDashboard() {
 
   const calculateStats = useCallback((medicines: Medicine[]) => {
     const now = Date.now();
-    const sixtyDaysMs = 60 * 24 * 60 * 60 * 1000;
+    const expiryThresholdMs = EXPIRY_WARNING_DAYS * ONE_DAY_MS;
 
-    const lowStock = medicines.filter(m => m.stockQuantity < 10).length;
+    const lowStock = medicines.filter(m => m.stockQuantity < LOW_STOCK_THRESHOLD).length;
     const expiringSoon = medicines.filter(m => {
       const expiryDate = new Date(m.expiryDate).getTime();
-      return (expiryDate - now) <= sixtyDaysMs && expiryDate > now;
+      return (expiryDate - now) <= expiryThresholdMs && expiryDate > now;
     }).length;
 
     return { lowStock, expiringSoon };
@@ -49,7 +50,7 @@ export default function PharmacistDashboard() {
   const fetchDashboardData = useCallback(async () => {
     try {
       const [medicines, pending] = await Promise.all([
-        medicineService.getMedicines(),
+        medicineService.getMedicines().catch(() => [] as Medicine[]),
         dispensingService.getPendingPrescriptions().catch(() => []),
       ]);
 
@@ -61,8 +62,10 @@ export default function PharmacistDashboard() {
         expiringSoonCount: expiringSoon,
         pendingPrescriptions: Array.isArray(pending) ? pending.length : 0,
       });
-    } catch {
-      // Silently fail - dashboard shows zeros
+    } catch (err) {
+      if (__DEV__) {
+        console.warn('[PharmacistDashboard] Failed to load dashboard data', err);
+      }
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -89,6 +92,8 @@ export default function PharmacistDashboard() {
     );
   }
 
+  const hasAlerts = stats.lowStockCount > 0 || stats.expiringSoonCount > 0;
+
   return (
     <SafeAreaView style={[styles.safeArea, { backgroundColor: theme.background }]}>
       <ScrollView
@@ -98,23 +103,55 @@ export default function PharmacistDashboard() {
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={theme.primary} />
         }
       >
-        <Text style={[styles.title, { color: theme.text }]}>Pharmacist Dashboard</Text>
+        <Text style={[styles.title, { color: theme.text }]}>Pharmacy Dashboard</Text>
         <Text style={[styles.subtitle, { color: theme.textSecondary }]}>
-          Monitor stock health and update inventory records.
+          Monitor stock health and manage inventory records.
         </Text>
+
+        <View style={styles.statsRow}>
+          <View style={[styles.statCard, { backgroundColor: theme.surface, ...shadows.card }]}>
+            <Text style={[styles.statValue, { color: theme.primary }]}>{stats.totalMedicines}</Text>
+            <Text style={[styles.statLabel, { color: theme.textSecondary }]}>TOTAL MEDICINES</Text>
+          </View>
+          <View style={[styles.statCard, { backgroundColor: theme.surface, ...shadows.card }]}>
+            <Text style={[styles.statValue, { color: stats.lowStockCount > 0 ? theme.error : theme.textSecondary }]}>
+              {stats.lowStockCount}
+            </Text>
+            <Text style={[styles.statLabel, { color: theme.textSecondary }]}>LOW STOCK</Text>
+          </View>
+          <View style={[styles.statCard, { backgroundColor: theme.surface, ...shadows.card }]}>
+            <Text style={[styles.statValue, { color: stats.expiringSoonCount > 0 ? theme.warning : theme.textSecondary }]}>
+              {stats.expiringSoonCount}
+            </Text>
+            <Text style={[styles.statLabel, { color: theme.textSecondary }]}>EXPIRING SOON</Text>
+          </View>
+        </View>
+
+        {hasAlerts && (
+          <View style={[styles.alertBanner, { backgroundColor: theme.errorBg, borderColor: theme.error }]}>
+            <Feather name="alert-triangle" size={18} color={theme.error} />
+            <Text style={[styles.alertBannerText, { color: theme.error }]}>
+              {stats.lowStockCount > 0 && `${stats.lowStockCount} item${stats.lowStockCount > 1 ? 's' : ''} low on stock`}
+              {stats.lowStockCount > 0 && stats.expiringSoonCount > 0 && ' • '}
+              {stats.expiringSoonCount > 0 && `${stats.expiringSoonCount} expiring within 60 days`}
+            </Text>
+          </View>
+        )}
 
         <Card title="Inventory Workflow">
           <Button
             title="View Inventory"
             onPress={() => router.push('/(pharmacist)/pharmacy')}
-            variant="primary"
+            variant="accent"
+            size="lg"
             fullWidth
-            style={styles.button}
+            style={styles.primaryAction}
           />
           <Button
             title="Add Medication"
             onPress={() => router.push('/(pharmacist)/pharmacy/add-medicine')}
             variant="outline"
+            size="md"
             fullWidth
           />
         </Card>
@@ -124,48 +161,27 @@ export default function PharmacistDashboard() {
             title={`Pending Prescriptions${stats.pendingPrescriptions > 0 ? ` (${stats.pendingPrescriptions})` : ''}`}
             onPress={() => router.push('/(pharmacist)/dispense')}
             variant="primary"
+            size="md"
             fullWidth
-            style={{ backgroundColor: theme.success }}
+            style={{ backgroundColor: theme.success, borderColor: theme.success }}
           />
         </Card>
 
-        <Card style={{ backgroundColor: theme.infoBg, borderColor: theme.primary }}>
+        <Card style={{ backgroundColor: theme.infoBg, borderColor: theme.info }}>
           <Badge label="Focus Areas" variant="info" />
           <Text style={[styles.noteText, { color: theme.text }]}>
             Track low-stock alerts daily and keep packaging images clear for quick identification.
           </Text>
         </Card>
 
-        <Card title="Quick Stats">
-          <View style={styles.alertRow}>
-            <View style={styles.alertItem}>
-              <Text style={[styles.alertValue, { color: theme.primary }]}>{stats.totalMedicines}</Text>
-              <Text style={[styles.alertLabel, { color: theme.textSecondary }]}>Total Medicines</Text>
-            </View>
-            <View style={styles.alertItem}>
-              <Text style={[styles.alertValue, { color: stats.lowStockCount > 0 ? theme.error : theme.textSecondary }]}>
-                {stats.lowStockCount}
-              </Text>
-              <Text style={[styles.alertLabel, { color: theme.textSecondary }]}>Low Stock</Text>
-            </View>
-            <View style={styles.alertItem}>
-              <Text style={[styles.alertValue, { color: stats.expiringSoonCount > 0 ? theme.warning : theme.textSecondary }]}>
-                {stats.expiringSoonCount}
-              </Text>
-              <Text style={[styles.alertLabel, { color: theme.textSecondary }]}>Expiring Soon</Text>
-            </View>
-          </View>
-          {(stats.lowStockCount > 0 || stats.expiringSoonCount > 0) && (
-            <View style={[styles.alertBanner, { backgroundColor: theme.errorBg, borderColor: theme.error }]}>
-              <Feather name="alert-triangle" size={16} color={theme.error} />
-              <Text style={[styles.alertBannerText, { color: theme.error }]}>
-                {stats.lowStockCount > 0 && `${stats.lowStockCount} item${stats.lowStockCount > 1 ? 's' : ''} low on stock`}
-                {stats.lowStockCount > 0 && stats.expiringSoonCount > 0 && ' • '}
-                {stats.expiringSoonCount > 0 && `${stats.expiringSoonCount} expiring within 60 days`}
-              </Text>
-            </View>
-          )}
-        </Card>
+        <Button
+          title="Browse Inventory"
+          onPress={() => router.push('/(pharmacist)/pharmacy')}
+          variant="accent"
+          size="lg"
+          fullWidth
+          icon="package"
+        />
       </ScrollView>
     </SafeAreaView>
   );
@@ -181,22 +197,40 @@ const styles = StyleSheet.create({
     gap: spacing.md,
     paddingBottom: TAB_BAR_HEIGHT + spacing.md,
   },
-  title: { fontSize: 28, fontWeight: '700' },
-  subtitle: { fontSize: 14 },
-  button: { marginBottom: spacing.sm },
-  noteText: { fontSize: 13, marginTop: spacing.sm },
-  alertRow: { flexDirection: 'row', justifyContent: 'space-around' },
-  alertItem: { alignItems: 'center' },
-  alertValue: { fontSize: 22, fontWeight: '700' },
-  alertLabel: { fontSize: 12, marginTop: 2 },
+  title: { fontSize: typography.xxl, fontWeight: typography.bold },
+  subtitle: { fontSize: typography.sm },
+  statsRow: {
+    flexDirection: 'row',
+    gap: spacing.sm,
+  },
+  statCard: {
+    flex: 1,
+    alignItems: 'center',
+    paddingVertical: spacing.md,
+    paddingHorizontal: spacing.sm,
+    borderRadius: radius.lg,
+  },
+  statValue: {
+    fontSize: typography.xxl,
+    fontWeight: typography.bold,
+  },
+  statLabel: {
+    fontSize: 11,
+    fontWeight: typography.semibold,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+    marginTop: spacing.xs,
+    textAlign: 'center',
+  },
   alertBanner: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.sm,
-    marginTop: spacing.md,
-    padding: spacing.sm,
+    padding: spacing.md,
     borderWidth: 1,
-    borderRadius: spacing.sm,
+    borderRadius: radius.sm,
   },
   alertBannerText: { fontSize: 13, fontWeight: '500', flex: 1 },
+  primaryAction: { marginBottom: spacing.sm },
+  noteText: { fontSize: 13, marginTop: spacing.sm },
 });

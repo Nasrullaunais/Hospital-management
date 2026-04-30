@@ -239,30 +239,42 @@ export default function WardDashboardScreen() {
           <View style={styles.actionsGrid}>
             <Button
               title="Assign Patient"
-              onPress={() => router.push('/(receptionist)/assign')}
-              variant="primary"
+              onPress={() => router.push('/(receptionist)/patients/assign')}
+              variant="accent"
+              size="lg"
               fullWidth
-              style={styles.actionButton}
               testID="btn-assign-patient"
             />
             <Button
               title="View All Beds"
               onPress={() => router.push('/(receptionist)/beds')}
               variant="outline"
+              size="md"
               fullWidth
-              style={styles.actionButton}
               testID="btn-view-beds"
             />
             <Button
               title="View Patients"
               onPress={() => router.push('/(receptionist)/patients')}
               variant="secondary"
+              size="md"
               fullWidth
-              style={styles.actionButton}
               testID="btn-view-patients"
             />
           </View>
         </Card>
+
+        {/* Bottom CTA */}
+        <Button
+          title="Assign Patient"
+          onPress={() => router.push('/(receptionist)/patients/assign')}
+          variant="accent"
+          size="lg"
+          fullWidth
+          icon="user-plus"
+          style={styles.bottomCta}
+          testID="btn-bottom-assign"
+        />
       </ScrollView>
     </SafeAreaView>
   );
@@ -273,7 +285,7 @@ const styles = StyleSheet.create({
   scrollView: { flex: 1 },
   content: {
     padding: spacing.md,
-    paddingBottom: TAB_BAR_HEIGHT + spacing.md,
+    paddingBottom: TAB_BAR_HEIGHT + spacing.lg + 56,
     gap: spacing.md,
   },
   center: { flex: 1, justifyContent: 'center', alignItems: 'center' },
@@ -332,5 +344,5 @@ const styles = StyleSheet.create({
   dischargeDate: { fontSize: 12 },
   dischargeHour: { fontSize: 13, fontWeight: '600', marginTop: 2 },
   actionsGrid: { gap: spacing.sm },
-  actionButton: { marginBottom: spacing.xs },
+  bottomCta: { marginTop: spacing.xs },
 });

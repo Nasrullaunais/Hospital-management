@@ -8,6 +8,10 @@ import type { Medicine, ApiSuccessResponse } from '@/shared/types';
 
 export interface MedicineFilters {
   category?: string;
+  name?: string;
+  minStock?: number;
+  maxStock?: number;
+  expiringWithinDays?: number;
 }
 
 export interface CreateMedicinePayload {
@@ -35,11 +39,16 @@ export const medicineService = {
    * Fetch all medicines, optionally filtered by category.
    */
   getMedicines: async (filters?: MedicineFilters): Promise<Medicine[]> => {
-    const res = await apiClient.get<ApiSuccessResponse<{ medicines: Medicine[]; count: number }>>(
+    const params: Record<string, string | number> = {};
+    if (filters?.category) params.category = filters.category;
+    if (filters?.name) params.name = filters.name;
+    if (filters?.minStock !== undefined) params.minStock = filters.minStock;
+    if (filters?.maxStock !== undefined) params.maxStock = filters.maxStock;
+    if (filters?.expiringWithinDays !== undefined) params.expiringWithinDays = filters.expiringWithinDays;
+
+    const res = await apiClient.get<ApiSuccessResponse<{ medicines: Medicine[]; count: number; total: number }>>(
       ENDPOINTS.MEDICINES.BASE,
-      {
-        params: filters,
-      },
+      { params },
     );
     return res.data.data.medicines;
   },
@@ -72,10 +81,12 @@ export const medicineService = {
    * Update a medicine. Admin only.
    * Sends JSON fields such as name/category/price/expiryDate.
    */
-  updateMedicine: async (id: string, payload: UpdateMedicinePayload): Promise<Medicine> => {
+  updateMedicine: async (id: string, payload: UpdateMedicinePayload | FormData): Promise<Medicine> => {
+    const isFormData = payload instanceof FormData;
     const res = await apiClient.put<ApiSuccessResponse<{ medicine: Medicine }>>(
       ENDPOINTS.MEDICINES.BY_ID(id),
       payload,
+      isFormData ? { headers: { 'Content-Type': 'multipart/form-data' } } : undefined,
     );
     return res.data.data.medicine;
   },
@@ -86,6 +97,14 @@ export const medicineService = {
       payload,
     );
     return res.data.data.medicine;
+  },
+
+  getMedicinesByIds: async (ids: string[]): Promise<Medicine[]> => {
+    const res = await apiClient.post<ApiSuccessResponse<{ medicines: Medicine[] }>>(
+      ENDPOINTS.MEDICINES.BATCH,
+      { ids },
+    );
+    return res.data.data.medicines;
   },
 
   /**

@@ -26,6 +26,7 @@ const dispenseSchema = new mongoose.Schema(
 
 // Indexes for common query patterns
 dispenseSchema.index({ patientId: 1, fulfilledAt: -1 });
+dispenseSchema.index({ pharmacistId: 1, fulfilledAt: -1 });
 dispenseSchema.index({ pharmacistId: 1 });
 dispenseSchema.index({ prescriptionId: 1 });
 

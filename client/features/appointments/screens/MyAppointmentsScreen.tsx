@@ -13,10 +13,11 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Feather } from '@expo/vector-icons';
 import { useRouter, type Href } from 'expo-router';
 import { appointmentService } from '../services/appointment.service';
-import type { Appointment, Doctor } from '@/shared/types';
+import type { Appointment, AppointmentStatus } from '@/shared/types';
 import Colors from '@/constants/Colors';
 import { useColorScheme } from '@/components/useColorScheme';
 import { spacing, radius, shadows } from '@/constants/ThemeTokens';
+import { getAppointmentStatusStyle } from '@/shared/utils/statusStyles';
 
 const TAB_BAR_HEIGHT = 70;
 
@@ -34,7 +35,7 @@ export default function MyAppointmentsScreen() {
       setError(null);
       const data = await appointmentService.getMyAppointments();
       setAppointments(data);
-    } catch (err) {
+          } catch (err: unknown) {
       setError(err instanceof Error ? err.message : 'Failed to load appointments.');
     }
   }, []);
@@ -60,9 +61,9 @@ export default function MyAppointmentsScreen() {
           try {
             await appointmentService.cancelAppointment(id);
             setAppointments((prev) =>
-              prev.map((a) => (a._id === id ? { ...a, status: 'Cancelled' } : a)),
+              prev.map((a) => (a._id === id ? { ...a, status: 'Cancelled' as AppointmentStatus } : a)),
             );
-          } catch (err) {
+    } catch (err: unknown) {
             Alert.alert('Error', err instanceof Error ? err.message : 'Could not cancel.');
           }
         },
@@ -70,30 +71,10 @@ export default function MyAppointmentsScreen() {
     ]);
   }, []);
 
-  const getStatusStyle = useCallback((status: string) => {
-    switch (status) {
-      case 'Pending':
-        return { bg: theme.warningBg, text: theme.warning };
-      case 'Confirmed':
-        return { bg: theme.infoBg, text: theme.info };
-      case 'Completed':
-        return { bg: theme.successBg, text: theme.success };
-      case 'Cancelled':
-        return { bg: theme.errorBg, text: theme.error };
-      default:
-        return { bg: theme.surfaceTertiary, text: theme.textSecondary };
-    }
-  }, [theme]);
-
   const renderAppointment = useCallback(({ item }: { item: Appointment }) => {
-    const statusStyle = getStatusStyle(item.status);
-    let doctorName = 'Unknown Doctor';
-    if (item.doctorId && typeof item.doctorId === 'object') {
-      const doctor = item.doctorId as Doctor;
-      if (doctor.userId && typeof doctor.userId === 'object') {
-        doctorName = doctor.userId.name;
-      }
-    }
+    const statusStyle = getAppointmentStatusStyle(item.status, theme);
+    const doctorObj = item.doctorId && typeof item.doctorId === 'object' ? item.doctorId : null;
+    const doctorName = doctorObj?.userId?.name ?? 'Unknown Doctor';
 
     const dateStr = new Date(item.appointmentDate).toLocaleString(undefined, {
       weekday: 'short',
@@ -138,7 +119,7 @@ export default function MyAppointmentsScreen() {
         )}
       </View>
     );
-  }, [theme, getStatusStyle, handleCancel]);
+  }, [theme, handleCancel]);
 
   const keyExtractor = useCallback((item: Appointment) => item._id, []);
 

@@ -1,18 +1,18 @@
 import React from 'react';
 import {
-  View,
   Text,
-  TouchableOpacity,
+  Pressable,
   StyleSheet,
   ViewStyle,
   TextStyle,
   ActivityIndicator,
 } from 'react-native';
+import { Feather } from '@expo/vector-icons';
 import { useColorScheme } from '@/components/useColorScheme';
 import { Colors, getButtonColors } from '@/constants/Colors';
-import { spacing, radius } from '@/constants/ThemeTokens';
+import { spacing, radius, shadows } from '@/constants/ThemeTokens';
 
-type ButtonVariant = 'primary' | 'secondary' | 'outline' | 'ghost' | 'danger';
+type ButtonVariant = 'primary' | 'secondary' | 'outline' | 'ghost' | 'danger' | 'accent';
 type ButtonSize = 'sm' | 'md' | 'lg';
 
 interface ButtonProps {
@@ -22,6 +22,7 @@ interface ButtonProps {
   size?: ButtonSize;
   disabled?: boolean;
   loading?: boolean;
+  icon?: keyof typeof Feather.glyphMap;
   style?: ViewStyle;
   textStyle?: TextStyle;
   fullWidth?: boolean;
@@ -34,6 +35,7 @@ export function Button({
   size = 'md',
   disabled = false,
   loading = false,
+  icon,
   style,
   textStyle,
   fullWidth = false,
@@ -41,65 +43,58 @@ export function Button({
   const theme = useColorScheme() ?? 'light';
   const colors = getButtonColors(variant, theme);
 
-  const sizeStyles = {
-    sm: {
-      paddingVertical: spacing.sm,
-      paddingHorizontal: spacing.md,
-      fontSize: 13,
-    },
-    md: {
-      paddingVertical: spacing.md,
-      paddingHorizontal: spacing.lg,
-      fontSize: 15,
-    },
-    lg: {
-      paddingVertical: spacing.lg,
-      paddingHorizontal: spacing.xl,
-      fontSize: 17,
-    },
+  const sizePresets = {
+    sm: { height: 40, fontSize: 13, iconSize: 16 },
+    md: { height: 48, fontSize: 15, iconSize: 18 },
+    lg: { height: 56, fontSize: 17, iconSize: 20 },
   };
 
   const isDisabled = disabled || loading;
 
   return (
-    <TouchableOpacity
+    <Pressable
       onPress={onPress}
       disabled={isDisabled}
-      activeOpacity={0.7}
-      style={[
+      style={({ pressed }) => [
         styles.button,
         {
-          backgroundColor: isDisabled
-            ? colors.background + '80' // 50% opacity
-            : colors.background,
+          backgroundColor: colors.background,
           borderColor: colors.border,
-          paddingVertical: sizeStyles[size].paddingVertical,
-          paddingHorizontal: sizeStyles[size].paddingHorizontal,
+          height: sizePresets[size].height,
+          opacity: isDisabled ? 0.5 : 1,
+          transform: [{ scale: pressed ? 0.97 : 1 }],
         },
         fullWidth && styles.fullWidth,
         style,
       ]}
     >
       {loading ? (
-        <ActivityIndicator
-          size="small"
-          color={colors.text}
-        />
+        <ActivityIndicator size="small" color={colors.text} />
       ) : (
-        <Text
-          style={[
-            styles.text,
-            {
-              color: isDisabled ? colors.text + '80' : colors.text,
-              fontSize: sizeStyles[size].fontSize,
-            },
-            textStyle,
-          ]}
-        >
-          {title}
-        </Text>
+        <>
+          {icon && (
+            <Feather
+              name={icon}
+              size={sizePresets[size].iconSize}
+              color={colors.text}
+              style={styles.icon}
+            />
+          )}
+          <Text
+            style={[
+              styles.text,
+              {
+                color: colors.text,
+                fontSize: sizePresets[size].fontSize,
+              },
+              textStyle,
+            ]}
+          >
+            {title}
+          </Text>
+        </>
       )}
-    </TouchableOpacity>
+    </Pressable>
   );
 }
 
@@ -110,10 +105,15 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     borderRadius: radius.md,
     borderWidth: 1,
+    paddingHorizontal: spacing.lg,
     gap: spacing.sm,
+    ...shadows.button,
   },
   fullWidth: {
     width: '100%',
+  },
+  icon: {
+    marginRight: 0,
   },
   text: {
     fontWeight: '600',

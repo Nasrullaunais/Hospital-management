@@ -1,4 +1,4 @@
-// @ts-ignore - vitest types not available in tsconfig types
+/// <reference types="vitest" />
 import { describe, it, expect, beforeAll, afterAll, beforeEach, vi } from 'vitest';
 import mongoose from 'mongoose';
 import { MongoMemoryServer } from 'mongodb-memory-server';

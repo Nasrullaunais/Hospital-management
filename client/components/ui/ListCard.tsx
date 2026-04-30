@@ -2,13 +2,13 @@ import React from 'react';
 import {
   View,
   Text,
-  TouchableOpacity,
+  Pressable,
   StyleSheet,
   ViewStyle,
 } from 'react-native';
 import { useColorScheme } from '@/components/useColorScheme';
 import { Colors } from '@/constants/Colors';
-import { spacing, radius, shadows } from '@/constants/ThemeTokens';
+import { spacing, shadows } from '@/constants/ThemeTokens';
 import { Badge, BadgeVariant } from './Badge';
 
 interface ListCardProps {
@@ -64,22 +64,39 @@ export function ListCard({
             </Text>
           )}
         </View>
-        {rightContent && (
-          <View style={styles.rightContent}>{rightContent}</View>
-        )}
         {badge && (
           <Badge label={badge.label} variant={badge.variant} />
         )}
+        {rightContent && (
+          <View style={styles.rightContent}>{rightContent}</View>
+        )}
       </View>
-      {footer && <View style={styles.footer}>{footer}</View>}
+      {footer && (
+        <View
+          style={[
+            styles.footer,
+            { borderTopColor: colors.divider },
+          ]}
+        >
+          {footer}
+        </View>
+      )}
     </View>
   );
 
   if (onPress) {
     return (
-      <TouchableOpacity onPress={onPress} activeOpacity={0.7}>
+      <Pressable
+        onPress={onPress}
+        style={({ pressed }) => [
+          {
+            transform: [{ scale: pressed ? 0.98 : 1 }],
+            opacity: pressed ? 0.92 : 1,
+          },
+        ]}
+      >
         {content}
-      </TouchableOpacity>
+      </Pressable>
     );
   }
 
@@ -132,9 +149,11 @@ export function Avatar({
   );
 }
 
+const listCardRadius = 16;
+
 const styles = StyleSheet.create({
   card: {
-    borderRadius: radius.lg,
+    borderRadius: listCardRadius,
     borderWidth: 1,
     padding: spacing.lg,
     ...shadows.card,
@@ -148,7 +167,7 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   title: {
-    fontSize: 16,
+    fontSize: 15,
     fontWeight: '600',
     marginBottom: 2,
   },
@@ -158,10 +177,9 @@ const styles = StyleSheet.create({
   leftContent: {},
   rightContent: {},
   footer: {
-    marginTop: spacing.md,
-    paddingTop: spacing.md,
+    marginTop: spacing.sm,
+    paddingTop: spacing.sm,
     borderTopWidth: 1,
-    borderTopColor: 'rgba(0,0,0,0.05)',
   },
   avatar: {
     justifyContent: 'center',

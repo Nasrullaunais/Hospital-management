@@ -1,3 +1,5 @@
+import mongoose from 'mongoose';
+import type { Request } from 'express';
 import { body, param, query } from 'express-validator';
 
 export const assignPatientValidation = [
@@ -16,7 +18,16 @@ export const assignPatientValidation = [
   body('expectedDischarge')
     .optional()
     .isISO8601()
-    .withMessage('Expected discharge must be a valid ISO 8601 date'),
+    .withMessage('Expected discharge must be a valid ISO 8601 date')
+    .custom((value: string, { req }: { req: Request }) => {
+      if (!value) return true;
+      const discharge = new Date(value);
+      const admission = new Date(req.body.admissionDate);
+      if (discharge <= admission) {
+        throw new Error('Expected discharge date must be after admission date');
+      }
+      return true;
+    }),
   body('notes')
     .optional()
     .trim()
@@ -45,8 +56,8 @@ export const updateAssignmentValidation = [
     .withMessage('Notes must not exceed 500 characters'),
   body('status')
     .optional()
-    .isIn(['active', 'discharged'])
-    .withMessage('Status must be either active or discharged'),
+    .isIn(['active', 'discharged', 'transferred'])
+    .withMessage('Status must be either active, discharged, or transferred'),
 ];
 
 export const wardIdParamValidation = [
@@ -55,9 +66,20 @@ export const wardIdParamValidation = [
     .withMessage('Invalid ward ID'),
 ];
 
+export const patientIdParamValidation = [
+  param('patientId')
+    .isMongoId()
+    .withMessage('Invalid patient ID'),
+];
+
 export const wardIdQueryValidation = [
   query('wardId')
     .optional()
-    .isMongoId()
-    .withMessage('Invalid ward ID'),
+    .custom((value: string) => {
+      if (value === '') throw new Error('Ward ID cannot be empty');
+      if (value && !mongoose.Types.ObjectId.isValid(value)) {
+        throw new Error('Invalid ward ID');
+      }
+      return true;
+    }),
 ];

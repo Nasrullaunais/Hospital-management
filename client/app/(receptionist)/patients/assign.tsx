@@ -16,10 +16,10 @@ import { Feather } from '@expo/vector-icons';
 import DateTimePicker, { type DateTimePickerEvent } from '@react-native-community/datetimepicker';
 import { useRouter } from 'expo-router';
 import { wardReceptionistService, type BedStatus, type PatientSummary } from '@/features/wardReceptionist/services/wardReceptionist.service';
-import { Input, Button } from '@/components/ui';
+import { Input, Button, Card } from '@/components/ui';
 import Colors from '@/constants/Colors';
 import { useColorScheme } from '@/components/useColorScheme';
-import { spacing, radius } from '@/constants/ThemeTokens';
+import { spacing, radius, shadows } from '@/constants/ThemeTokens';
 
 export default function AssignPatientScreen() {
   const router = useRouter();
@@ -118,6 +118,7 @@ export default function AssignPatientScreen() {
         wardId: selectedBed.wardId,
         bedNumber: selectedBed.bedNumber,
         admissionDate: admissionDate.toISOString(),
+        expectedDischarge: expectedDischarge ? expectedDischarge.toISOString() : undefined,
         notes: notes.trim() || undefined,
       });
       Alert.alert('Success', `Patient ${selectedPatient!.name} has been assigned to bed #${selectedBed!.bedNumber}.`, [
@@ -168,135 +169,141 @@ export default function AssignPatientScreen() {
         showsVerticalScrollIndicator={false}
       >
         <View style={styles.form} testID="assign-screen">
-          {/* Patient Selector */}
-          <View style={styles.fieldContainer}>
-            <Text style={[styles.label, { color: theme.text }]}>Patient *</Text>
-            <TouchableOpacity
-              style={[
-                styles.pickerButton,
-                {
-                  backgroundColor: theme.inputBackground,
-                  borderColor: errors.patient ? theme.inputErrorBorder : theme.inputBorder,
-                },
-              ]}
-              onPress={() => {
-                setShowPatientPicker(true);
-                setSearchQuery('');
-              }}
-              disabled={submitting}
-              testID="patient-select"
-            >
-              {selectedPatient ? (
-                <>
-                  <Feather name="user" size={16} color={theme.success} style={{ marginRight: 8 }} />
-                  <Text style={[styles.pickerButtonText, { color: theme.text }]}>{selectedPatient.name}</Text>
-                </>
-              ) : (
-                <>
-                  <Feather name="user" size={16} color={theme.textTertiary} style={{ marginRight: 8 }} />
-                  <Text style={[styles.pickerPlaceholder, { color: theme.textSecondary }]}>Select a patient</Text>
-                </>
+          {/* Patient & Bed Assignment Card */}
+          <Card title="Patient & Bed Assignment" style={styles.formCard}>
+            {/* Patient Selector */}
+            <View style={styles.fieldContainer}>
+              <Text style={[styles.label, { color: theme.text }]}>Patient *</Text>
+              <TouchableOpacity
+                style={[
+                  styles.pickerButton,
+                  {
+                    backgroundColor: theme.inputBackground,
+                    borderColor: errors.patient ? theme.inputErrorBorder : theme.inputBorder,
+                  },
+                ]}
+                onPress={() => {
+                  setShowPatientPicker(true);
+                  setSearchQuery('');
+                }}
+                disabled={submitting}
+                testID="patient-select"
+              >
+                {selectedPatient ? (
+                  <>
+                    <Feather name="user" size={16} color={theme.success} style={{ marginRight: 8 }} />
+                    <Text style={[styles.pickerButtonText, { color: theme.text }]}>{selectedPatient.name}</Text>
+                  </>
+                ) : (
+                  <>
+                    <Feather name="user" size={16} color={theme.textTertiary} style={{ marginRight: 8 }} />
+                    <Text style={[styles.pickerPlaceholder, { color: theme.textSecondary }]}>Select a patient</Text>
+                  </>
+                )}
+                <Feather name="chevron-down" size={16} color={theme.textTertiary} style={{ marginLeft: 'auto' }} />
+              </TouchableOpacity>
+              {errors.patient && (
+                <Text style={[styles.errorText, { color: theme.inputError }]}>{errors.patient}</Text>
               )}
-              <Feather name="chevron-down" size={16} color={theme.textTertiary} style={{ marginLeft: 'auto' }} />
-            </TouchableOpacity>
-            {errors.patient && (
-              <Text style={[styles.errorText, { color: theme.inputError }]}>{errors.patient}</Text>
-            )}
-          </View>
+            </View>
 
-          {/* Bed Selector */}
-          <View style={styles.fieldContainer}>
-            <Text style={[styles.label, { color: theme.text }]}>Bed *</Text>
-            <TouchableOpacity
-              style={[
-                styles.pickerButton,
-                {
-                  backgroundColor: theme.inputBackground,
-                  borderColor: errors.bed ? theme.inputErrorBorder : theme.inputBorder,
-                },
-              ]}
-              onPress={() => setShowBedPicker(true)}
-              disabled={submitting}
-              testID="bed-select"
-            >
-              {selectedBed ? (
-                <>
-                  <Feather name="check-circle" size={16} color={theme.success} style={{ marginRight: 8 }} />
-                  <Text style={[styles.pickerButtonText, { color: theme.text }]}>
-                    Bed #{selectedBed.bedNumber} — {selectedBed.wardName}
-                  </Text>
-                </>
-              ) : (
-                <>
-                  <Feather name="grid" size={16} color={theme.textTertiary} style={{ marginRight: 8 }} />
-                  <Text style={[styles.pickerPlaceholder, { color: theme.textSecondary }]}>Select a vacant bed</Text>
-                </>
+            {/* Bed Selector */}
+            <View style={styles.fieldContainer}>
+              <Text style={[styles.label, { color: theme.text }]}>Bed *</Text>
+              <TouchableOpacity
+                style={[
+                  styles.pickerButton,
+                  {
+                    backgroundColor: theme.inputBackground,
+                    borderColor: errors.bed ? theme.inputErrorBorder : theme.inputBorder,
+                  },
+                ]}
+                onPress={() => setShowBedPicker(true)}
+                disabled={submitting}
+                testID="bed-select"
+              >
+                {selectedBed ? (
+                  <>
+                    <Feather name="check-circle" size={16} color={theme.success} style={{ marginRight: 8 }} />
+                    <Text style={[styles.pickerButtonText, { color: theme.text }]}>
+                      Bed #{selectedBed.bedNumber} — {selectedBed.wardName}
+                    </Text>
+                  </>
+                ) : (
+                  <>
+                    <Feather name="grid" size={16} color={theme.textTertiary} style={{ marginRight: 8 }} />
+                    <Text style={[styles.pickerPlaceholder, { color: theme.textSecondary }]}>Select a vacant bed</Text>
+                  </>
+                )}
+                <Feather name="chevron-down" size={16} color={theme.textTertiary} style={{ marginLeft: 'auto' }} />
+              </TouchableOpacity>
+              {errors.bed && (
+                <Text style={[styles.errorText, { color: theme.inputError }]}>{errors.bed}</Text>
               )}
-              <Feather name="chevron-down" size={16} color={theme.textTertiary} style={{ marginLeft: 'auto' }} />
-            </TouchableOpacity>
-            {errors.bed && (
-              <Text style={[styles.errorText, { color: theme.inputError }]}>{errors.bed}</Text>
-            )}
-          </View>
+            </View>
+          </Card>
 
-          {/* Admission Date */}
-          <View style={styles.fieldContainer}>
-            <Text style={[styles.label, { color: theme.text }]}>Admission Date *</Text>
-            <TouchableOpacity
-              style={[
-                styles.pickerButton,
-                {
-                  backgroundColor: theme.inputBackground,
-                  borderColor: errors.admissionDate ? theme.inputErrorBorder : theme.inputBorder,
-                },
-              ]}
-              onPress={() => setShowAdmissionPicker(true)}
-              disabled={submitting}
-              testID="admission-date"
-            >
-              <Feather name="calendar" size={16} color={theme.textTertiary} style={{ marginRight: 8 }} />
-              <Text style={[styles.pickerButtonText, { color: theme.text }]}>{formattedAdmissionDate}</Text>
-              <Feather name="chevron-down" size={16} color={theme.textTertiary} style={{ marginLeft: 'auto' }} />
-            </TouchableOpacity>
-            {errors.admissionDate && (
-              <Text style={[styles.errorText, { color: theme.inputError }]}>{errors.admissionDate}</Text>
-            )}
-          </View>
-
-          {/* Expected Discharge Date */}
-          <View style={styles.fieldContainer}>
-            <Text style={[styles.label, { color: theme.text }]}>Expected Discharge Date (optional)</Text>
-            <TouchableOpacity
-              style={[
-                styles.pickerButton,
-                {
-                  backgroundColor: theme.inputBackground,
-                  borderColor: theme.inputBorder,
-                },
-              ]}
-              onPress={() => setShowDischargePicker(true)}
-              disabled={submitting}
-            >
-              <Feather name="calendar" size={16} color={theme.textTertiary} style={{ marginRight: 8 }} />
-              {formattedDischargeDate ? (
-                <Text style={[styles.pickerButtonText, { color: theme.text }]}>{formattedDischargeDate}</Text>
-              ) : (
-                <Text style={[styles.pickerPlaceholder, { color: theme.textSecondary }]}>Select expected discharge date</Text>
+          {/* Admission Details Card */}
+          <Card title="Admission Details" style={styles.formCard}>
+            {/* Admission Date */}
+            <View style={styles.fieldContainer}>
+              <Text style={[styles.label, { color: theme.text }]}>Admission Date *</Text>
+              <TouchableOpacity
+                style={[
+                  styles.pickerButton,
+                  {
+                    backgroundColor: theme.inputBackground,
+                    borderColor: errors.admissionDate ? theme.inputErrorBorder : theme.inputBorder,
+                  },
+                ]}
+                onPress={() => setShowAdmissionPicker(true)}
+                disabled={submitting}
+                testID="admission-date"
+              >
+                <Feather name="calendar" size={16} color={theme.textTertiary} style={{ marginRight: 8 }} />
+                <Text style={[styles.pickerButtonText, { color: theme.text }]}>{formattedAdmissionDate}</Text>
+                <Feather name="chevron-down" size={16} color={theme.textTertiary} style={{ marginLeft: 'auto' }} />
+              </TouchableOpacity>
+              {errors.admissionDate && (
+                <Text style={[styles.errorText, { color: theme.inputError }]}>{errors.admissionDate}</Text>
               )}
-              <Feather name="chevron-down" size={16} color={theme.textTertiary} style={{ marginLeft: 'auto' }} />
-            </TouchableOpacity>
-          </View>
+            </View>
 
-          {/* Notes */}
-          <Input
-            label="Notes (optional)"
-            placeholder="Add any relevant notes about this admission..."
-            value={notes}
-            onChangeText={setNotes}
-            multiline
-            numberOfLines={3}
-            editable={!submitting}
-          />
+            {/* Expected Discharge Date */}
+            <View style={styles.fieldContainer}>
+              <Text style={[styles.label, { color: theme.text }]}>Expected Discharge Date (optional)</Text>
+              <TouchableOpacity
+                style={[
+                  styles.pickerButton,
+                  {
+                    backgroundColor: theme.inputBackground,
+                    borderColor: theme.inputBorder,
+                  },
+                ]}
+                onPress={() => setShowDischargePicker(true)}
+                disabled={submitting}
+              >
+                <Feather name="calendar" size={16} color={theme.textTertiary} style={{ marginRight: 8 }} />
+                {formattedDischargeDate ? (
+                  <Text style={[styles.pickerButtonText, { color: theme.text }]}>{formattedDischargeDate}</Text>
+                ) : (
+                  <Text style={[styles.pickerPlaceholder, { color: theme.textSecondary }]}>Select expected discharge date</Text>
+                )}
+                <Feather name="chevron-down" size={16} color={theme.textTertiary} style={{ marginLeft: 'auto' }} />
+              </TouchableOpacity>
+            </View>
+
+            {/* Notes */}
+            <Input
+              label="Notes (optional)"
+              placeholder="Add any relevant notes about this admission..."
+              value={notes}
+              onChangeText={setNotes}
+              multiline
+              numberOfLines={3}
+              editable={!submitting}
+            />
+          </Card>
 
           {/* Submit Button */}
           <Button
@@ -304,6 +311,8 @@ export default function AssignPatientScreen() {
             onPress={handleAssign}
             loading={submitting}
             disabled={submitting}
+            variant="accent"
+            size="lg"
             fullWidth
             style={styles.button}
             testID="submit-btn"
@@ -351,7 +360,7 @@ export default function AssignPatientScreen() {
                       setErrors(prev => ({ ...prev, patient: undefined }));
                     }}
                   >
-                    <View style={styles.listItemIcon}>
+                    <View style={[styles.listItemIcon, { backgroundColor: theme.primaryMuted }]}>
                       <Feather name="user" size={18} color={theme.primary} />
                     </View>
                     <View style={styles.listItemContent}>
@@ -464,7 +473,10 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   form: {
-    gap: spacing.xs,
+    gap: spacing.md,
+  },
+  formCard: {
+    padding: spacing.lg,
   },
   fieldContainer: {
     marginBottom: spacing.md,
@@ -496,7 +508,7 @@ const styles = StyleSheet.create({
     marginTop: spacing.xs,
   },
   button: {
-    marginTop: spacing.md,
+    marginTop: spacing.sm,
   },
   modalOverlay: {
     flex: 1,
@@ -548,7 +560,6 @@ const styles = StyleSheet.create({
     width: 36,
     height: 36,
     borderRadius: 18,
-    backgroundColor: 'rgba(0,0,0,0.05)',
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: spacing.md,

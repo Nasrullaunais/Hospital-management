@@ -9,6 +9,8 @@ import type { Doctor, DoctorAvailability, ApiSuccessResponse } from '@/shared/ty
 export interface DoctorFilters {
   specialization?: string;
   availability?: DoctorAvailability;
+  page?: number;
+  limit?: number;
 }
 
 export interface UpdateDoctorPayload {
@@ -24,7 +26,11 @@ export const doctorService = {
    * Public endpoint — no auth required.
    */
   getDoctors: async (filters?: DoctorFilters): Promise<Doctor[]> => {
-    const res = await apiClient.get<ApiSuccessResponse<{ doctors: Doctor[]; count: number }>>(
+    const res = await apiClient.get<ApiSuccessResponse<{
+      doctors: Doctor[];
+      count: number;
+      pagination: { total: number; page: number; limit: number; pages: number };
+    }>>(
       ENDPOINTS.DOCTORS.BASE,
       { params: filters },
     );

@@ -57,13 +57,22 @@ export function Card({
         </View>
       )}
       {children && <View style={styles.content}>{children}</View>}
-      {footer && <View style={styles.footer}>{footer}</View>}
+      {footer && (
+        <View
+          style={[
+            styles.footer,
+            { borderTopColor: colors.divider },
+          ]}
+        >
+          {footer}
+        </View>
+      )}
     </View>
   );
 
   if (onPress) {
     return (
-      <TouchableOpacity onPress={onPress} activeOpacity={0.7}>
+      <TouchableOpacity onPress={onPress} activeOpacity={0.85}>
         {content}
       </TouchableOpacity>
     );
@@ -88,13 +97,14 @@ const styles = StyleSheet.create({
     marginBottom: spacing.xs,
   },
   subtitle: {
-    fontSize: 14,
+    fontSize: 13,
   },
-  content: {},
+  content: {
+    gap: 12,
+  },
   footer: {
-    marginTop: spacing.md,
-    paddingTop: spacing.md,
+    marginTop: spacing.sm,
+    paddingTop: spacing.sm,
     borderTopWidth: 1,
-    borderTopColor: 'rgba(0,0,0,0.05)',
   },
 });

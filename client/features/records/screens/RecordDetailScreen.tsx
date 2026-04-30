@@ -9,34 +9,47 @@ import {
   Linking,
   Alert,
 } from 'react-native';
+import { useLocalSearchParams } from 'expo-router';
+import { useColorScheme } from '@/components/useColorScheme';
+import Colors from '@/constants/Colors';
 import { recordService } from '../services/record.service';
 import { useAuth } from '@/shared/context/AuthContext';
 import type { MedicalRecord } from '@/shared/types';
+import { spacing, radius } from '@/constants/ThemeTokens';
 
 interface Props {
-  recordId: string;
+  recordId?: string;
   onDeleted?: () => void;
 }
 
-/**
- * RecordDetailScreen — Member 4
- * Full view of a single medical record.
- * TODO: Accept `recordId` from Expo Router navigation params.
- * TODO: Doctor: add inline edit form.
- * TODO: Patient: open labReportUrl in a WebView or native browser.
- */
-export default function RecordDetailScreen({ recordId, onDeleted }: Props) {
+export default function RecordDetailScreen({ recordId: propRecordId, onDeleted }: Props) {
+  const routeParams = useLocalSearchParams<{ recordId?: string }>();
+  const recordId = propRecordId ?? routeParams.recordId;
   const { user } = useAuth();
+  const colorScheme = useColorScheme() ?? 'light';
+  const theme = Colors[colorScheme];
   const [record, setRecord] = useState<MedicalRecord | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    recordService
-      .getRecordById(recordId)
-      .then(setRecord)
-      .catch((err) => setError(err instanceof Error ? err.message : 'Failed to load record.'))
-      .finally(() => setLoading(false));
+    async function loadRecord() {
+      if (!recordId) {
+        setError('Record ID is missing.');
+        setLoading(false);
+        return;
+      }
+      try {
+        const data = await recordService.getRecordById(recordId);
+        setRecord(data);
+          } catch (err: unknown) {
+        console.error('getRecordById failed:', err);
+        setError(err instanceof Error ? err.message : 'Failed to load record.');
+      } finally {
+        setLoading(false);
+      }
+    }
+    void loadRecord();
   }, [recordId]);
 
   const handleDelete = () => {
@@ -46,10 +59,12 @@ export default function RecordDetailScreen({ recordId, onDeleted }: Props) {
         text: 'Delete',
         style: 'destructive',
         onPress: async () => {
+          if (!recordId) return;
           try {
             await recordService.deleteRecord(recordId);
             onDeleted?.();
-          } catch (err) {
+      } catch (err: unknown) {
+            console.error('deleteRecord failed:', err);
             Alert.alert('Error', err instanceof Error ? err.message : 'Could not delete record.');
           }
         },
@@ -58,23 +73,24 @@ export default function RecordDetailScreen({ recordId, onDeleted }: Props) {
   };
 
   const openLabReport = (url: string) => {
-    Linking.openURL(url).catch(() => {
+    Linking.openURL(url).catch((err) => {
+      console.error('openLabReport failed:', err);
       Alert.alert('Error', 'Could not open the lab report.');
     });
   };
 
   if (loading) {
     return (
-      <View style={styles.center}>
-        <ActivityIndicator size="large" color="#2563eb" />
+      <View style={[styles.center, { backgroundColor: theme.background }]}>
+        <ActivityIndicator size="large" color={theme.primary} />
       </View>
     );
   }
 
   if (error || !record) {
     return (
-      <View style={styles.center}>
-        <Text style={styles.errorText}>{error ?? 'Record not found.'}</Text>
+      <View style={[styles.center, { backgroundColor: theme.background }]}>
+        <Text style={[styles.errorText, { color: theme.error }]}>{error ?? 'Record not found.'}</Text>
       </View>
     );
   }
@@ -82,9 +98,9 @@ export default function RecordDetailScreen({ recordId, onDeleted }: Props) {
   const isAdmin = user?.role === 'admin';
 
   return (
-    <ScrollView style={styles.container} contentContainerStyle={styles.content}>
-      <Text style={styles.title}>Medical Record</Text>
-      <Text style={styles.date}>
+    <ScrollView style={[styles.container, { backgroundColor: theme.background }]} contentContainerStyle={styles.content}>
+      <Text style={[styles.title, { color: theme.text }]}>Medical Record</Text>
+      <Text style={[styles.date, { color: theme.textTertiary }]}>
         Recorded: {new Date(record.dateRecorded).toLocaleDateString('en-US', {
           year: 'numeric',
           month: 'long',
@@ -92,30 +108,33 @@ export default function RecordDetailScreen({ recordId, onDeleted }: Props) {
         })}
       </Text>
 
-      <Section label="Diagnosis">
-        <Text style={styles.body}>{record.diagnosis}</Text>
-      </Section>
+      <View style={[styles.section, { borderTopColor: theme.divider }]}>
+        <Text style={[styles.sectionLabel, { color: theme.textTertiary }]}>Diagnosis</Text>
+        <Text style={[styles.body, { color: theme.text }]}>{record.diagnosis}</Text>
+      </View>
 
       {record.prescription && (
-        <Section label="Prescription">
-          <Text style={styles.body}>{record.prescription}</Text>
-        </Section>
+        <View style={[styles.section, { borderTopColor: theme.divider }]}>
+          <Text style={[styles.sectionLabel, { color: theme.textTertiary }]}>Prescription</Text>
+          <Text style={[styles.body, { color: theme.text }]}>{record.prescription}</Text>
+        </View>
       )}
 
       {record.labReportUrl && (
-        <Section label="Lab Report">
+        <View style={[styles.section, { borderTopColor: theme.divider }]}>
+          <Text style={[styles.sectionLabel, { color: theme.textTertiary }]}>Lab Report</Text>
           <TouchableOpacity
-            style={styles.reportButton}
+            style={[styles.reportButton, { backgroundColor: theme.infoBg }]}
             onPress={() => openLabReport(record.labReportUrl!)}
           >
-            <Text style={styles.reportButtonText}>📄 View Lab Report</Text>
+            <Text style={[styles.reportButtonText, { color: theme.info }]}>📄 View Lab Report</Text>
           </TouchableOpacity>
-        </Section>
+        </View>
       )}
 
       {isAdmin && (
-        <TouchableOpacity style={styles.deleteButton} onPress={handleDelete}>
-          <Text style={styles.deleteButtonText}>Delete Record</Text>
+        <TouchableOpacity style={[styles.deleteButton, { borderColor: theme.error }]} onPress={handleDelete}>
+          <Text style={[styles.deleteButtonText, { color: theme.error }]}>Delete Record</Text>
         </TouchableOpacity>
       )}
     </ScrollView>
@@ -132,42 +151,38 @@ function Section({ label, children }: { label: string; children: React.ReactNode
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#fff' },
-  content: { padding: 20 },
+  container: { flex: 1 },
+  content: { padding: spacing.lg },
   center: { flex: 1, justifyContent: 'center', alignItems: 'center' },
-  title: { fontSize: 24, fontWeight: '700', color: '#1a1a2e', marginBottom: 4 },
-  date: { fontSize: 13, color: '#888', marginBottom: 20 },
+  title: { fontSize: 24, fontWeight: '700', marginBottom: spacing.xs },
+  date: { fontSize: 13, marginBottom: spacing.lg },
   section: {
     borderTopWidth: 1,
-    borderColor: '#f0f0f0',
-    paddingTop: 16,
-    marginBottom: 16,
+    paddingTop: spacing.md,
+    marginBottom: spacing.md,
   },
   sectionLabel: {
     fontSize: 11,
     fontWeight: '700',
-    color: '#888',
     textTransform: 'uppercase',
     letterSpacing: 0.5,
-    marginBottom: 8,
+    marginBottom: spacing.sm,
   },
-  body: { fontSize: 15, color: '#374151', lineHeight: 22 },
+  body: { fontSize: 15, lineHeight: 22 },
   reportButton: {
-    backgroundColor: '#eff6ff',
-    borderRadius: 8,
-    paddingVertical: 12,
-    paddingHorizontal: 16,
+    borderRadius: radius.md,
+    paddingVertical: spacing.md,
+    paddingHorizontal: spacing.md,
     alignSelf: 'flex-start',
   },
-  reportButtonText: { color: '#2563eb', fontWeight: '600', fontSize: 14 },
+  reportButtonText: { fontWeight: '600', fontSize: 14 },
   deleteButton: {
-    marginTop: 16,
+    marginTop: spacing.lg,
     borderWidth: 1,
-    borderColor: '#ef4444',
-    borderRadius: 8,
-    paddingVertical: 12,
+    borderRadius: radius.md,
+    paddingVertical: spacing.md,
     alignItems: 'center',
   },
-  deleteButtonText: { color: '#ef4444', fontWeight: '600', fontSize: 15 },
-  errorText: { color: '#ef4444', fontSize: 15 },
+  deleteButtonText: { fontWeight: '600', fontSize: 15 },
+  errorText: { fontSize: 15 },
 });

@@ -7,6 +7,7 @@ import {
   ViewStyle,
   TextInputProps,
 } from 'react-native';
+import { Feather } from '@expo/vector-icons';
 import { useColorScheme } from '@/components/useColorScheme';
 import { Colors } from '@/constants/Colors';
 import { spacing, radius } from '@/constants/ThemeTokens';
@@ -39,10 +40,15 @@ export function Input({
     return colors.inputBorder;
   };
 
+  const getBorderWidth = () => {
+    if (isFocused) return 2;
+    return 1.5;
+  };
+
   return (
     <View style={[styles.container, containerStyle]}>
       {label && (
-        <Text style={[styles.label, { color: colors.text }]}>
+        <Text style={[styles.label, { color: colors.textSecondary }]}>
           {label}
         </Text>
       )}
@@ -52,6 +58,7 @@ export function Input({
           {
             backgroundColor: disabled ? colors.inputDisabled : colors.inputBackground,
             borderColor: getBorderColor(),
+            borderWidth: getBorderWidth(),
           },
         ]}
       >
@@ -91,20 +98,22 @@ const styles = StyleSheet.create({
     marginBottom: spacing.md,
   },
   label: {
-    fontSize: 14,
-    fontWeight: '500',
+    fontSize: 12,
+    fontWeight: '600',
+    textTransform: 'uppercase',
+    letterSpacing: 0.8,
     marginBottom: spacing.sm,
   },
   inputContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    borderWidth: 1.5,
     borderRadius: radius.md,
+    minHeight: 48,
     paddingHorizontal: spacing.md,
   },
   input: {
     flex: 1,
-    paddingVertical: spacing.md,
+    paddingVertical: 12,
     fontSize: 16,
   },
   iconLeft: {

@@ -57,6 +57,7 @@ export interface PatientMedication {
   medicationName: string;
   dosage: string;
   frequency: string;
+  route?: string;
   startDate: string;
   endDate?: string;
   status: 'active' | 'completed' | 'discontinued';
@@ -127,5 +128,28 @@ export const wardReceptionistService = {
       ENDPOINTS.WARD_RECEPTIONIST.PATIENTS(wardId),
     );
     return res.data.data.patients;
+  },
+
+  getPatientById: async (patientId: string): Promise<PatientSummary & { email: string; wardType?: string; bedId: string; status: 'active' | 'discharged' | 'transferred' }> => {
+    const res = await apiClient.get<ApiSuccessResponse<{ patient: PatientSummary & { email: string; wardType?: string; bedId: string; status: 'active' | 'discharged' | 'transferred' } }>>(
+      ENDPOINTS.WARD_RECEPTIONIST.PATIENT_BY_ID(patientId),
+    );
+    return res.data.data.patient;
+  },
+
+  getAllPatients: async (params?: { skip?: number; limit?: number; wardId?: string }): Promise<{
+    patients: PatientSummary[];
+    count: number;
+    totalCount: number;
+  }> => {
+    const res = await apiClient.get<ApiSuccessResponse<{
+      patients: PatientSummary[];
+      count: number;
+      totalCount: number;
+    }>>(
+      ENDPOINTS.WARD_RECEPTIONIST.ALL_PATIENTS,
+      { params },
+    );
+    return res.data.data;
   },
 };

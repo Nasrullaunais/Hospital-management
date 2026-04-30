@@ -15,16 +15,22 @@ interface MaskedMedication {
   notes?: string;
 }
 
-const maskMedication = (doc: IWardMedication & { medicationId?: { name: string } }): MaskedMedication => ({
-  _id: doc._id,
-  medicationName: doc.medicationId?.name ?? '',
-  dosage: doc.dosage,
-  frequency: doc.frequency,
-  startDate: doc.startDate,
-  endDate: doc.endDate,
-  status: doc.status,
-  notes: doc.notes,
-});
+const maskMedication = (doc: IWardMedication & { medicationId?: { name: string } }): MaskedMedication => {
+  const medicationName = doc.medicationId?.name ?? '';
+  if (!medicationName) {
+    console.warn(`[wardMedications] Data integrity warning: Medication document ${doc._id} has missing medicationId.name`);
+  }
+  return {
+    _id: doc._id,
+    medicationName,
+    dosage: doc.dosage,
+    frequency: doc.frequency,
+    startDate: doc.startDate,
+    endDate: doc.endDate,
+    status: doc.status,
+    notes: doc.notes,
+  };
+};
 
 export const getPatientMedications = async (
   req: Request,
@@ -34,24 +40,44 @@ export const getPatientMedications = async (
   try {
     const { patientId } = req.params;
 
-    const activeAssignment = await WardAssignment.findOne({
-      patientId: new mongoose.Types.ObjectId(patientId),
-      status: 'active',
-    });
-
-    if (!activeAssignment) {
-      throw ApiError.notFound('Patient is not currently assigned to any ward');
-    }
-
-    const medications = await WardMedication.find({
-      wardAssignmentId: activeAssignment._id,
-    }).populate<{ medicationId: { name: string } }>('medicationId', 'name');
-
-    const masked = medications.map(m => maskMedication(m));
+    const medications = await WardMedication.aggregate([
+      { $match: { wardAssignmentId: new mongoose.Types.ObjectId(patientId) } },
+      {
+        $lookup: {
+          from: 'wardassignments',
+          localField: 'wardAssignmentId',
+          foreignField: '_id',
+          as: 'assignment',
+        },
+      },
+      { $unwind: '$assignment' },
+      { $match: { 'assignment.patientId': new mongoose.Types.ObjectId(patientId), 'assignment.status': 'active' } },
+      {
+        $lookup: {
+          from: 'medicines',
+          localField: 'medicationId',
+          foreignField: '_id',
+          as: 'medicationId',
+        },
+      },
+      { $unwind: '$medicationId' },
+      {
+        $project: {
+          _id: 1,
+          medicationName: '$medicationId.name',
+          dosage: 1,
+          frequency: 1,
+          startDate: 1,
+          endDate: 1,
+          status: 1,
+          notes: 1,
+        },
+      },
+    ]);
 
     res.status(200).json({
       success: true,
-      data: { medications: masked },
+      data: { medications },
     });
   } catch (error) {
     next(error);
@@ -92,6 +118,137 @@ export const getMedicationById = async (
     res.status(200).json({
       success: true,
       data: masked,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const addWardMedication = async (
+  req: Request,
+  res: Response,
+  next: NextFunction,
+): Promise<void> => {
+  try {
+    const { wardAssignmentId, medicationId, dosage, frequency, route, startDate, endDate, notes } = req.body;
+
+    if (!mongoose.Types.ObjectId.isValid(wardAssignmentId)) {
+      throw ApiError.badRequest('Invalid ward assignment ID format');
+    }
+    if (!mongoose.Types.ObjectId.isValid(medicationId)) {
+      throw ApiError.badRequest('Invalid medication ID format');
+    }
+
+    const assignment = await WardAssignment.findOne({
+      _id: wardAssignmentId,
+      status: 'active',
+    });
+
+    if (!assignment) {
+      throw ApiError.notFound('Active ward assignment not found');
+    }
+
+    const medication = await WardMedication.create({
+      wardAssignmentId,
+      medicationId,
+      dosage,
+      frequency,
+      route,
+      startDate,
+      endDate,
+      notes,
+    });
+
+    const populated = await medication.populate<{ medicationId: { name: string } }>('medicationId', 'name');
+
+    res.status(201).json({
+      success: true,
+      data: maskMedication(populated),
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const updateWardMedication = async (
+  req: Request,
+  res: Response,
+  next: NextFunction,
+): Promise<void> => {
+  try {
+    const { id } = req.params;
+    const { dosage, frequency, route, endDate, status, notes } = req.body;
+
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      throw ApiError.badRequest('Invalid medication ID format');
+    }
+
+    const medication = await WardMedication.findById(id);
+
+    if (!medication) {
+      throw ApiError.notFound('Medication not found');
+    }
+
+    const activeAssignment = await WardAssignment.findOne({
+      _id: medication.wardAssignmentId,
+      status: 'active',
+    });
+
+    if (!activeAssignment) {
+      throw ApiError.notFound('Medication not found');
+    }
+
+    const updated = await WardMedication.findByIdAndUpdate(
+      id,
+      { dosage, frequency, route, endDate, status, notes },
+      { returnDocument: 'after', runValidators: true },
+    ).populate<{ medicationId: { name: string } }>('medicationId', 'name');
+
+    res.status(200).json({
+      success: true,
+      data: maskMedication(updated!),
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const discontinueMedication = async (
+  req: Request,
+  res: Response,
+  next: NextFunction,
+): Promise<void> => {
+  try {
+    const { id } = req.params;
+
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      throw ApiError.badRequest('Invalid medication ID format');
+    }
+
+    const medication = await WardMedication.findById(id);
+
+    if (!medication) {
+      throw ApiError.notFound('Medication not found');
+    }
+
+    const activeAssignment = await WardAssignment.findOne({
+      _id: medication.wardAssignmentId,
+      status: 'active',
+    });
+
+    if (!activeAssignment) {
+      throw ApiError.notFound('Medication not found');
+    }
+
+    const discontinued = await WardMedication.findByIdAndUpdate(
+      id,
+      { status: 'discontinued', endDate: new Date() },
+      { returnDocument: 'after' },
+    ).populate<{ medicationId: { name: string } }>('medicationId', 'name');
+
+    res.status(200).json({
+      success: true,
+      data: maskMedication(discontinued!),
     });
   } catch (error) {
     next(error);

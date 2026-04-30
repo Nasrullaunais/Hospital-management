@@ -41,11 +41,17 @@ src/
 │   ├── db.ts           # MongoDB connection (retry + graceful shutdown)
 │   └── env.ts          # Env validation — import this, never process.env directly
 ├── modules/
-│   ├── auth/           # Member 1 — User auth & patient profile
+│   ├── auth/           # Common — User auth (shared across all members)
+│   ├── departments/    # Member 1 — Hospital departments
+│   ├── wards/          # Member 1 — Ward management with bed tracking
+│   ├── wardAssignments/# Member 1 — Patient admission/discharge/transfer
+│   ├── wardMedications/# Member 1 — In-patient medication administration
 │   ├── doctors/        # Member 2 — Doctor listings & management
 │   ├── appointments/   # Member 3 — Appointment booking
-│   ├── records/        # Member 4 — Medical records
+│   ├── records/        # Member 4 — Medical records & lab reports
 │   ├── pharmacy/       # Member 5 — Medicine inventory
+│   ├── dispensing/     # Member 5 — Medicine dispensing
+│   ├── prescriptions/  # Member 5 — Prescription management
 │   └── billing/        # Member 6 — Invoices & payments
 ├── routes/
 │   └── index.ts        # Central route aggregator

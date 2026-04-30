@@ -8,6 +8,8 @@ import {
   getWardStats,
   getBedStatuses,
   getWardPatients,
+  getPatientById,
+  getAllPatients,
 } from './wardAssignment.controller.js';
 import { authMiddleware, requireRole } from '../../shared/middlewares/authMiddleware.js';
 import {
@@ -16,6 +18,7 @@ import {
   updateAssignmentValidation,
   wardIdParamValidation,
   wardIdQueryValidation,
+  patientIdParamValidation,
 } from './wardAssignment.validation.js';
 
 const router = Router();
@@ -36,6 +39,24 @@ router.get(
   requireRole('receptionist'),
   wardIdParamValidation,
   getWardAssignments,
+);
+
+/** GET /api/assignments/stats — Receptionist only (MUST be before /:id) */
+router.get(
+  '/stats',
+  authMiddleware,
+  requireRole('receptionist'),
+  wardIdQueryValidation,
+  getWardStats,
+);
+
+/** GET /api/assignments/bed-statuses — Receptionist only (MUST be before /:id) */
+router.get(
+  '/bed-statuses',
+  authMiddleware,
+  requireRole('receptionist'),
+  wardIdQueryValidation,
+  getBedStatuses,
 );
 
 /** GET /api/assignments/:id — Receptionist only */
@@ -65,24 +86,6 @@ router.delete(
   dischargePatient,
 );
 
-/** GET /api/assignments/stats — Receptionist only */
-router.get(
-  '/stats',
-  authMiddleware,
-  requireRole('receptionist'),
-  wardIdQueryValidation,
-  getWardStats,
-);
-
-/** GET /api/assignments/bed-statuses — Receptionist only */
-router.get(
-  '/bed-statuses',
-  authMiddleware,
-  requireRole('receptionist'),
-  wardIdQueryValidation,
-  getBedStatuses,
-);
-
 /** GET /api/assignments/ward/:wardId/patients — Receptionist only */
 router.get(
   '/ward/:wardId/patients',
@@ -90,6 +93,24 @@ router.get(
   requireRole('receptionist'),
   wardIdParamValidation,
   getWardPatients,
+);
+
+/** GET /api/assignments/patient/:patientId — Receptionist only */
+router.get(
+  '/patient/:patientId',
+  authMiddleware,
+  requireRole('receptionist'),
+  patientIdParamValidation,
+  getPatientById,
+);
+
+/** GET /api/assignments/patients — Receptionist only */
+router.get(
+  '/patients',
+  authMiddleware,
+  requireRole('receptionist'),
+  wardIdQueryValidation,
+  getAllPatients,
 );
 
 export default router;

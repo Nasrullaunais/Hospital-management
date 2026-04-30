@@ -1,13 +1,15 @@
 import React, { useState, useEffect } from 'react';
-import { ActivityIndicator, View, StyleSheet } from 'react-native';
+import { ActivityIndicator, View, Text, StyleSheet } from 'react-native';
 import { Redirect, Stack, useRouter, usePathname } from 'expo-router';
 import Colors from '@/constants/Colors';
 import { useColorScheme } from '@/components/useColorScheme';
 import { useAuth } from '@/shared/context/AuthContext';
 import { getRoleHomeRoute } from '@/shared/constants/roleRoutes';
 import { CustomTabBar, TabItem } from '@/components/ui/CustomTabBar';
+import { spacing, radius, shadows } from '@/constants/ThemeTokens';
 
-const TAB_SCREENS = ['index', 'appointments', 'records', 'profile'];
+const VALID_TAB_KEYS = ['index', 'appointments', 'records', 'profile'] as const;
+type TabKey = typeof VALID_TAB_KEYS[number];
 
 export default function DoctorLayout() {
   const colorScheme = useColorScheme() ?? 'light';
@@ -15,33 +17,35 @@ export default function DoctorLayout() {
   const router = useRouter();
   const pathname = usePathname();
   const { user, isLoading } = useAuth();
-  const [activeTab, setActiveTab] = useState('index');
+  const [activeTab, setActiveTab] = useState<TabKey>('index');
 
   const tabs: TabItem[] = [
-    { key: 'index', title: 'Home', icon: '🏠' },
-    { key: 'appointments', title: 'Schedule', icon: '📅' },
-    { key: 'records', title: 'Patients', icon: '📋' },
-    { key: 'profile', title: 'Profile', icon: '👤' },
+    { key: 'index', title: 'Home', icon: 'home' },
+    { key: 'appointments', title: 'Schedule', icon: 'calendar' },
+    { key: 'records', title: 'Patients', icon: 'users' },
+    { key: 'profile', title: 'Profile', icon: 'user' },
   ];
 
   useEffect(() => {
     const segments = pathname.split('/');
     const screenName = segments[2];
-    if (screenName && TAB_SCREENS.includes(screenName)) {
-      setActiveTab(screenName);
+    if (screenName && VALID_TAB_KEYS.includes(screenName as TabKey)) {
+      setActiveTab(screenName as TabKey);
     }
   }, [pathname]);
 
   const handleTabPress = (tabKey: string) => {
     setActiveTab(tabKey);
-    const path = tabKey === 'index' ? '/(doctor)' : `/(doctor)/${tabKey}`;
-    router.push(path as any);
+    const path: string = tabKey === 'index' ? '/(doctor)' : `/(doctor)/${tabKey}`;
+    router.push(path);
   };
 
   if (isLoading) {
     return (
-      <View style={[styles.loading, { backgroundColor: theme.background }]}>
-        <ActivityIndicator size="large" color={theme.primary} />
+      <View style={styles.loading}>
+        <Text style={styles.loadingBrand}>Pulse</Text>
+        <Text style={styles.loadingSubtitle}>Doctor Portal</Text>
+        <ActivityIndicator size="large" color="#F4795B" style={{ marginTop: 24 }} />
       </View>
     );
   }
@@ -64,8 +68,8 @@ export default function DoctorLayout() {
       >
         {/* Main tab screens */}
         <Stack.Screen name="index" options={{ headerShown: false }} />
-        <Stack.Screen name="appointments" options={{ headerShown: false }} />
-        <Stack.Screen name="records" options={{ headerShown: false }} />
+        <Stack.Screen name="appointments/index" options={{ headerShown: false }} />
+        <Stack.Screen name="records/index" options={{ headerShown: false }} />
         <Stack.Screen name="profile" options={{ headerShown: false }} />
 
         {/* Detail pages with headers */}
@@ -73,10 +77,24 @@ export default function DoctorLayout() {
           name="records/add-record"
           options={{
             headerShown: true,
-            title: 'Add Record',
+            title: 'New Patient Record',
             headerStyle: { backgroundColor: theme.surface },
-            headerTintColor: theme.text,
+            headerTintColor: theme.primary,
+            headerTitleStyle: { fontWeight: '600', fontSize: 16 },
             headerShadowVisible: false,
+            headerBackTitleVisible: false,
+          }}
+        />
+        <Stack.Screen
+          name="records/[id]"
+          options={{
+            headerShown: true,
+            title: 'Record Info',
+            headerStyle: { backgroundColor: theme.surface },
+            headerTintColor: theme.primary,
+            headerTitleStyle: { fontWeight: '600', fontSize: 16 },
+            headerShadowVisible: false,
+            headerBackTitleVisible: false,
           }}
         />
       </Stack>
@@ -95,5 +113,19 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
+    backgroundColor: '#1B2A4A',
+  },
+  loadingBrand: {
+    fontSize: 36,
+    fontWeight: '800',
+    color: '#FFFFFF',
+    letterSpacing: 2,
+  },
+  loadingSubtitle: {
+    fontSize: 14,
+    fontWeight: '500',
+    color: 'rgba(255,255,255,0.7)',
+    marginTop: 6,
+    letterSpacing: 1,
   },
 });

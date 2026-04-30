@@ -11,9 +11,11 @@ export interface IUser extends Document {
   role: 'patient' | 'doctor' | 'admin' | 'pharmacist' | 'receptionist';
   phone?: string;
   dateOfBirth?: Date;
+  /** File reference with protocol: 's3://...' | 'local://...' | legacy '/uploads/...' */
   idDocumentUrl?: string;
   createdAt: Date;
   updatedAt: Date;
+  lastVisit?: Date;
   // Instance methods
   comparePassword(candidatePassword: string): Promise<boolean>;
 }
@@ -64,6 +66,13 @@ const userSchema = new Schema<IUser>(
     },
     idDocumentUrl: {
       type: String,
+    },
+    isActive: {
+      type: Boolean,
+      default: true,
+    },
+    lastVisit: {
+      type: Date,
     },
   },
   {

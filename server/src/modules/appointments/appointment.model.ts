@@ -7,6 +7,7 @@ export interface IAppointment extends Document {
   appointmentDate: Date;
   reasonForVisit?: string;
   status: 'Pending' | 'Confirmed' | 'Completed' | 'Cancelled';
+  /** File reference with protocol: 's3://...' | 'local://...' | legacy '/uploads/...' */
   referralDocumentUrl?: string;
   createdAt: Date;
   updatedAt: Date;
@@ -27,6 +28,10 @@ const appointmentSchema = new Schema<IAppointment>(
     appointmentDate: {
       type: Date,
       required: [true, 'Appointment date is required'],
+      validate: {
+        validator: (value: Date) => value.getTime() > Date.now(),
+        message: 'Appointment date must be in the future',
+      },
     },
     reasonForVisit: {
       type: String,
@@ -48,6 +53,29 @@ const appointmentSchema = new Schema<IAppointment>(
 // Indexes for common query patterns
 appointmentSchema.index({ patientId: 1, status: 1 });
 appointmentSchema.index({ doctorId: 1, appointmentDate: 1 });
+appointmentSchema.index({ doctorId: 1, status: 1 });
 appointmentSchema.index({ status: 1 });
+// Unique constraint prevents double-booking: same doctor can't have two appointments at the same time
+appointmentSchema.index(
+  { doctorId: 1, appointmentDate: 1 },
+  { unique: true, partialFilterExpression: { appointmentDate: { $exists: true } } },
+);
+
+appointmentSchema.pre('save', async function () {
+  const SLOT_WINDOW_MS = 30 * 60 * 1000;
+  const windowStart = new Date(this.appointmentDate.getTime() - SLOT_WINDOW_MS);
+  const windowEnd = new Date(this.appointmentDate.getTime() + SLOT_WINDOW_MS);
+
+  const conflict = await this.constructor.findOne({
+    doctorId: this.doctorId,
+    _id: { $ne: this._id },
+    appointmentDate: { $gte: windowStart, $lte: windowEnd },
+    status: { $nin: ['Cancelled'] },
+  });
+
+  if (conflict) {
+    throw new Error('This time slot is already booked. Please choose a different time.');
+  }
+});
 
 export const Appointment = mongoose.model<IAppointment>('Appointment', appointmentSchema);

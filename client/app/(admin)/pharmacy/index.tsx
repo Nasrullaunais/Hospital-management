@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import { ROLES } from '@/shared/constants/roles';
 import { useFocusEffect } from 'expo-router';
 import {
   ActivityIndicator,
@@ -12,21 +13,16 @@ import {
   View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { Feather } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import Colors from '@/constants/Colors';
 import { useColorScheme } from '@/components/useColorScheme';
 import { useAuth } from '@/shared/context/AuthContext';
-import { Config } from '@/shared/constants/Config';
+import { spacing, radius, shadows, typography } from '@/constants/ThemeTokens';
+import { LOW_STOCK_THRESHOLD } from '@/shared/constants/Config';
+import { getImageUrl } from '@/shared/utils/getImageUrl';
 import type { Medicine } from '@/shared/types';
 import { medicineService } from '@/features/pharmacy/services/medicine.service';
-
-function getImageUrl(url: string): string {
-  if (!url) return '';
-  if (url.startsWith('http://') || url.startsWith('https://')) return url;
-  const base = Config.BASE_URL.endsWith('/') ? Config.BASE_URL.slice(0, -1) : Config.BASE_URL;
-  const path = url.startsWith('/') ? url : `/${url}`;
-  return `${base}${path}`;
-}
 
 const makeStyles = (colorScheme: 'light' | 'dark') => StyleSheet.create({
   container: {
@@ -34,57 +30,56 @@ const makeStyles = (colorScheme: 'light' | 'dark') => StyleSheet.create({
     backgroundColor: Colors[colorScheme].surfaceTertiary,
   },
   list: {
-    padding: 12,
-    paddingTop: 8,
+    padding: spacing.md,
+    paddingTop: spacing.sm,
   },
   emptyList: {
     flexGrow: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    padding: 16,
+    padding: spacing.md,
   },
   card: {
     flexDirection: 'row',
-    borderRadius: 12,
+    borderRadius: radius.lg,
     backgroundColor: Colors[colorScheme].surface,
-    marginBottom: 10,
+    marginBottom: 12,
     overflow: 'hidden',
-    shadowColor: '#000',
-    shadowOpacity: 0.06,
-    shadowRadius: 6,
-    elevation: 2,
+    ...shadows.card,
   },
   image: {
     width: 86,
     height: 86,
     backgroundColor: Colors[colorScheme].border,
+    borderTopLeftRadius: 12,
+    borderBottomLeftRadius: 12,
   },
   cardBody: {
     flex: 1,
-    padding: 10,
-    gap: 2,
+    padding: spacing.sm,
+    paddingLeft: spacing.md,
+    gap: spacing.xs,
+    justifyContent: 'center',
   },
   rowBetween: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 2,
   },
   name: {
-    fontSize: 15,
-    fontWeight: '700',
+    fontSize: typography.md,
+    fontWeight: typography.semibold,
     color: Colors[colorScheme].text,
     flex: 1,
-    paddingRight: 8,
+    paddingRight: spacing.sm,
   },
   meta: {
-    fontSize: 12,
+    fontSize: typography.xs,
     color: Colors[colorScheme].textSecondary,
   },
   stockText: {
-    marginTop: 4,
     fontSize: 13,
-    fontWeight: '700',
+    fontWeight: typography.semibold,
     color: Colors[colorScheme].text,
   },
   stockTextLow: {
@@ -94,82 +89,87 @@ const makeStyles = (colorScheme: 'light' | 'dark') => StyleSheet.create({
     backgroundColor: Colors[colorScheme].errorBg,
     borderColor: Colors[colorScheme].error,
     borderWidth: 1,
-    borderRadius: 999,
-    paddingHorizontal: 8,
-    paddingVertical: 3,
+    borderRadius: radius.xs,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: spacing.xs,
   },
   lowStockBadgeText: {
     color: Colors[colorScheme].error,
     fontSize: 11,
-    fontWeight: '700',
+    fontWeight: typography.bold,
   },
   addButton: {
-    marginHorizontal: 12,
-    marginTop: 12,
-    marginBottom: 5,
-    backgroundColor: Colors[colorScheme].primary,
-    borderRadius: 10,
-    paddingVertical: 12,
+    flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'center',
+    marginHorizontal: spacing.md,
+    marginTop: spacing.md,
+    marginBottom: spacing.xs,
+    backgroundColor: Colors[colorScheme].accent,
+    borderRadius: radius.md,
+    height: 52,
+    ...shadows.button,
   },
   addButtonText: {
     color: '#ffffff',
-    fontWeight: '700',
-    fontSize: 14,
+    fontWeight: typography.semibold,
+    fontSize: typography.sm,
   },
   center: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    padding: 20,
+    padding: spacing.lg,
   },
   errorText: {
-    marginBottom: 12,
+    marginBottom: spacing.sm,
     textAlign: 'center',
   },
   retryButton: {
     backgroundColor: Colors[colorScheme].surface,
-    borderRadius: 8,
-    paddingHorizontal: 14,
-    paddingVertical: 10,
+    borderRadius: radius.md,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
     borderWidth: 1,
     borderColor: Colors[colorScheme].primary,
   },
   retryButtonText: {
-    fontWeight: '600',
+    fontWeight: typography.semibold,
   },
   emptyText: {
     color: Colors[colorScheme].textTertiary,
-    fontSize: 14,
+    fontSize: typography.sm,
   },
   actionRow: {
     flexDirection: 'row',
-    gap: 8,
-    marginTop: 8,
+    gap: spacing.sm,
+    marginTop: spacing.sm,
   },
   editButton: {
     flex: 1,
     backgroundColor: Colors[colorScheme].primary,
-    borderRadius: 6,
-    paddingVertical: 6,
+    borderRadius: radius.md,
+    height: 36,
+    justifyContent: 'center',
     alignItems: 'center',
   },
   editButtonText: {
     color: '#ffffff',
-    fontSize: 12,
-    fontWeight: '700',
+    fontSize: typography.xs,
+    fontWeight: typography.bold,
   },
   deleteButton: {
     flex: 1,
     backgroundColor: Colors[colorScheme].error,
-    borderRadius: 6,
-    paddingVertical: 6,
+    borderRadius: radius.md,
+    height: 36,
+    justifyContent: 'center',
     alignItems: 'center',
   },
   deleteButtonText: {
     color: '#ffffff',
-    fontSize: 12,
-    fontWeight: '700',
+    fontSize: typography.xs,
+    fontWeight: typography.bold,
   },
 });
 
@@ -185,7 +185,7 @@ export default function PharmacyInventoryScreen() {
   const [error, setError] = useState<string | null>(null);
 
   const canAddMedicine = useMemo(
-    () => user?.role === 'admin' || user?.role === 'pharmacist',
+    () => user?.role === ROLES.ADMIN || user?.role === ROLES.PHARMACIST,
     [user?.role],
   );
 
@@ -239,7 +239,7 @@ export default function PharmacyInventoryScreen() {
   };
 
   const renderItem = ({ item }: { item: Medicine }) => {
-    const lowStock = item.stockQuantity < 10;
+    const lowStock = item.stockQuantity < LOW_STOCK_THRESHOLD;
 
     return (
       <View style={styles.card}>
@@ -313,6 +313,7 @@ export default function PharmacyInventoryScreen() {
           style={styles.addButton}
           onPress={() => router.push('/(admin)/pharmacy/add-medicine')}
         >
+          <Feather name="plus" size={18} color="#fff" style={{ marginRight: spacing.sm }} />
           <Text style={styles.addButtonText}>Add Medication</Text>
         </TouchableOpacity>
       ) : null}
@@ -321,7 +322,7 @@ export default function PharmacyInventoryScreen() {
         data={medicines}
         keyExtractor={(item) => item._id}
         renderItem={renderItem}
-        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={Colors[colorScheme].primary} />}
         contentContainerStyle={medicines.length === 0 ? styles.emptyList : styles.list}
         ListEmptyComponent={<Text style={styles.emptyText}>No medicines in inventory.</Text>}
       />

@@ -35,10 +35,10 @@ export const appointmentService = {
    * Fetch all appointments for the currently authenticated patient.
    */
   getMyAppointments: async (): Promise<Appointment[]> => {
-    const res = await apiClient.get<ApiSuccessResponse<Appointment[]>>(
+    const res = await apiClient.get<ApiSuccessResponse<{ appointments: Appointment[]; count: number }>>(
       ENDPOINTS.APPOINTMENTS.MY_APPOINTMENTS,
     );
-    return res.data.data;
+    return res.data.data.appointments;
   },
 
   /**

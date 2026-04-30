@@ -6,6 +6,7 @@ export interface IWardMedication extends Document {
   medicationId: mongoose.Types.ObjectId;
   dosage: string;
   frequency: string;
+  route?: string;
   startDate: Date;
   endDate?: Date;
   status: 'active' | 'completed' | 'discontinued';
@@ -38,6 +39,10 @@ const wardMedicationSchema = new Schema<IWardMedication>(
       required: [true, 'Frequency is required'],
       trim: true,
     },
+    route: {
+      type: String,
+      trim: true,
+    },
     startDate: {
       type: Date,
       required: [true, 'Start date is required'],
@@ -57,8 +62,5 @@ const wardMedicationSchema = new Schema<IWardMedication>(
   },
   { timestamps: true },
 );
-
-wardMedicationSchema.index({ wardAssignmentId: 1 });
-wardMedicationSchema.index({ medicationId: 1 });
 
 export const WardMedication = mongoose.model<IWardMedication>('WardMedication', wardMedicationSchema);

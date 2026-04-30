@@ -15,21 +15,29 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { SymbolView } from 'expo-symbols';
+import { Feather } from '@expo/vector-icons';
 import * as DocumentPicker from 'expo-document-picker';
 import { useRouter } from 'expo-router';
 import Colors from '@/constants/Colors';
 import { useColorScheme } from '@/components/useColorScheme';
 import { apiClient } from '@/shared/api/client';
 import { ENDPOINTS } from '@/shared/api/endpoints';
+import { APPOINTMENT_STATUS } from '@/shared/constants/appointmentStatus';
 import { recordService } from '@/features/records/services/record.service';
 import { prescriptionService, type PrescriptionItem } from '@/features/prescriptions/services/prescription.service';
 import { medicineService } from '@/features/pharmacy/services/medicine.service';
-import type { ApiSuccessResponse, Appointment, User, Medicine } from '@/shared/types';
+import { spacing, radius, shadows } from '@/constants/ThemeTokens';
+import { Input, Card, Button } from '@/components/ui';
+import type { ApiSuccessResponse, Appointment, MedicalRecord, User, Medicine } from '@/shared/types';
+
+const TAB_BAR_HEIGHT = 70;
 
 type PatientOption = {
   appointmentId: string;
   patientId: string;
   patientName: string;
+  appointmentDate: string;
+  status: string;
 };
 
 export default function AddRecordScreen() {
@@ -47,11 +55,10 @@ export default function AddRecordScreen() {
   const [rxItems, setRxItems] = useState<PrescriptionItem[]>([]);
   const [medicineModalOpen, setMedicineModalOpen] = useState(false);
   const [medicines, setMedicines] = useState<Medicine[]>([]);
+  const [allMedicines, setAllMedicines] = useState<Medicine[]>([]);
   const [loadingMedicines, setLoadingMedicines] = useState(false);
   const [newItem, setNewItem] = useState<Partial<PrescriptionItem>>({});
-
-  // Focus state for inputs
-  const [diagnosisFocused, setDiagnosisFocused] = useState(false);
+  const [medicineSearchQuery, setMedicineSearchQuery] = useState('');
 
   useEffect(() => {
     const loadPatients = async () => {
@@ -64,14 +71,21 @@ export default function AddRecordScreen() {
         const options: PatientOption[] = [];
 
         for (const appt of appointments) {
-          if (appt.status !== 'Confirmed' && appt.status !== 'Completed') continue;
-          const patient = appt.patientId as User;
-          if (seen.has(patient._id)) continue;
-          seen.add(patient._id);
+          if (appt.status === APPOINTMENT_STATUS.CANCELLED) continue;
+          const patient = appt.patientId;
+          if (typeof patient !== 'object' || !patient || !('_id' in patient)) {
+            console.warn('[AddRecord] Skipping appointment with unpopulated patientId:', appt._id);
+            continue;
+          }
+          const user = patient as User;
+          if (seen.has(user._id)) continue;
+          seen.add(user._id);
           options.push({
             appointmentId: appt._id,
-            patientId: patient._id,
-            patientName: patient.name,
+            patientId: user._id,
+            patientName: user.name,
+            appointmentDate: appt.appointmentDate,
+            status: appt.status,
           });
         }
 
@@ -89,8 +103,10 @@ export default function AddRecordScreen() {
 
   const openMedicinePicker = async () => {
     setLoadingMedicines(true);
+    setMedicineSearchQuery('');
     try {
       const data = await medicineService.getMedicines();
+      setAllMedicines(data);
       setMedicines(data);
       setMedicineModalOpen(true);
     } catch {
@@ -134,6 +150,13 @@ export default function AddRecordScreen() {
       Alert.alert('Validation', 'Diagnosis is required.');
       return;
     }
+    for (let i = 0; i < rxItems.length; i++) {
+      const item = rxItems[i];
+      if (!item.medicineId || !item.dosage || !item.quantity) {
+        Alert.alert('Validation', `Prescription item ${i + 1} is incomplete. Medicine, dosage, and quantity are required.`);
+        return;
+      }
+    }
 
     try {
       setSubmitting(true);
@@ -143,22 +166,33 @@ export default function AddRecordScreen() {
       formData.append('appointmentId', selectedPatient.appointmentId);
       formData.append('diagnosis', diagnosis.trim());
       if (labFile) {
-        formData.append('labReport', {
-          uri: labFile.uri,
-          name: labFile.name,
-          type: labFile.mimeType ?? 'application/octet-stream',
-        } as unknown as Blob);
+        const fileUri = labFile.uri;
+        const fileName = labFile.name ?? 'lab_report';
+        const fileType = labFile.mimeType ?? 'application/octet-stream';
+        const response = await fetch(fileUri);
+        const blob = await response.blob();
+        const file = new Blob([blob], { type: fileType });
+        formData.append('labReport', file, fileName);
       }
 
       const record = await recordService.createRecord(formData);
 
       if (rxItems.length > 0) {
-        await prescriptionService.createPrescription({
-          patientId: selectedPatient.patientId,
-          medicalRecordId: (record as any)._id,
-          items: rxItems,
-          notes: '',
-        });
+        try {
+          await prescriptionService.createPrescription({
+            patientId: selectedPatient.patientId,
+            medicalRecordId: record._id,
+            items: rxItems,
+            notes: '',
+          });
+          const prescriptionSummary = rxItems
+            .map((item) => `${item.medicineName} ${item.dosage} (x${item.quantity})`)
+            .join(', ');
+          await recordService.updateRecord(record._id, { prescription: prescriptionSummary });
+        } catch (prescriptionErr) {
+          try { await recordService.deleteRecord(record._id); } catch { }
+          throw prescriptionErr;
+        }
       }
 
       Alert.alert('Success', 'Medical record created successfully.', [
@@ -188,225 +222,263 @@ export default function AddRecordScreen() {
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       >
         <ScrollView contentContainerStyle={styles.container} keyboardShouldPersistTaps="handled">
-
-        {/* Patient Selector */}
-        <Text style={[styles.label, { color: colors.text }]}>Patient *</Text>
-        {patients.length === 0 ? (
-          <View style={[styles.hintBox, { backgroundColor: colors.surfaceTertiary }]}>
-            <SymbolView name={{ ios: 'calendar.badge.exclamationmark', android: 'event', web: 'event' }} tintColor={colors.warning} size={20} />
-            <View style={styles.hintContent}>
-              <Text style={[styles.hintTitle, { color: colors.text }]}>No patients available</Text>
-              <Text style={[styles.hint, { color: colors.textSecondary }]}>
-                You need confirmed or completed appointments before creating medical records. Patients must book and confirm appointments first.
-              </Text>
-            </View>
-          </View>
-        ) : (
-          <View style={styles.patientList}>
-            {patients.map((p) => (
-              <TouchableOpacity
-                key={p.patientId}
-                style={[
-                  styles.patientChip,
-                  selectedPatient?.patientId === p.patientId
-                    ? { backgroundColor: colors.primaryMuted, borderColor: colors.primary }
-                    : { backgroundColor: colors.surface, borderColor: colors.border },
-                ]}
-                onPress={() => setSelectedPatient(p)}
-              >
-                <SymbolView
-                  name={{ ios: 'person', android: 'person', web: 'person' }}
-                  tintColor={selectedPatient?.patientId === p.patientId ? colors.primary : colors.textSecondary}
-                  size={14}
-                />
-                <Text
-                  style={[
-                    styles.patientChipText,
-                    { color: selectedPatient?.patientId === p.patientId ? colors.primary : colors.text },
-                  ]}
-                >
-                  {p.patientName}
-                </Text>
-              </TouchableOpacity>
-            ))}
-          </View>
-        )}
-
-        {/* Diagnosis */}
-        <Text style={[styles.label, { color: colors.text }]}>Diagnosis *</Text>
-        <TextInput
-          style={[
-            styles.input,
-            styles.multiline,
-            {
-              backgroundColor: colors.inputBackground,
-              borderColor: diagnosisFocused ? colors.primary : colors.inputBorder,
-              color: colors.inputText,
-            },
-          ]}
-          placeholder="Enter diagnosis details…"
-          placeholderTextColor={colors.inputPlaceholder}
-          value={diagnosis}
-          onChangeText={setDiagnosis}
-          onFocus={() => setDiagnosisFocused(true)}
-          onBlur={() => setDiagnosisFocused(false)}
-          multiline
-          numberOfLines={4}
-          textAlignVertical="top"
-        />
-
-        {/* Prescription Items */}
-        <Text style={[styles.label, { color: colors.text }]}>Prescription Items</Text>
-        {rxItems.length > 0 && (
-          <View style={styles.rxItemList}>
-            {rxItems.map((item, idx) => (
-              <View key={idx} style={[styles.rxItemRow, { backgroundColor: colors.surface, borderColor: colors.border }]}>
-                <View style={styles.rxItemInfo}>
-                  <Text style={[styles.rxItemName, { color: colors.text }]}>{item.medicineName}</Text>
-                  <Text style={[styles.rxItemDetail, { color: colors.textSecondary }]}>
-                    {item.dosage} — Qty: {item.quantity}
+          {/* Patient Selection Card */}
+          <Text style={[styles.sectionTitle, { color: colors.textSecondary }]}>Select Patient</Text>
+          <View style={[styles.formCard, { backgroundColor: colors.surface, shadowColor: '#1B2A4A' }]}>
+            {patients.length === 0 ? (
+              <View style={styles.hintBox}>
+                <Feather name="alert-circle" size={20} color={colors.warning} />
+                <View style={styles.hintContent}>
+                  <Text style={[styles.hintTitle, { color: colors.text }]}>No patients available</Text>
+                  <Text style={[styles.hint, { color: colors.textSecondary }]}>
+                    You need pending or confirmed appointments before creating medical records. Patients must book appointments first.
                   </Text>
-                  {item.instructions && (
-                    <Text style={[styles.rxItemInstructions, { color: colors.textTertiary }]}>{item.instructions}</Text>
-                  )}
                 </View>
-                <TouchableOpacity onPress={() => removeRxItem(idx)} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
-                  <SymbolView name={{ ios: 'xmark.circle.fill', android: 'cancel', web: 'cancel' }} tintColor={colors.error} size={22} />
-                </TouchableOpacity>
               </View>
-            ))}
-          </View>
-        )}
-        <TouchableOpacity
-          style={[styles.addMedicineButton, { borderColor: colors.primary }]}
-          onPress={() => void openMedicinePicker()}
-        >
-          <SymbolView name={{ ios: 'plus.circle', android: 'add_circle', web: 'add_circle' }} tintColor={colors.primary} size={18} />
-          <Text style={[styles.addMedicineButtonText, { color: colors.primary }]}>Add Medicine</Text>
-        </TouchableOpacity>
-
-        {/* Lab Report Upload */}
-        <Text style={[styles.label, { color: colors.text }]}>Lab Report</Text>
-        <TouchableOpacity
-          style={[styles.uploadButton, { backgroundColor: colors.surface, borderColor: colors.border }]}
-          onPress={() => void pickLabReport()}
-        >
-          <SymbolView
-            name={labFile ? { ios: 'doc.fill', android: 'description', web: 'description' } : { ios: 'link', android: 'link', web: 'link' }}
-            tintColor={labFile ? colors.primary : colors.textSecondary}
-            size={18}
-          />
-          <Text style={[styles.uploadButtonText, { color: labFile ? colors.primary : colors.textSecondary }]}>
-            {labFile ? `📎 ${labFile.name}` : 'Attach PDF or Image (optional)'}
-          </Text>
-        </TouchableOpacity>
-        {labFile ? (
-          <TouchableOpacity onPress={() => setLabFile(null)}>
-            <Text style={[styles.removeFile, { color: colors.error }]}>Remove file</Text>
-          </TouchableOpacity>
-        ) : null}
-
-        {/* Submit */}
-        <TouchableOpacity
-          style={[styles.submitButton, { backgroundColor: colors.primary }, submitting && styles.submitButtonDisabled]}
-          onPress={() => void handleSubmit()}
-          disabled={submitting}
-        >
-          {submitting ? (
-            <ActivityIndicator color="#fff" />
-          ) : (
-            <Text style={styles.submitButtonText}>
-              {rxItems.length > 0 ? 'Create Record + Prescription' : 'Create Record'}
-            </Text>
-          )}
-        </TouchableOpacity>
-      </ScrollView>
-
-      {/* Medicine Picker Modal */}
-      <Modal visible={medicineModalOpen} animationType="slide" transparent>
-        <View style={styles.modalOverlay}>
-          <View style={[styles.modalContent, { backgroundColor: colors.surface }]}>
-            <Text style={[styles.modalTitle, { color: colors.text }]}>Select Medicine</Text>
-            {loadingMedicines ? (
-              <ActivityIndicator size="large" color={colors.primary} />
             ) : (
-              <FlatList
-                data={medicines}
-                keyExtractor={(m) => m._id}
-                style={styles.medicineList}
-                renderItem={({ item }) => (
-                  <TouchableOpacity
-                    style={[
-                      styles.medicineRow,
-                      { borderBottomColor: colors.divider },
-                      item.stockQuantity === 0 && { opacity: 0.4 },
-                    ]}
-                    onPress={() => {
-                      if (item.stockQuantity === 0) return;
-                      setNewItem(prev => ({
-                        ...prev,
-                        medicineId: item._id,
-                        medicineName: item.name,
-                      }));
-                    }}
-                    disabled={item.stockQuantity === 0}
-                  >
-                    <View>
-                      <Text style={[styles.medicineName, { color: colors.text }]}>{item.name}</Text>
-                      <Text style={[styles.medicineDosage, { color: colors.textSecondary }]}>{item.category}</Text>
-                    </View>
-                    <Text
+              <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.patientScrollContent}>
+                {patients.map((p) => {
+                  const isSelected = selectedPatient?.patientId === p.patientId;
+                  const statusColor =
+                    p.status === APPOINTMENT_STATUS.CONFIRMED ? colors.success :
+                    p.status === APPOINTMENT_STATUS.COMPLETED ? colors.textSecondary :
+                    p.status === APPOINTMENT_STATUS.PENDING ? colors.warning :
+                    colors.textSecondary;
+                  const formattedDate = new Date(p.appointmentDate).toLocaleDateString('en-US', {
+                    month: 'short',
+                    day: 'numeric',
+                    hour: '2-digit',
+                    minute: '2-digit',
+                  });
+                  return (
+                    <TouchableOpacity
+                      key={p.patientId}
                       style={[
-                        styles.medicineStock,
-                        { color: item.stockQuantity === 0 ? colors.error : colors.textSecondary },
+                        styles.patientChip,
+                        isSelected
+                          ? { backgroundColor: colors.primaryMuted, borderColor: colors.primary }
+                          : { backgroundColor: colors.surface, borderColor: colors.border },
                       ]}
+                      onPress={() => setSelectedPatient(p)}
                     >
-                      {item.stockQuantity === 0 ? 'Out of stock' : `Stock: ${item.stockQuantity}`}
-                    </Text>
-                  </TouchableOpacity>
-                )}
-              />
+                      <View style={[styles.chipAvatar, { backgroundColor: isSelected ? colors.primary : colors.textTertiary }]}>
+                        <Text style={styles.chipAvatarText}>
+                          {p.patientName.split(' ').map(n => n[0]).slice(0, 2).join('').toUpperCase()}
+                        </Text>
+                      </View>
+                      <View style={styles.patientChipContent}>
+                        <Text
+                          style={[
+                            styles.patientChipText,
+                            { color: isSelected ? colors.primary : colors.text },
+                          ]}
+                        >
+                          {p.patientName}
+                        </Text>
+                        <View style={styles.patientChipMeta}>
+                          <View style={[styles.statusDot, { backgroundColor: statusColor }]} />
+                          <Text style={[styles.statusText, { color: statusColor }]}>{p.status}</Text>
+                          <Text style={[styles.appointmentDate, { color: colors.textTertiary }]}>{formattedDate}</Text>
+                        </View>
+                      </View>
+                    </TouchableOpacity>
+                  );
+                })}
+              </ScrollView>
             )}
+          </View>
 
-            {newItem.medicineId && (
-              <View style={[styles.itemForm, { backgroundColor: colors.surfaceTertiary }]}>
-                <TextInput
-                  style={[styles.input, { backgroundColor: colors.inputBackground, borderColor: colors.inputBorder, color: colors.inputText }]}
-                  placeholder="Dosage (e.g., 500mg)"
-                  placeholderTextColor={colors.inputPlaceholder}
-                  value={newItem.dosage}
-                  onChangeText={(v) => setNewItem(prev => ({ ...prev, dosage: v }))}
-                />
-                <TextInput
-                  style={[styles.input, { backgroundColor: colors.inputBackground, borderColor: colors.inputBorder, color: colors.inputText, marginTop: 8 }]}
-                  placeholder="Quantity"
-                  keyboardType="number-pad"
-                  placeholderTextColor={colors.inputPlaceholder}
-                  value={newItem.quantity ? String(newItem.quantity) : ''}
-                  onChangeText={(v) => setNewItem(prev => ({ ...prev, quantity: parseInt(v, 10) || 0 }))}
-                />
-                <TextInput
-                  style={[styles.input, { backgroundColor: colors.inputBackground, borderColor: colors.inputBorder, color: colors.inputText, marginTop: 8 }]}
-                  placeholder="Instructions (optional)"
-                  placeholderTextColor={colors.inputPlaceholder}
-                  value={newItem.instructions}
-                  onChangeText={(v) => setNewItem(prev => ({ ...prev, instructions: v }))}
-                />
-                <TouchableOpacity style={[styles.confirmAddButton, { backgroundColor: colors.primary }]} onPress={() => void addRxItem()}>
-                  <Text style={styles.confirmAddButtonText}>Add to Prescription</Text>
-                </TouchableOpacity>
+          {/* Diagnosis Card */}
+          <Text style={[styles.sectionTitle, { color: colors.textSecondary }]}>Diagnosis</Text>
+          <View style={[styles.formCard, { backgroundColor: colors.surface, shadowColor: '#1B2A4A' }]}>
+            <TextInput
+              style={[styles.textArea, { backgroundColor: colors.inputBackground, borderColor: colors.inputBorder, color: colors.inputText }]}
+              placeholder="Enter diagnosis details…"
+              placeholderTextColor={colors.inputPlaceholder}
+              value={diagnosis}
+              onChangeText={setDiagnosis}
+              multiline
+              numberOfLines={5}
+              textAlignVertical="top"
+              maxLength={2000}
+            />
+          </View>
+
+          {/* Prescription Items Card */}
+          <Text style={[styles.sectionTitle, { color: colors.textSecondary }]}>Prescription</Text>
+          <View style={[styles.formCard, { backgroundColor: colors.surface, shadowColor: '#1B2A4A' }]}>
+            {rxItems.length > 0 && (
+              <View style={styles.rxItemList}>
+                {rxItems.map((item, idx) => (
+                  <View key={idx} style={[styles.rxItemRow, { backgroundColor: colors.primaryMuted }]}>
+                    <View style={styles.rxItemInfo}>
+                      <Text style={[styles.rxItemName, { color: colors.text }]}>{item.medicineName}</Text>
+                      <Text style={[styles.rxItemDetail, { color: colors.textSecondary }]}>
+                        {item.dosage} — Qty: {item.quantity}
+                      </Text>
+                      {item.instructions && (
+                        <Text style={[styles.rxItemInstructions, { color: colors.textTertiary }]}>{item.instructions}</Text>
+                      )}
+                    </View>
+                    <TouchableOpacity onPress={() => removeRxItem(idx)} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+                      <Feather name="x-circle" size={22} color={colors.error} />
+                    </TouchableOpacity>
+                  </View>
+                ))}
               </View>
             )}
-
             <TouchableOpacity
-              style={styles.closeModalButton}
-              onPress={() => { setMedicineModalOpen(false); setNewItem({}); }}
+              style={[styles.addMedicineButton, { borderColor: colors.primary }]}
+              onPress={() => void openMedicinePicker()}
             >
-              <Text style={[styles.closeModalButtonText, { color: colors.textSecondary }]}>Cancel</Text>
+              <Feather name="plus-circle" size={18} color={colors.primary} />
+              <Text style={[styles.addMedicineButtonText, { color: colors.primary }]}>Add Medicine</Text>
             </TouchableOpacity>
           </View>
-        </View>
-      </Modal>
+
+          {/* Lab Report Card */}
+          <Text style={[styles.sectionTitle, { color: colors.textSecondary }]}>Lab Report</Text>
+          <View style={[styles.formCard, { backgroundColor: colors.surface, shadowColor: '#1B2A4A' }]}>
+            <TouchableOpacity
+              style={[styles.uploadButton, { backgroundColor: colors.surface, borderColor: colors.border }]}
+              onPress={() => void pickLabReport()}
+            >
+              <Feather
+                name={labFile ? 'file' : 'link'}
+                size={18}
+                color={labFile ? colors.primary : colors.textSecondary}
+              />
+              <Text style={[styles.uploadButtonText, { color: labFile ? colors.primary : colors.textSecondary }]}>
+                {labFile ? labFile.name : 'Upload Lab Report (PDF or Image)'}
+              </Text>
+            </TouchableOpacity>
+            {labFile ? (
+              <TouchableOpacity onPress={() => setLabFile(null)} style={styles.removeFileRow}>
+                <Text style={[styles.removeFile, { color: colors.error }]}>Remove file</Text>
+              </TouchableOpacity>
+            ) : null}
+          </View>
+
+          {/* Submit Button */}
+          <Button
+            title={rxItems.length > 0 ? 'Create Record + Prescription' : 'Create Record'}
+            onPress={() => void handleSubmit()}
+            variant="accent"
+            size="lg"
+            fullWidth
+            loading={submitting}
+            style={styles.submitButton}
+          />
+        </ScrollView>
+
+        {/* Medicine Picker Modal */}
+        <Modal visible={medicineModalOpen} animationType="slide" transparent>
+          <View style={styles.modalOverlay}>
+            <KeyboardAvoidingView
+              behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+              style={styles.modalKeyboardAvoiding}
+            >
+              <View style={[styles.modalContent, { backgroundColor: colors.surface, shadowColor: '#1B2A4A' }]}>
+                <ScrollView keyboardShouldPersistTaps="handled" style={styles.modalScrollView}>
+                  <View style={styles.modalDragHandle} />
+                  <Text style={[styles.modalTitle, { color: colors.text }]}>Select Medicine</Text>
+                  <TextInput
+                    style={[styles.inputField, { backgroundColor: colors.inputBackground, borderColor: colors.inputBorder, color: colors.inputText }]}
+                    placeholder="Search medicines..."
+                    placeholderTextColor={colors.inputPlaceholder}
+                    value={medicineSearchQuery}
+                    onChangeText={(v) => {
+                      setMedicineSearchQuery(v);
+                      const q = v.toLowerCase();
+                      const filtered = allMedicines.filter((m) => m.name.toLowerCase().includes(q));
+                      setMedicines(filtered);
+                    }}
+                  />
+                  {loadingMedicines ? (
+                    <ActivityIndicator size="large" color={colors.primary} />
+                  ) : (
+                    <FlatList
+                      data={medicines}
+                      keyExtractor={(m) => m._id}
+                      style={styles.medicineList}
+                      renderItem={({ item }) => (
+                        <TouchableOpacity
+                          style={[
+                            styles.medicineRow,
+                            { borderBottomColor: colors.divider },
+                            item.stockQuantity === 0 && { opacity: 0.4 },
+                          ]}
+                          onPress={() => {
+                            if (item.stockQuantity === 0) return;
+                            setNewItem(prev => ({
+                              ...prev,
+                              medicineId: item._id,
+                              medicineName: item.name,
+                            }));
+                          }}
+                          disabled={item.stockQuantity === 0}
+                        >
+                          <View>
+                            <Text style={[styles.medicineName, { color: colors.text }]}>{item.name}</Text>
+                            <Text style={[styles.medicineDosage, { color: colors.textSecondary }]}>{item.category}</Text>
+                          </View>
+                          <Text
+                            style={[
+                              styles.medicineStock,
+                              { color: item.stockQuantity === 0 ? colors.error : colors.textSecondary },
+                            ]}
+                          >
+                            {item.stockQuantity === 0 ? 'Out of stock' : `Stock: ${item.stockQuantity}`}
+                          </Text>
+                        </TouchableOpacity>
+                      )}
+                    />
+                  )}
+
+                  {newItem.medicineId && (
+                    <View style={[styles.itemForm, { backgroundColor: colors.surfaceTertiary }]}>
+                      <TextInput
+                        style={[styles.inputField, { backgroundColor: colors.inputBackground, borderColor: colors.inputBorder, color: colors.inputText }]}
+                        placeholder="Dosage (e.g., 500mg)"
+                        placeholderTextColor={colors.inputPlaceholder}
+                        value={newItem.dosage}
+                        onChangeText={(v) => setNewItem(prev => ({ ...prev, dosage: v }))}
+                      />
+                      <TextInput
+                        style={[styles.inputField, { backgroundColor: colors.inputBackground, borderColor: colors.inputBorder, color: colors.inputText, marginTop: 8 }]}
+                        placeholder="Quantity"
+                        keyboardType="number-pad"
+                        placeholderTextColor={colors.inputPlaceholder}
+                        value={newItem.quantity ? String(newItem.quantity) : ''}
+                        onChangeText={(v) => {
+                          const parsed = parseInt(v, 10);
+                          setNewItem(prev => ({ ...prev, quantity: Number.isInteger(parsed) && parsed > 0 ? parsed : prev.quantity }));
+                        }}
+                      />
+                      <TextInput
+                        style={[styles.inputField, { backgroundColor: colors.inputBackground, borderColor: colors.inputBorder, color: colors.inputText, marginTop: 8 }]}
+                        placeholder="Instructions (optional)"
+                        placeholderTextColor={colors.inputPlaceholder}
+                        value={newItem.instructions}
+                        onChangeText={(v) => setNewItem(prev => ({ ...prev, instructions: v }))}
+                      />
+                      <TouchableOpacity style={[styles.confirmAddButton, { backgroundColor: colors.accent }]} onPress={() => void addRxItem()}>
+                        <Text style={styles.confirmAddButtonText}>Add to Prescription</Text>
+                      </TouchableOpacity>
+                    </View>
+                  )}
+
+                  <TouchableOpacity
+                    style={styles.closeModalButton}
+                    onPress={() => { setMedicineModalOpen(false); setNewItem({}); }}
+                  >
+                    <Text style={[styles.closeModalButtonText, { color: colors.textSecondary }]}>Cancel</Text>
+                  </TouchableOpacity>
+                </ScrollView>
+              </View>
+            </KeyboardAvoidingView>
+          </View>
+        </Modal>
       </KeyboardAvoidingView>
     </SafeAreaView>
   );
@@ -416,51 +488,73 @@ const styles = StyleSheet.create({
   flex: { flex: 1 },
   centered: { flex: 1, justifyContent: 'center', alignItems: 'center', gap: 12 },
   loadingText: { fontSize: 15 },
-  container: { padding: 20, paddingBottom: 48 },
-  label: {
-    fontSize: 13,
+  container: { padding: spacing.md, paddingBottom: TAB_BAR_HEIGHT + spacing.lg },
+  sectionTitle: {
+    fontSize: 14,
     fontWeight: '600',
-    marginBottom: 8,
-    marginTop: 16,
     textTransform: 'uppercase',
-    letterSpacing: 0.4,
+    letterSpacing: 0.6,
+    marginBottom: 8,
+    marginTop: 20,
+  },
+  formCard: {
+    borderRadius: radius.lg,
+    padding: spacing.lg,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.08,
+    shadowRadius: 12,
+    elevation: 3,
   },
   hintBox: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 12,
-    borderRadius: 8,
-    padding: 12,
-    marginBottom: 4,
   },
   hintContent: { flex: 1 },
   hintTitle: { fontSize: 15, fontWeight: '600', marginBottom: 4 },
   hint: { fontSize: 14, lineHeight: 20 },
-  patientList: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 4 },
+  patientScrollContent: { gap: 8, paddingRight: 8 },
   patientChip: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 6,
-    paddingHorizontal: 14,
-    paddingVertical: 8,
-    borderRadius: 20,
-    borderWidth: 1.5,
-  },
-  patientChipText: { fontSize: 14, fontWeight: '500' },
-  input: {
-    borderWidth: 1,
-    borderRadius: 10,
+    gap: 10,
     paddingHorizontal: 14,
     paddingVertical: 12,
-    fontSize: 15,
+    borderRadius: radius.md,
+    borderWidth: 1.5,
+    minWidth: 200,
   },
-  multiline: { minHeight: 100 },
-  rxItemList: { gap: 8, marginBottom: 8 },
+  chipAvatar: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  chipAvatarText: {
+    color: '#fff',
+    fontSize: 12,
+    fontWeight: '700',
+  },
+  patientChipContent: { gap: 4, flex: 1 },
+  patientChipText: { fontSize: 14, fontWeight: '600' },
+  patientChipMeta: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  statusDot: { width: 6, height: 6, borderRadius: 3 },
+  statusText: { fontSize: 10, fontWeight: '600' },
+  appointmentDate: { fontSize: 10 },
+  textArea: {
+    borderWidth: 1.5,
+    borderRadius: radius.md,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    fontSize: 16,
+    minHeight: 120,
+  },
+  rxItemList: { gap: 10, marginBottom: 12 },
   rxItemRow: {
     flexDirection: 'row',
-    borderRadius: 10,
-    padding: 12,
-    borderWidth: 1,
+    borderRadius: radius.md,
+    padding: 14,
     alignItems: 'center',
   },
   rxItemInfo: { flex: 1 },
@@ -474,8 +568,8 @@ const styles = StyleSheet.create({
     gap: 6,
     borderWidth: 1.5,
     borderStyle: 'dashed',
-    borderRadius: 10,
-    paddingVertical: 12,
+    borderRadius: radius.md,
+    paddingVertical: 14,
   },
   addMedicineButtonText: { fontSize: 14, fontWeight: '600' },
   uploadButton: {
@@ -485,32 +579,48 @@ const styles = StyleSheet.create({
     gap: 8,
     borderWidth: 1.5,
     borderStyle: 'dashed',
-    borderRadius: 10,
+    borderRadius: radius.md,
     paddingVertical: 14,
-    paddingHorizontal: 16,
+    paddingHorizontal: spacing.md,
   },
   uploadButtonText: { fontSize: 14 },
-  removeFile: { fontSize: 13, marginTop: 6, textAlign: 'right' },
+  removeFileRow: { marginTop: 8, alignItems: 'flex-end' },
+  removeFile: { fontSize: 13 },
   submitButton: {
     marginTop: 32,
-    borderRadius: 12,
-    paddingVertical: 16,
-    alignItems: 'center',
+    marginBottom: 16,
   },
-  submitButtonDisabled: { opacity: 0.6 },
-  submitButtonText: { color: '#fff', fontSize: 16, fontWeight: '700' },
   modalOverlay: {
     flex: 1,
     backgroundColor: 'rgba(0,0,0,0.5)',
     justifyContent: 'flex-end',
   },
+  modalKeyboardAvoiding: {
+    justifyContent: 'flex-end',
+  },
   modalContent: {
-    borderTopLeftRadius: 24,
-    borderTopRightRadius: 24,
-    padding: 24,
+    borderTopLeftRadius: radius.xl,
+    borderTopRightRadius: radius.xl,
+    padding: spacing.lg,
+    paddingTop: 12,
     maxHeight: '80%',
   },
+  modalDragHandle: {
+    width: 40,
+    height: 4,
+    borderRadius: 2,
+    backgroundColor: '#D1D5DB',
+    alignSelf: 'center',
+    marginBottom: 8,
+  },
   modalTitle: { fontSize: 18, fontWeight: '700', marginBottom: 16 },
+  inputField: {
+    borderWidth: 1.5,
+    borderRadius: radius.md,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    fontSize: 16,
+  },
   medicineList: { maxHeight: 300 },
   medicineRow: {
     flexDirection: 'row',
@@ -522,10 +632,10 @@ const styles = StyleSheet.create({
   medicineName: { fontSize: 15, fontWeight: '600' },
   medicineDosage: { fontSize: 12, marginTop: 1 },
   medicineStock: { fontSize: 13 },
-  itemForm: { marginTop: 16, borderRadius: 12, padding: 14 },
+  itemForm: { marginTop: 16, borderRadius: radius.md, padding: 14 },
   confirmAddButton: {
     marginTop: 12,
-    borderRadius: 10,
+    borderRadius: radius.md,
     paddingVertical: 14,
     alignItems: 'center',
   },

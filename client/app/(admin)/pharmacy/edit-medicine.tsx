@@ -1,11 +1,10 @@
 import React, { useEffect, useMemo, useState } from 'react';
+import { ROLES } from '@/shared/constants/roles';
 import {
   View,
   Text,
-  TextInput,
   TouchableOpacity,
   ActivityIndicator,
-  StyleSheet,
   ScrollView,
   Alert,
   Image,
@@ -15,13 +14,19 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import DateTimePicker, { type DateTimePickerEvent } from '@react-native-community/datetimepicker';
 import * as ImagePicker from 'expo-image-picker';
+import { Ionicons } from '@expo/vector-icons';
 import { useRouter, useLocalSearchParams } from 'expo-router';
-import Colors from '@/constants/Colors';
+import { Colors } from '@/constants/Colors';
 import { useColorScheme } from '@/components/useColorScheme';
 import { useAuth } from '@/shared/context/AuthContext';
-import { Config } from '@/shared/constants/Config';
-import { medicineService } from '@/features/pharmacy/services/medicine.service';
+import { MS_PER_DAY } from '@/shared/constants/Config';
+import { spacing, radius, shadows } from '@/constants/ThemeTokens';
+import { Input } from '@/components/ui/Input';
+import { Button } from '@/components/ui/Button';
+import { medicineService, UpdateMedicinePayload } from '@/features/pharmacy/services/medicine.service';
 import type { Medicine } from '@/shared/types';
+import { getImageUrl } from '@/shared/utils/getImageUrl';
+import { toFormDataFile } from '@/shared/utils/formData';
 
 interface PickedImage {
   uri: string;
@@ -29,130 +34,13 @@ interface PickedImage {
   type: string;
 }
 
-const makeStyles = (colorScheme: 'light' | 'dark') => StyleSheet.create({
-  flex: { flex: 1 },
-  safeArea: { flex: 1 },
-  container: {
-    flex: 1,
-    backgroundColor: Colors[colorScheme].surfaceTertiary,
-  },
-  content: {
-    padding: 18,
-    paddingBottom: 30,
-  },
-  title: {
-    fontSize: 24,
-    fontWeight: '700',
-    color: Colors[colorScheme].text,
-    marginBottom: 4,
-  },
-  subtitle: {
-    fontSize: 13,
-    color: Colors[colorScheme].textSecondary,
-    marginBottom: 16,
-  },
-  label: {
-    marginBottom: 6,
-    marginTop: 8,
-    color: Colors[colorScheme].textSecondary,
-    fontWeight: '600',
-    fontSize: 13,
-  },
-  input: {
-    borderWidth: 1,
-    borderColor: Colors[colorScheme].border,
-    borderRadius: 8,
-    backgroundColor: Colors[colorScheme].surface,
-    paddingHorizontal: 12,
-    paddingVertical: 11,
-    fontSize: 15,
-    color: Colors[colorScheme].text,
-  },
-  inputDisabled: {
-    opacity: 0.6,
-    backgroundColor: Colors[colorScheme].surfaceTertiary,
-  },
-  dateButton: {
-    borderWidth: 1,
-    borderColor: Colors[colorScheme].border,
-    borderRadius: 8,
-    backgroundColor: Colors[colorScheme].surface,
-    paddingHorizontal: 12,
-    paddingVertical: 12,
-  },
-  dateButtonText: {
-    color: Colors[colorScheme].text,
-    fontSize: 14,
-  },
-  imageButton: {
-    borderWidth: 1,
-    borderStyle: 'dashed',
-    borderColor: Colors[colorScheme].primary,
-    borderRadius: 8,
-    backgroundColor: Colors[colorScheme].infoBg,
-    paddingVertical: 14,
-    alignItems: 'center',
-  },
-  imageButtonText: {
-    color: Colors[colorScheme].primary,
-    fontSize: 14,
-    fontWeight: '600',
-  },
-  previewWrap: {
-    marginTop: 10,
-    alignItems: 'center',
-  },
-  previewImage: {
-    width: 160,
-    height: 160,
-    borderRadius: 10,
-    backgroundColor: Colors[colorScheme].border,
-  },
-  previewLabel: {
-    marginTop: 8,
-    color: Colors[colorScheme].textSecondary,
-    fontSize: 12,
-  },
-  submitButton: {
-    marginTop: 24,
-    backgroundColor: Colors[colorScheme].primary,
-    borderRadius: 10,
-    paddingVertical: 14,
-    alignItems: 'center',
-  },
-  submitButtonDisabled: {
-    opacity: 0.6,
-  },
-  submitButtonText: {
-    color: '#ffffff',
-    fontSize: 15,
-    fontWeight: '700',
-  },
-  loadingContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  imagePreviewRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginTop: 10,
-    gap: 12,
-  },
-  currentImage: {
-    width: 60,
-    height: 60,
-    borderRadius: 8,
-    backgroundColor: Colors[colorScheme].border,
-  },
-});
-
 export default function EditMedicineScreen() {
   const router = useRouter();
-  const { id } = useLocalSearchParams<{ id: string }>();
+  const { id: rawId } = useLocalSearchParams<{ id: string }>();
+  const id = rawId ?? '';
   const { user } = useAuth();
   const colorScheme = useColorScheme() ?? 'light';
-  const styles = useMemo(() => makeStyles(colorScheme), [colorScheme]);
+  const colors = Colors[colorScheme];
 
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
@@ -167,20 +55,21 @@ export default function EditMedicineScreen() {
   const [newImage, setNewImage] = useState<PickedImage | null>(null);
 
   const canSubmit = useMemo(
-    () => user?.role === 'admin' || user?.role === 'pharmacist',
+    () => user?.role === ROLES.ADMIN || user?.role === ROLES.PHARMACIST,
     [user?.role],
   );
 
   useEffect(() => {
     if (!id) {
       Alert.alert('Error', 'Medicine ID is required.');
-      router.back();
       return;
     }
 
+    let cancelled = false;
     const loadMedicine = async () => {
       try {
         const medicine: Medicine = await medicineService.getMedicineById(id);
+        if (cancelled) return;
         setName(medicine.name);
         setCategory(medicine.category);
         setPrice(String(medicine.price));
@@ -188,15 +77,19 @@ export default function EditMedicineScreen() {
         setExpiryDate(new Date(medicine.expiryDate));
         setPackagingImageUrl(medicine.packagingImageUrl ?? '');
       } catch (err) {
+        if (cancelled) return;
+        console.error('[EditMedicine] Failed to load medicine:', err);
         Alert.alert('Error', err instanceof Error ? err.message : 'Failed to load medication.');
-        router.back();
       } finally {
-        setLoading(false);
+        if (!cancelled) setLoading(false);
       }
     };
 
     loadMedicine();
-  }, [id, router]);
+    return () => {
+      cancelled = true;
+    };
+  }, [id]);
 
   const onDateChange = (_event: DateTimePickerEvent, selectedDate?: Date) => {
     setShowDatePicker(false);
@@ -225,6 +118,33 @@ export default function EditMedicineScreen() {
         name: `packaging-${Date.now()}.${extension}`,
         type: asset.mimeType ?? 'image/jpeg',
       });
+    }
+  };
+
+  const pickFromGallery = async () => {
+    try {
+      const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      if (!permission.granted) {
+        Alert.alert('Permission Required', 'Gallery permission is required to select packaging images.');
+        return;
+      }
+
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ['images'],
+        quality: 0.8,
+      });
+
+      if (!result.canceled && result.assets.length > 0) {
+        const asset = result.assets[0];
+        const extension = asset.uri.split('.').pop() ?? 'jpg';
+        setNewImage({
+          uri: asset.uri,
+          name: `packaging-${Date.now()}.${extension}`,
+          type: asset.mimeType ?? 'image/jpeg',
+        });
+      }
+    } catch (err) {
+      Alert.alert('Error', 'Failed to open image gallery.');
     }
   };
 
@@ -257,7 +177,7 @@ export default function EditMedicineScreen() {
     try {
       setSubmitting(true);
 
-      const payload: Record<string, string | number> = {
+      const payload: UpdateMedicinePayload = {
         name: name.trim(),
         category: category.trim(),
         price: Number(price),
@@ -268,17 +188,19 @@ export default function EditMedicineScreen() {
       if (newImage) {
         const formData = new FormData();
         Object.entries(payload).forEach(([key, value]) => {
-          formData.append(key, String(value));
+          if (value !== undefined) formData.append(key, String(value));
         });
-        formData.append('packagingImage', {
+        const file = toFormDataFile({
           uri: newImage.uri,
           name: newImage.name,
-          type: newImage.type,
-        } as unknown as Blob);
+          mimeType: newImage.type,
+        });
 
-        await medicineService.updateMedicine(id, formData as unknown as Parameters<typeof medicineService.updateMedicine>[1]);
+        formData.append('packagingImage', file!);
+
+        await medicineService.updateMedicine(id, formData);
       } else {
-        await medicineService.updateMedicine(id, payload as Parameters<typeof medicineService.updateMedicine>[1]);
+        await medicineService.updateMedicine(id, payload as UpdateMedicinePayload);
       }
 
       Alert.alert('Success', 'Medication updated successfully.', [{ text: 'OK', onPress: () => router.replace('/(admin)/pharmacy') }]);
@@ -291,128 +213,261 @@ export default function EditMedicineScreen() {
 
   if (loading) {
     return (
-      <SafeAreaView edges={['top', 'bottom']} style={{ flex: 1, backgroundColor: Colors[colorScheme].surfaceTertiary }}>
-        <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color={Colors[colorScheme].primary} />
+      <SafeAreaView edges={['top', 'bottom']} style={{ flex: 1, backgroundColor: colors.background }}>
+        <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+          <ActivityIndicator size="large" color={colors.primary} />
         </View>
       </SafeAreaView>
     );
   }
 
   return (
-    <SafeAreaView edges={['top', 'bottom']} style={[styles.safeArea, { backgroundColor: Colors[colorScheme].surfaceTertiary }]}>
+    <SafeAreaView edges={['top', 'bottom']} style={{ flex: 1, backgroundColor: colors.background }}>
       <KeyboardAvoidingView
-        style={styles.flex}
+        style={{ flex: 1 }}
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       >
-        <ScrollView style={styles.container} contentContainerStyle={styles.content}>
-          <Text style={styles.title}>Edit Medication</Text>
-          <Text style={styles.subtitle}>Update medicine details and inventory information.</Text>
+        <ScrollView contentContainerStyle={{ padding: spacing.md }}>
+          <Text style={{ fontSize: 24, fontWeight: '700', color: colors.text, marginBottom: 4 }}>
+            Edit Medication
+          </Text>
+          <Text style={{ fontSize: 14, color: colors.textSecondary, marginBottom: spacing.lg }}>
+            Update medicine details and inventory information.
+          </Text>
 
-          <Text style={styles.label}>Medicine Name</Text>
-          <TextInput
-            value={name}
-            onChangeText={setName}
-            style={styles.input}
-            placeholder="e.g. Amoxicillin"
-            placeholderTextColor={Colors[colorScheme].textTertiary}
-            editable={!submitting}
-          />
-
-          <Text style={styles.label}>Category</Text>
-          <TextInput
-            value={category}
-            onChangeText={setCategory}
-            style={styles.input}
-            placeholder="e.g. Antibiotic"
-            placeholderTextColor={Colors[colorScheme].textTertiary}
-            editable={!submitting}
-          />
-
-          <Text style={styles.label}>Price</Text>
-          <TextInput
-            value={price}
-            onChangeText={setPrice}
-            style={styles.input}
-            placeholder="e.g. 12.5"
-            placeholderTextColor={Colors[colorScheme].textTertiary}
-            keyboardType="decimal-pad"
-            editable={!submitting}
-          />
-
-          <Text style={styles.label}>Stock Quantity</Text>
-          <TextInput
-            value={stockQuantity}
-            onChangeText={setStockQuantity}
-            style={styles.input}
-            placeholder="e.g. 100"
-            placeholderTextColor={Colors[colorScheme].textTertiary}
-            keyboardType="number-pad"
-            editable={!submitting}
-          />
-
-          <Text style={styles.label}>Expiry Date</Text>
-          <TouchableOpacity
-            onPress={() => setShowDatePicker(true)}
-            style={styles.dateButton}
-            disabled={submitting}
+          {/* Medicine Details Section */}
+          <View
+            style={{
+              backgroundColor: colors.surface,
+              borderRadius: radius.lg,
+              padding: spacing.lg,
+              marginBottom: spacing.md,
+              ...shadows.card,
+            }}
           >
-            <Text style={styles.dateButtonText}>{expiryDate.toLocaleDateString()}</Text>
-          </TouchableOpacity>
-
-          {showDatePicker ? (
-            <DateTimePicker
-              value={expiryDate}
-              mode="date"
-              display={Platform.OS === 'ios' ? 'inline' : 'default'}
-              minimumDate={new Date(Date.now() + 24 * 60 * 60 * 1000)}
-              onChange={onDateChange}
-            />
-          ) : null}
-
-          <Text style={styles.label}>Packaging Image</Text>
-          {packagingImageUrl && !newImage ? (
-            <View style={styles.imagePreviewRow}>
-              <Image
-                source={{ uri: (() => {
-                  if (!packagingImageUrl) return '';
-                  if (packagingImageUrl.startsWith('http://') || packagingImageUrl.startsWith('https://')) return packagingImageUrl;
-                  const base = Config.BASE_URL.endsWith('/') ? Config.BASE_URL.slice(0, -1) : Config.BASE_URL;
-                  const path = packagingImageUrl.startsWith('/') ? packagingImageUrl : `/${packagingImageUrl}`;
-                  return `${base}${path}`;
-                })() }}
-                style={styles.currentImage}
-                resizeMode="cover"
-              />
-              <Text style={{ color: Colors[colorScheme].textSecondary, fontSize: 12, flex: 1 }}>
-                Current image — tap below to replace
-              </Text>
-            </View>
-          ) : null}
-          <TouchableOpacity
-            onPress={pickNewImage}
-            style={styles.imageButton}
-            disabled={submitting}
-          >
-            <Text style={styles.imageButtonText}>
-              {newImage ? 'Retake Packaging Photo' : packagingImageUrl ? 'Replace Packaging Photo' : 'Capture Packaging Photo'}
+            <Text
+              style={{
+                fontSize: 14,
+                fontWeight: '600',
+                color: colors.textSecondary,
+                textTransform: 'uppercase',
+                letterSpacing: 1,
+                marginBottom: spacing.md,
+              }}
+            >
+              MEDICINE DETAILS
             </Text>
-          </TouchableOpacity>
 
-          {newImage ? (
-            <View style={styles.previewWrap}>
-              <Image source={{ uri: newImage.uri }} style={styles.previewImage} />
-              <Text style={styles.previewLabel}>{newImage.name}</Text>
-            </View>
-          ) : null}
+            <Input
+              label="Medicine Name"
+              placeholder="e.g. Amoxicillin"
+              value={name}
+              onChangeText={setName}
+              disabled={submitting}
+            />
 
-          <TouchableOpacity
-            style={[styles.submitButton, submitting ? styles.submitButtonDisabled : undefined]}
-            onPress={handleSubmit}
-            disabled={submitting}
+            <Input
+              label="Category"
+              placeholder="e.g. Antibiotic"
+              value={category}
+              onChangeText={setCategory}
+              disabled={submitting}
+            />
+
+            <Input
+              label="Price"
+              placeholder="e.g. 12.5"
+              value={price}
+              onChangeText={setPrice}
+              keyboardType="decimal-pad"
+              disabled={submitting}
+            />
+
+            <Input
+              label="Stock Quantity"
+              placeholder="e.g. 100"
+              value={stockQuantity}
+              onChangeText={setStockQuantity}
+              keyboardType="number-pad"
+              disabled={submitting}
+            />
+          </View>
+
+          {/* Expiry & Packaging Section */}
+          <View
+            style={{
+              backgroundColor: colors.surface,
+              borderRadius: radius.lg,
+              padding: spacing.lg,
+              marginBottom: spacing.md,
+              ...shadows.card,
+            }}
           >
-            {submitting ? <ActivityIndicator color="#fff" /> : <Text style={styles.submitButtonText}>Update Medication</Text>}
-          </TouchableOpacity>
+            <Text
+              style={{
+                fontSize: 14,
+                fontWeight: '600',
+                color: colors.textSecondary,
+                textTransform: 'uppercase',
+                letterSpacing: 1,
+                marginBottom: spacing.md,
+              }}
+            >
+              EXPIRY & PACKAGING
+            </Text>
+
+            <View style={{ marginBottom: spacing.md }}>
+              <Text
+                style={{
+                  fontSize: 12,
+                  fontWeight: '600',
+                  textTransform: 'uppercase',
+                  letterSpacing: 0.8,
+                  color: colors.textSecondary,
+                  marginBottom: spacing.sm,
+                }}
+              >
+                Expiry Date
+              </Text>
+              <TouchableOpacity
+                onPress={() => setShowDatePicker(true)}
+                disabled={submitting}
+                activeOpacity={0.7}
+                style={{
+                  borderWidth: 1.5,
+                  borderColor: colors.inputBorder,
+                  borderRadius: radius.md,
+                  backgroundColor: submitting ? colors.inputDisabled : colors.inputBackground,
+                  paddingHorizontal: spacing.md,
+                  paddingVertical: 12,
+                  minHeight: 48,
+                  justifyContent: 'center',
+                }}
+              >
+                <Text style={{ color: colors.inputText, fontSize: 16 }}>
+                  {expiryDate.toLocaleDateString()}
+                </Text>
+              </TouchableOpacity>
+            </View>
+
+            {showDatePicker ? (
+              <DateTimePicker
+                value={expiryDate}
+                mode="date"
+                display={Platform.OS === 'ios' ? 'inline' : 'default'}
+                minimumDate={new Date(Date.now() + MS_PER_DAY)}
+                onChange={onDateChange}
+              />
+            ) : null}
+
+            <View>
+              <Text
+                style={{
+                  fontSize: 12,
+                  fontWeight: '600',
+                  textTransform: 'uppercase',
+                  letterSpacing: 0.8,
+                  color: colors.textSecondary,
+                  marginBottom: spacing.sm,
+                }}
+              >
+                Packaging Image
+              </Text>
+              {packagingImageUrl && !newImage ? (
+                <View
+                  style={{
+                    flexDirection: 'row',
+                    alignItems: 'center',
+                    marginBottom: spacing.sm,
+                    gap: 12,
+                  }}
+                >
+                  <Image
+                    source={{ uri: getImageUrl(packagingImageUrl) }}
+                    style={{
+                      width: 60,
+                      height: 60,
+                      borderRadius: radius.xs,
+                      backgroundColor: colors.border,
+                    }}
+                    resizeMode="cover"
+                  />
+                  <Text style={{ color: colors.textSecondary, fontSize: 12, flex: 1 }}>
+                    Current image &mdash; tap below to replace
+                  </Text>
+                </View>
+              ) : null}
+              <View style={{ flexDirection: 'row', gap: 12 }}>
+                <TouchableOpacity
+                  onPress={pickNewImage}
+                  disabled={submitting}
+                  activeOpacity={0.7}
+                  style={{
+                    flex: 1,
+                    borderWidth: 1,
+                    borderStyle: 'dashed',
+                    borderColor: colors.primary,
+                    borderRadius: radius.md,
+                    backgroundColor: colors.primaryMuted,
+                    paddingVertical: 14,
+                    alignItems: 'center',
+                  }}
+                >
+                  <Ionicons name="camera-outline" size={20} color={colors.primary} />
+                  <Text style={{ color: colors.primary, fontSize: 14, fontWeight: '600', marginTop: 4 }}>
+                    Camera
+                  </Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  onPress={pickFromGallery}
+                  disabled={submitting}
+                  activeOpacity={0.7}
+                  style={{
+                    flex: 1,
+                    borderWidth: 1,
+                    borderStyle: 'dashed',
+                    borderColor: colors.primary,
+                    borderRadius: radius.md,
+                    backgroundColor: colors.primaryMuted,
+                    paddingVertical: 14,
+                    alignItems: 'center',
+                  }}
+                >
+                  <Ionicons name="images-outline" size={20} color={colors.primary} />
+                  <Text style={{ color: colors.primary, fontSize: 14, fontWeight: '600', marginTop: 4 }}>
+                    Gallery
+                  </Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+
+            {newImage ? (
+              <View style={{ alignItems: 'center', marginTop: spacing.md }}>
+                <Image
+                  source={{ uri: newImage.uri }}
+                  style={{
+                    width: 160,
+                    height: 160,
+                    borderRadius: radius.sm,
+                    backgroundColor: colors.border,
+                  }}
+                />
+                <Text style={{ color: colors.textSecondary, fontSize: 12, marginTop: spacing.sm }}>
+                  {newImage.name}
+                </Text>
+              </View>
+            ) : null}
+          </View>
+
+          <Button
+            title="Update Medication"
+            variant="accent"
+            size="lg"
+            fullWidth
+            loading={submitting}
+            onPress={handleSubmit}
+            style={{ marginTop: spacing.lg }}
+          />
         </ScrollView>
       </KeyboardAvoidingView>
     </SafeAreaView>

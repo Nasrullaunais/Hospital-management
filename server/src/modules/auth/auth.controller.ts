@@ -3,6 +3,8 @@ import { validationResult } from 'express-validator';
 import jwt from 'jsonwebtoken';
 import { User } from './auth.model.js';
 import { ApiError } from '../../shared/utils/ApiError.js';
+import { s3Service } from '../../shared/services/s3.service.js';
+import { formatFileReference } from '../../shared/utils/fileReference.js';
 import { env } from '../../config/env.js';
 import { getRequestContext, logger } from '../../shared/utils/logger.js';
 
@@ -163,13 +165,18 @@ export const updateMyProfile = async (
     if (req.body.phone) updates.phone = req.body.phone;
     if (req.body.dateOfBirth) updates.dateOfBirth = req.body.dateOfBirth;
 
-    // Multer attaches the file to req.file
-    if (req.file) {
-      updates.idDocumentUrl = `/uploads/${req.file.filename}`;
+    // Determine file source: S3 presigned key takes priority, fallback to multer
+    if (req.body.fileKey && typeof req.body.fileKey === 'string' && req.body.fileKey.trim().length > 0) {
+      await s3Service.verifyAndConsume(req.user!.id, req.body.fileKey);
+      updates.idDocumentUrl = formatFileReference('s3', req.body.fileKey);
+    } else if (req.file) {
+      // Legacy multer upload: store with local protocol
+      updates.idDocumentUrl = formatFileReference('local', `/uploads/${req.file.filename}`);
     }
+    // else: stays undefined (file was optional)
 
     const user = await User.findByIdAndUpdate(req.user?.id, updates, {
-      new: true,
+      returnDocument: 'after',
       runValidators: true,
     });
 

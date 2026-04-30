@@ -10,23 +10,20 @@ import {
   ActivityIndicator,
   Alert,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { SymbolView } from 'expo-symbols';
+import { Feather } from '@expo/vector-icons';
 import Colors from '@/constants/Colors';
 import { useColorScheme } from '@/components/useColorScheme';
 import { apiClient } from '@/shared/api/client';
 import { ENDPOINTS } from '@/shared/api/endpoints';
+import { APPOINTMENT_STATUS, APPOINTMENT_STATUS_VARIANTS, ALL_APPOINTMENT_STATUSES } from '@/shared/constants/appointmentStatus';
 import { appointmentService } from '@/features/appointments/services/appointment.service';
-import type { ApiSuccessResponse, Appointment, User, AppointmentStatus } from '@/shared/types';
+import { spacing, radius, shadows } from '@/constants/ThemeTokens';
+import type { ApiSuccessResponse, Appointment, User } from '@/shared/types';
 import { ListCard, EmptyState, LoadingState, ErrorState } from '@/components/ui';
 
-const STATUS_VARIANTS = {
-  Pending: 'warning' as const,
-  Confirmed: 'info' as const,
-  Completed: 'success' as const,
-  Cancelled: 'error' as const,
-};
-
-const STATUS_OPTIONS: AppointmentStatus[] = ['Pending', 'Confirmed', 'Completed', 'Cancelled'];
+const TAB_BAR_HEIGHT = 70;
 
 export default function DoctorScheduleScreen() {
   const [appointments, setAppointments] = useState<Appointment[]>([]);
@@ -45,7 +42,10 @@ export default function DoctorScheduleScreen() {
       const res = await apiClient.get<ApiSuccessResponse<{ appointments: Appointment[]; count: number }>>(
         ENDPOINTS.APPOINTMENTS.MY_DOCTOR_SCHEDULE,
       );
-      setAppointments(res.data.data.appointments);
+      const sorted = res.data.data.appointments.sort(
+        (a, b) => new Date(a.appointmentDate).getTime() - new Date(b.appointmentDate).getTime(),
+      );
+      setAppointments(sorted);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to load your schedule.');
     }
@@ -67,29 +67,26 @@ export default function DoctorScheduleScreen() {
       ? (item.patientId as User).name
       : 'Unknown Patient';
 
-    const statusVariant = STATUS_VARIANTS[item.status] ?? 'neutral';
+    const statusVariant = APPOINTMENT_STATUS_VARIANTS[item.status] ?? 'neutral';
 
     return (
-      <TouchableOpacity onPress={() => { setSelectedAppt(item); setModalOpen(true); }}>
+      <TouchableOpacity
+        style={styles.cardWrapper}
+        onPress={() => { setSelectedAppt(item); setModalOpen(true); }}
+      >
         <ListCard
           title={patientName}
           subtitle={new Date(item.appointmentDate).toLocaleString()}
           badge={{ label: item.status, variant: statusVariant }}
           leftContent={
-            <SymbolView
-              name={{ ios: 'person.circle', android: 'account_circle', web: 'account_circle' }}
-              tintColor={colors.textTertiary}
-              size={32}
-            />
+            <View style={[styles.avatarCircle, { backgroundColor: colors.primaryMuted }]}>
+              <Feather name="user" size={18} color={colors.primary} />
+            </View>
           }
           footer={
             item.reasonForVisit ? (
               <View style={styles.reasonRow}>
-                <SymbolView
-                  name={{ ios: 'text.alignleft', android: 'notes', web: 'notes' }}
-                  tintColor={colors.textTertiary}
-                  size={14}
-                />
+                <Feather name="align-left" size={14} color={colors.textTertiary} />
                 <Text
                   style={[styles.reasonText, { color: colors.textSecondary }]}
                   numberOfLines={2}
@@ -113,7 +110,14 @@ export default function DoctorScheduleScreen() {
   }
 
   return (
-    <View style={[styles.root, { backgroundColor: colors.background }]}>
+    <SafeAreaView edges={['top', 'bottom']} style={[styles.safeArea, { backgroundColor: colors.background }]}>
+      <View style={styles.screenHeader}>
+        <Text style={[styles.headerTitle, { color: colors.text }]}>My Schedule</Text>
+        <Text style={[styles.headerSub, { color: colors.textSecondary }]}>
+          {appointments.length} appointment{appointments.length !== 1 ? 's' : ''}
+        </Text>
+      </View>
+
       <FlatList
         data={appointments}
         keyExtractor={(item) => item._id}
@@ -126,14 +130,6 @@ export default function DoctorScheduleScreen() {
           />
         }
         contentContainerStyle={appointments.length === 0 ? styles.emptyContainer : styles.listContainer}
-        ListHeaderComponent={
-          <View style={styles.header}>
-            <Text style={[styles.headerTitle, { color: colors.text }]}>My Schedule</Text>
-            <Text style={[styles.headerSub, { color: colors.textSecondary }]}>
-              {appointments.length} appointment{appointments.length !== 1 ? 's' : ''}
-            </Text>
-          </View>
-        }
         ListEmptyComponent={
           <EmptyState
             title="No Appointments"
@@ -146,7 +142,7 @@ export default function DoctorScheduleScreen() {
       {/* Status Update Modal */}
       <Modal visible={modalOpen} animationType="slide" transparent>
         <View style={styles.modalOverlay}>
-          <View style={[styles.modalContent, { backgroundColor: colors.surface }]}>
+          <View style={[styles.modalContent, { backgroundColor: colors.surface, shadowColor: '#1B2A4A' }]}>
             <Text style={[styles.modalTitle, { color: colors.text }]}>Update Status</Text>
             {selectedAppt && (
               <>
@@ -161,7 +157,7 @@ export default function DoctorScheduleScreen() {
                   </Text>
                 </View>
                 <View style={styles.statusPicker}>
-                  {STATUS_OPTIONS.map((status) => (
+                  {ALL_APPOINTMENT_STATUSES.map((status) => (
                     <TouchableOpacity
                       key={status}
                       style={[
@@ -200,8 +196,9 @@ export default function DoctorScheduleScreen() {
                       updating && styles.modalConfirmBtnDisabled,
                     ]}
                     onPress={async () => {
-                      if (!selectedAppt || selectedAppt.status === appointments.find(a => a._id === selectedAppt._id)?.status) {
-                        setModalOpen(false);
+                      const currentStatus = appointments.find(a => a._id === selectedAppt._id)?.status;
+                      if (!selectedAppt || selectedAppt.status === currentStatus) {
+                        Alert.alert('No Change', `Status is already "${currentStatus}".`);
                         return;
                       }
                       setUpdating(true);
@@ -230,21 +227,38 @@ export default function DoctorScheduleScreen() {
           </View>
         </View>
       </Modal>
-    </View>
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  root: { flex: 1 },
-  listContainer: { padding: 12 },
-  emptyContainer: { flex: 1 },
-  header: {
-    marginBottom: 12,
-    paddingTop: 4,
-    gap: 2,
+  safeArea: { flex: 1 },
+  screenHeader: {
+    paddingHorizontal: spacing.md,
+    paddingTop: spacing.md,
+    paddingBottom: 12,
+    gap: 4,
+  },
+  listContainer: {
+    paddingHorizontal: spacing.md,
+    paddingBottom: TAB_BAR_HEIGHT + spacing.md,
+  },
+  emptyContainer: {
+    flex: 1,
+    paddingBottom: TAB_BAR_HEIGHT + spacing.md,
   },
   headerTitle: { fontSize: 22, fontWeight: '700' },
   headerSub: { fontSize: 13 },
+  cardWrapper: {
+    marginBottom: 12,
+  },
+  avatarCircle: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
   reasonRow: {
     flexDirection: 'row',
     alignItems: 'flex-start',
@@ -256,11 +270,12 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: 'rgba(0,0,0,0.5)',
     justifyContent: 'center',
-    padding: 24,
+    padding: spacing.lg,
   },
   modalContent: {
-    borderRadius: 16,
-    padding: 24,
+    borderRadius: radius.lg,
+    padding: spacing.lg,
+    ...shadows.modal,
   },
   modalTitle: { fontSize: 20, fontWeight: '700', marginBottom: 16 },
   modalInfo: { marginBottom: 16 },
@@ -270,7 +285,7 @@ const styles = StyleSheet.create({
   statusOption: {
     paddingHorizontal: 14,
     paddingVertical: 8,
-    borderRadius: 20,
+    borderRadius: radius.full,
     borderWidth: 1.5,
   },
   statusOptionText: { fontSize: 14, fontWeight: '500' },
@@ -278,14 +293,14 @@ const styles = StyleSheet.create({
   modalCancelBtn: {
     flex: 1,
     paddingVertical: 12,
-    borderRadius: 10,
+    borderRadius: radius.md,
     borderWidth: 1,
     alignItems: 'center',
   },
   modalConfirmBtn: {
     flex: 1,
     paddingVertical: 12,
-    borderRadius: 10,
+    borderRadius: radius.md,
     alignItems: 'center',
   },
   modalConfirmBtnDisabled: { opacity: 0.6 },

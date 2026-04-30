@@ -1,0 +1,15 @@
+export const APPOINTMENT_STATUS = {
+  PENDING: 'Pending',
+  CONFIRMED: 'Confirmed',
+  COMPLETED: 'Completed',
+  CANCELLED: 'Cancelled',
+} as const;
+
+export type AppointmentStatus = typeof APPOINTMENT_STATUS[keyof typeof APPOINTMENT_STATUS];
+
+export const ALL_APPOINTMENT_STATUSES: AppointmentStatus[] = [
+  APPOINTMENT_STATUS.PENDING,
+  APPOINTMENT_STATUS.CONFIRMED,
+  APPOINTMENT_STATUS.COMPLETED,
+  APPOINTMENT_STATUS.CANCELLED,
+];
