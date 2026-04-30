@@ -35,7 +35,7 @@ router.get('/api/health', (_req: Request, res: Response) => {
 });
 
 // ── Module Routes ──────────────────────────────────────────────────────────────
-// Member 1: Auth (/api/auth/register, /api/auth/login) + Patients (/api/patients/me)
+// Common: Auth (/api/auth/register, /api/auth/login) — shared across all members
 router.use('/api', authRoutes);
 
 // Member 2: Doctors

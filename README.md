@@ -8,12 +8,15 @@ A full-stack Hospital Management System built with **React Native (Expo)** and *
 
 | Member | Phase | Module | Folder |
 |--------|-------|--------|--------|
-| Member 1 | Phase 1 | Authentication & Patient Management | `server/src/modules/auth/` · `client/features/auth/` |
+| (Common) | — | Authentication | `server/src/modules/auth/` · `client/shared/context/AuthContext.tsx` |
+| Member 1 | Phase 1 | Ward Management | `server/src/modules/departments/` · `server/src/modules/wards/` · `server/src/modules/wardAssignments/` · `server/src/modules/wardMedications/` · `client/features/wards/` · `client/features/wardReceptionist/` |
 | Member 2 | Phase 2 | Doctor & Staff Management | `server/src/modules/doctors/` · `client/features/doctors/` |
 | Member 3 | Phase 3 | Appointment Booking | `server/src/modules/appointments/` · `client/features/appointments/` |
 | Member 4 | Phase 4 | Medical Records & Lab Reports | `server/src/modules/records/` · `client/features/records/` |
 | Member 5 | Phase 5 | Pharmacy & Inventory | `server/src/modules/pharmacy/` · `client/features/pharmacy/` |
 | Member 6 | Phase 6 | Billing, Insurance & Deployment | `server/src/modules/billing/` · `client/features/billing/` |
+
+> **Authentication** is a shared/common module used by all members. It provides JWT-based user registration, login, and role-based access control (`patient`, `doctor`, `admin`, `pharmacist`, `receptionist`). Every member integrates auth middleware into their protected routes — see `server/src/shared/middlewares/authMiddleware.ts` and `client/shared/context/AuthContext.tsx`.
 
 ---
 
