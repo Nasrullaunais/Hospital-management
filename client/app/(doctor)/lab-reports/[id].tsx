@@ -566,6 +566,28 @@ export default function LabReportDetailScreen() {
                   </Text>
                 </TouchableOpacity>
               </View>
+            ) : (
+              <TouchableOpacity
+                style={[
+                  styles.actionButton,
+                  {
+                    backgroundColor: colors.primaryMuted,
+                    borderColor: colors.primary,
+                  },
+                ]}
+                onPress={() => void handleReview()}
+                disabled={reviewing}
+              >
+                {reviewing ? (
+                  <ActivityIndicator size="small" color={colors.primary} />
+                ) : (
+                  <Feather name="check-circle" size={18} color={colors.primary} />
+                )}
+                <Text style={[styles.actionButtonText, { color: colors.primary }]}>
+                  {reviewing ? 'Marking...' : 'Mark as Reviewed'}
+                </Text>
+              </TouchableOpacity>
+            )
           ) : null}
         </View>
       </ScrollView>
