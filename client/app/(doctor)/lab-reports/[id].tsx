@@ -166,7 +166,12 @@ export default function LabReportDetailScreen() {
         const url = result.downloadUrl.startsWith('http')
         ? result.downloadUrl
         : `${Config.BASE_URL}${result.downloadUrl}`;
-      await Linking.openURL(url);
+      const supported = await Linking.canOpenURL(url);
+      if (supported) {
+        await Linking.openURL(url);
+      } else {
+        Alert.alert('Cannot Open PDF', 'No app available to open this file type.');
+      }
       } else {
         Alert.alert('Cannot Open URL', 'Unable to open the download link.');
       }
