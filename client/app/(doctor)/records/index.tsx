@@ -8,12 +8,12 @@ import {
   StyleSheet,
   RefreshControl,
   Alert,
-  Linking,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { SymbolView } from 'expo-symbols';
 import { Feather } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
+import * as WebBrowser from 'expo-web-browser';
 import Colors from '@/constants/Colors';
 import { useColorScheme } from '@/components/useColorScheme';
 import { recordService } from '@/features/records/services/record.service';
@@ -80,12 +80,7 @@ export default function RecordsScreen() {
 
   const openLabReport = async (labReportUrl: string) => {
     const fullUrl = `${Config.BASE_URL}${labReportUrl}`;
-    const supported = await Linking.canOpenURL(fullUrl);
-    if (supported) {
-      await Linking.openURL(fullUrl);
-    } else {
-      Alert.alert('Cannot Open File', 'No app available to open this file type.');
-    }
+    await WebBrowser.openBrowserAsync(fullUrl);
   };
 
   const renderRecord = ({ item }: { item: PopulatedMedicalRecord }) => {

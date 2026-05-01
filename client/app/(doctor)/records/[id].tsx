@@ -8,7 +8,6 @@ import {
   StyleSheet,
   ScrollView,
   Alert,
-  Linking,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { SymbolView } from 'expo-symbols';
@@ -114,12 +113,7 @@ export default function RecordDetailScreen() {
 
   const openLabReport = async (labReportUrl: string) => {
     const fullUrl = `${Config.BASE_URL}${labReportUrl}`;
-    const supported = await Linking.canOpenURL(fullUrl);
-    if (supported) {
-      await Linking.openURL(fullUrl);
-    } else {
-      Alert.alert('Cannot Open File', 'No app available to open this file type.');
-    }
+    await WebBrowser.openBrowserAsync(fullUrl);
   };
 
   const generateCertificate = async (restFrom?: string, restTo?: string) => {
@@ -391,7 +385,8 @@ const styles = StyleSheet.create({
   content: {
     padding: spacing.md,
     paddingBottom: TAB_BAR_HEIGHT + spacing.lg,
-    gap: 12,
+    paddingTop: spacing.xs,
+    gap: spacing.md,
   },
   profileCard: {
     borderRadius: radius.lg,
@@ -437,7 +432,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 8,
     borderRadius: radius.md,
-    padding: 12,
+    padding: spacing.md,
   },
   doctorName: {
     fontSize: 13,
@@ -456,7 +451,7 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     textTransform: 'uppercase',
     letterSpacing: 0.5,
-    marginBottom: 8,
+    marginBottom: spacing.sm,
   },
   cardValue: {
     fontSize: 16,
@@ -485,12 +480,13 @@ const styles = StyleSheet.create({
     fontSize: 14,
   },
   reportSection: {
-    gap: 8,
+    gap: spacing.md,
+    marginTop: spacing.sm,
   },
   editActions: {
     flexDirection: 'row',
-    gap: 12,
-    marginTop: 8,
+    gap: spacing.md,
+    marginTop: spacing.md,
   },
   cancelButton: {
     flex: 1,
@@ -532,7 +528,7 @@ const styles = StyleSheet.create({
   },
   deleteHint: {
     alignItems: 'center',
-    marginTop: 8,
+    marginTop: spacing.md,
   },
   deleteHintText: {
     fontSize: 13,
@@ -563,9 +559,6 @@ const styles = StyleSheet.create({
     fontStyle: 'italic',
     marginLeft: 24,
     marginTop: 2,
-  },
-  reportSection: {
-    gap: 10,
   },
   reportActionButton: {
     flexDirection: 'row',

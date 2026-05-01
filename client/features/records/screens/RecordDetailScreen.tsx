@@ -6,9 +6,9 @@ import {
   ActivityIndicator,
   StyleSheet,
   TouchableOpacity,
-  Linking,
   Alert,
 } from 'react-native';
+import * as WebBrowser from 'expo-web-browser';
 import { useLocalSearchParams } from 'expo-router';
 import { useColorScheme } from '@/components/useColorScheme';
 import Colors from '@/constants/Colors';
@@ -72,11 +72,8 @@ export default function RecordDetailScreen({ recordId: propRecordId, onDeleted }
     ]);
   };
 
-  const openLabReport = (url: string) => {
-    Linking.openURL(url).catch((err) => {
-      console.error('openLabReport failed:', err);
-      Alert.alert('Error', 'Could not open the lab report.');
-    });
+  const openLabReport = async (url: string) => {
+    await WebBrowser.openBrowserAsync(url);
   };
 
   if (loading) {
