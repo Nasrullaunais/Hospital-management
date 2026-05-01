@@ -100,6 +100,7 @@ export default function LabReportDetailScreen() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [reviewing, setReviewing] = useState(false);
+  const [completing, setCompleting] = useState(false);
   const [generatingPDF, setGeneratingPDF] = useState(false);
 
   const fetchReport = useCallback(async () => {
@@ -137,6 +138,20 @@ export default function LabReportDetailScreen() {
       Alert.alert('Error', err instanceof Error ? err.message : 'Failed to review report.');
     } finally {
       setReviewing(false);
+    }
+  };
+
+  const handleComplete = async () => {
+    if (!id) return;
+    try {
+      setCompleting(true);
+      await labReportService.updateLabReport(id, { status: 'completed' });
+      await fetchReport();
+      Alert.alert('Success', 'Lab report marked as completed. You can now generate the PDF.');
+    } catch (err) {
+      Alert.alert('Error', err instanceof Error ? err.message : 'Failed to complete report.');
+    } finally {
+      setCompleting(false);
     }
   };
 
@@ -483,44 +498,74 @@ export default function LabReportDetailScreen() {
 
           {report.status !== 'reviewed' ? (
             report.status === 'pending' || report.status === 'sample_collected' ? (
-              <View
-                style={[
-                  styles.infoBox,
-                  { backgroundColor: colors.infoBg, borderColor: colors.info },
-                ]}
-              >
-                <Feather name="info" size={14} color={colors.info} />
-                <Text style={[styles.infoBoxText, { color: colors.info }]}>
-                  Complete the lab results to generate a PDF.
-                </Text>
-              </View>
-            ) : (
               <TouchableOpacity
                 style={[
                   styles.actionButton,
                   {
-                    backgroundColor: colors.primaryMuted,
-                    borderColor: colors.primary,
+                    backgroundColor: colors.warningBg || '#FEF3C7',
+                    borderColor: colors.warning || '#D97706',
                   },
                 ]}
-                onPress={() => void handleReview()}
-                disabled={reviewing}
+                onPress={() => void handleComplete()}
+                disabled={completing}
               >
-                {reviewing ? (
-                  <ActivityIndicator size="small" color={colors.primary} />
+                {completing ? (
+                  <ActivityIndicator size="small" color={colors.warning || '#D97706'} />
                 ) : (
-                  <Feather name="check-circle" size={18} color={colors.primary} />
+                  <Feather name="check-circle" size={18} color={colors.warning || '#D97706'} />
                 )}
                 <Text
                   style={[
                     styles.actionButtonText,
-                    { color: colors.primary },
+                    { color: colors.warning || '#D97706' },
                   ]}
                 >
-                  {reviewing ? 'Marking...' : 'Mark as Reviewed'}
+                  {completing ? 'Completing...' : 'Mark as Completed'}
                 </Text>
               </TouchableOpacity>
-            )
+            ) : report.status === 'in_progress' ? (
+              <View style={{ gap: 10 }}>
+                <TouchableOpacity
+                  style={[
+                    styles.actionButton,
+                    {
+                      backgroundColor: colors.warningBg || '#FEF3C7',
+                      borderColor: colors.warning || '#D97706',
+                    },
+                  ]}
+                  onPress={() => void handleComplete()}
+                  disabled={completing}
+                >
+                  {completing ? (
+                    <ActivityIndicator size="small" color={colors.warning || '#D97706'} />
+                  ) : (
+                    <Feather name="check-circle" size={18} color={colors.warning || '#D97706'} />
+                  )}
+                  <Text style={[styles.actionButtonText, { color: colors.warning || '#D97706' }]}>
+                    {completing ? 'Completing...' : 'Mark as Completed'}
+                  </Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[
+                    styles.actionButton,
+                    {
+                      backgroundColor: colors.primaryMuted,
+                      borderColor: colors.primary,
+                    },
+                  ]}
+                  onPress={() => void handleReview()}
+                  disabled={reviewing}
+                >
+                  {reviewing ? (
+                    <ActivityIndicator size="small" color={colors.primary} />
+                  ) : (
+                    <Feather name="check-circle" size={18} color={colors.primary} />
+                  )}
+                  <Text style={[styles.actionButtonText, { color: colors.primary }]}>
+                    {reviewing ? 'Marking...' : 'Mark as Reviewed'}
+                  </Text>
+                </TouchableOpacity>
+              </View>
           ) : null}
         </View>
       </ScrollView>
