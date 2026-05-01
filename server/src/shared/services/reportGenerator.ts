@@ -51,10 +51,12 @@ export class ReportGenerator {
     const compiledTemplate = handlebars.compile(templateContent);
     const html = compiledTemplate(request.data);
 
-    // 3. Launch puppeteer and generate PDF
     const browser = await puppeteer.launch({
       headless: true,
-      args: ['--no-sandbox', '--disable-setuid-sandbox'],
+      args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage'],
+      executablePath: process.env['PUPPETEER_EXECUTABLE_PATH']
+        || (fs.existsSync('/usr/bin/chromium-browser') ? '/usr/bin/chromium-browser' : undefined)
+        || (fs.existsSync('/usr/bin/chromium') ? '/usr/bin/chromium' : undefined),
     });
 
     try {
