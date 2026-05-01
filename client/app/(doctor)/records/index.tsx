@@ -161,13 +161,22 @@ export default function RecordsScreen() {
           {user?.role === 'doctor' ? 'Patient Logs' : 'Medical History'}
         </Text>
         {user?.role === 'doctor' ? (
-          <TouchableOpacity
-            style={[styles.addButton, { backgroundColor: colors.primary }]}
-            onPress={() => router.push('/(doctor)/records/add-record')}
-          >
-            <Feather name="plus" size={16} color="#fff" />
-            <Text style={styles.addButtonText}>Add Record</Text>
-          </TouchableOpacity>
+          <View style={styles.headerActions}>
+            <TouchableOpacity
+              style={[styles.labButton, { borderColor: colors.primary }]}
+              onPress={() => router.push('/(doctor)/lab-reports')}
+            >
+              <Feather name="file-text" size={16} color={colors.primary} />
+              <Text style={[styles.labButtonText, { color: colors.primary }]}>Lab Reports</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.addButton, { backgroundColor: colors.primary }]}
+              onPress={() => router.push('/(doctor)/records/add-record')}
+            >
+              <Feather name="plus" size={16} color="#fff" />
+              <Text style={styles.addButtonText}>Add Record</Text>
+            </TouchableOpacity>
+          </View>
         ) : null}
       </View>
 
@@ -222,6 +231,24 @@ const styles = StyleSheet.create({
   },
   addButtonText: {
     color: '#fff',
+    fontWeight: '600',
+    fontSize: 14,
+  },
+  headerActions: {
+    flexDirection: 'row',
+    gap: 8,
+    alignItems: 'center',
+  },
+  labButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: radius.md,
+    borderWidth: 1.5,
+  },
+  labButtonText: {
     fontWeight: '600',
     fontSize: 14,
   },
