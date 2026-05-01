@@ -15,6 +15,7 @@ import { SymbolView } from 'expo-symbols';
 import { Feather } from '@expo/vector-icons';
 import { useRouter, useLocalSearchParams, Stack } from 'expo-router';
 import { isAxiosError } from 'axios';
+import * as WebBrowser from 'expo-web-browser';
 import Colors from '@/constants/Colors';
 import { useColorScheme } from '@/components/useColorScheme';
 import { recordService } from '@/features/records/services/record.service';
@@ -46,6 +47,7 @@ export default function RecordDetailScreen() {
   const [diagnosis, setDiagnosis] = useState('');
   const [prescription, setPrescription] = useState('');
   const [saving, setSaving] = useState(false);
+  const [generatingCert, setGeneratingCert] = useState(false);
   const [prescriptions, setPrescriptions] = useState<Prescription[]>([]);
   const [loadingPrescriptions, setLoadingPrescriptions] = useState(false);
 
@@ -123,11 +125,18 @@ export default function RecordDetailScreen() {
   const generateCertificate = async (restFrom?: string, restTo?: string) => {
     if (!id) return;
     try {
+      setGeneratingCert(true);
       const { reportService } = await import('@/features/records/services/report.service');
       const result = await reportService.generateMedicalCertificate(id, restFrom, restTo);
-      await Linking.openURL(result.downloadUrl);
+      const url = result.downloadUrl.startsWith('http')
+        ? result.downloadUrl
+        : `${Config.BASE_URL}${result.downloadUrl}`;
+      await WebBrowser.openBrowserAsync(url);
     } catch (err) {
-      Alert.alert('Error', err instanceof Error ? err.message : 'Failed to generate certificate.');
+      const message = err instanceof Error ? err.message : 'Failed to generate certificate.';
+      Alert.alert('Error', message);
+    } finally {
+      setGeneratingCert(false);
     }
   };
 
@@ -285,30 +294,20 @@ export default function RecordDetailScreen() {
                 'Generate a medical certificate for this visit?',
                 [
                   { text: 'Cancel', style: 'cancel' },
-                  {
-                    text: 'Generate',
-                    onPress: () => {
-                      Alert.prompt
-                        ? Alert.prompt(
-                            'Rest Period (Optional)',
-                            'Enter rest period in days (leave empty to skip):',
-                            [
-                              { text: 'Skip', onPress: () => generateCertificate(undefined, undefined) },
-                              { text: 'Generate', onPress: (days) => generateCertificate(days, days) },
-                            ],
-                            'plain-text',
-                            '',
-                            'number-pad'
-                          )
-                        : generateCertificate(undefined, undefined);
-                    },
-                  },
+                  { text: 'Generate', onPress: () => generateCertificate(undefined, undefined) },
                 ]
               );
             }}
+            disabled={generatingCert}
           >
-            <Feather name="file-text" size={16} color={colors.success || '#1A8C4E'} />
-            <Text style={[styles.reportActionText, { color: colors.success || '#1A8C4E' }]}>Generate Medical Certificate</Text>
+            {generatingCert ? (
+              <ActivityIndicator size="small" color={colors.success || '#1A8C4E'} />
+            ) : (
+              <Feather name="file-text" size={16} color={colors.success || '#1A8C4E'} />
+            )}
+            <Text style={[styles.reportActionText, { color: colors.success || '#1A8C4E' }]}>
+              {generatingCert ? 'Generating...' : 'Generate Medical Certificate'}
+            </Text>
           </TouchableOpacity>
 
           {/* View Uploaded Lab Report (if exists) */}
