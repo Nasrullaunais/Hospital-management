@@ -3,6 +3,10 @@ import path from 'node:path';
 import fs from 'node:fs';
 import handlebars from 'handlebars';
 import puppeteer from 'puppeteer';
+
+handlebars.registerHelper('eq', function (a: unknown, b: unknown) {
+  return a === b;
+});
 import { s3Client, S3_BUCKET, S3_PREFIX } from '../../config/s3.js';
 import { s3Service } from './s3.service.js';
 
