@@ -13,6 +13,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Feather } from '@expo/vector-icons';
 import { useRouter, useLocalSearchParams, Stack } from 'expo-router';
 import { isAxiosError } from 'axios';
+import * as WebBrowser from 'expo-web-browser';
 import Colors from '@/constants/Colors';
 import { useColorScheme } from '@/components/useColorScheme';
 import { labReportService } from '@/features/records/services/labReport.service';
@@ -161,20 +162,10 @@ export default function LabReportDetailScreen() {
     try {
       setGeneratingPDF(true);
       const result = await reportService.generateLabReport(id);
-      const supported = await Linking.canOpenURL(result.downloadUrl);
-      if (supported) {
-        const url = result.downloadUrl.startsWith('http')
+      const url = result.downloadUrl.startsWith('http')
         ? result.downloadUrl
         : `${Config.BASE_URL}${result.downloadUrl}`;
-      const supported = await Linking.canOpenURL(url);
-      if (supported) {
-        await Linking.openURL(url);
-      } else {
-        Alert.alert('Cannot Open PDF', 'No app available to open this file type.');
-      }
-      } else {
-        Alert.alert('Cannot Open URL', 'Unable to open the download link.');
-      }
+      await WebBrowser.openBrowserAsync(url);
     } catch (err) {
       Alert.alert('Error', err instanceof Error ? err.message : 'Failed to generate PDF.');
     } finally {
