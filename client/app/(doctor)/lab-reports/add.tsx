@@ -13,7 +13,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Feather } from '@expo/vector-icons';
-import { useRouter } from 'expo-router';
+import { useRouter, useLocalSearchParams } from 'expo-router';
 import Colors from '@/constants/Colors';
 import { useColorScheme } from '@/components/useColorScheme';
 import { apiClient } from '@/shared/api/client';
@@ -62,6 +62,7 @@ const FLAG_OPTIONS: { key: LabResultFlag; label: string }[] = [
 
 export default function AddLabReportScreen() {
   const router = useRouter();
+  const { patientId: initialPatientId } = useLocalSearchParams<{ patientId?: string }>();
   const colorScheme = useColorScheme();
   const colors = Colors[colorScheme ?? 'light'];
 
@@ -105,6 +106,11 @@ export default function AddLabReportScreen() {
         }
 
         setPatients(options);
+
+        if (initialPatientId) {
+          const match = options.find(p => p.patientId === initialPatientId);
+          if (match) setSelectedPatient(match);
+        }
       } catch (err) {
         const message = err instanceof Error ? err.message : 'Failed to load appointments.';
         Alert.alert('Error', message);

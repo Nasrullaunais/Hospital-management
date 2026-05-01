@@ -100,6 +100,12 @@ export default function DoctorLayout() {
 
         {/* Lab Reports (Member 4) */}
         <Stack.Screen
+          name="lab-reports/index"
+          options={{
+            headerShown: false,
+          }}
+        />
+        <Stack.Screen
           name="lab-reports/add"
           options={{
             headerShown: true,
