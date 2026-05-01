@@ -76,13 +76,12 @@ export class ReportGenerator {
 
       await page.close();
 
-      // 4. Upload to S3 or fall back to local disk
       if (!S3_BUCKET) {
-        const localDir = '/tmp/reports';
+        const localDir = path.join(import.meta.dirname, '..', '..', '..', 'uploads', 'reports');
         fs.mkdirSync(localDir, { recursive: true });
         const localPath = path.join(localDir, fileName);
         fs.writeFileSync(localPath, pdfBuffer);
-        return { fileKey: localPath, downloadUrl: localPath };
+        return { fileKey: fileName, downloadUrl: `/uploads/reports/${fileName}` };
       }
 
       const fileKey = `${S3_PREFIX}reports/${fileName}`;

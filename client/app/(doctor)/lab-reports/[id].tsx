@@ -18,6 +18,7 @@ import { useColorScheme } from '@/components/useColorScheme';
 import { labReportService } from '@/features/records/services/labReport.service';
 import { reportService } from '@/features/records/services/report.service';
 import { spacing, radius, shadows } from '@/constants/ThemeTokens';
+import { Config } from '@/shared/constants/Config';
 import { Badge, Button } from '@/components/ui';
 import type { LabReport, LabReportStatus, LabResult, User, Doctor } from '@/shared/types';
 
@@ -162,7 +163,10 @@ export default function LabReportDetailScreen() {
       const result = await reportService.generateLabReport(id);
       const supported = await Linking.canOpenURL(result.downloadUrl);
       if (supported) {
-        await Linking.openURL(result.downloadUrl);
+        const url = result.downloadUrl.startsWith('http')
+        ? result.downloadUrl
+        : `${Config.BASE_URL}${result.downloadUrl}`;
+      await Linking.openURL(url);
       } else {
         Alert.alert('Cannot Open URL', 'Unable to open the download link.');
       }
