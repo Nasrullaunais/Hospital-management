@@ -14,7 +14,7 @@ A full-stack Hospital Management System built with **React Native (Expo)** and *
 | Member 3 | Phase 3 | Appointment Booking | `server/src/modules/appointments/` · `client/features/appointments/` |
 | Member 4 | Phase 4 | Medical Records & Lab Reports | `server/src/modules/records/` · `client/features/records/` |
 | Member 5 | Phase 5 | Pharmacy & Inventory | `server/src/modules/pharmacy/` · `client/features/pharmacy/` |
-| Member 6 | Phase 6 | Billing, Insurance & Deployment | `server/src/modules/billing/` · `client/features/billing/` |
+| Member 6 | Phase 6 | Billing & Deployment | `server/src/modules/billing/` · `client/features/billing/` |
 
 > **Authentication** is a shared/common module used by all members. It provides JWT-based user registration, login, and role-based access control (`patient`, `doctor`, `admin`, `pharmacist`, `receptionist`). Every member integrates auth middleware into their protected routes — see `server/src/shared/middlewares/authMiddleware.ts` and `client/shared/context/AuthContext.tsx`.
 

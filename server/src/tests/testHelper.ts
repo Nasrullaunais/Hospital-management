@@ -5,7 +5,6 @@ import { Doctor } from '../modules/doctors/doctor.model.js';
 import { Medicine } from '../modules/pharmacy/medicine.model.js';
 import { Prescription } from '../modules/prescriptions/prescription.model.js';
 import { env } from '../config/env.js';
-import { Department } from '../modules/departments/department.model.js';
 import { Ward } from '../modules/wards/ward.model.js';
 import { WardAssignment } from '../modules/wardAssignments/wardAssignment.model.js';
 
@@ -38,15 +37,11 @@ interface TestPrescription {
   status: string;
 }
 
-interface TestDepartment {
-  _id: mongoose.Types.ObjectId;
-  name: string;
-}
-
 interface TestWard {
   _id: mongoose.Types.ObjectId;
   name: string;
-  departmentId: mongoose.Types.ObjectId;
+  location?: string;
+  phone?: string;
   totalBeds: number;
 }
 
@@ -110,21 +105,13 @@ async function createPrescription(params: {
   }) as Promise<TestPrescription>;
 }
 
-async function createDepartment(params?: { name?: string }): Promise<TestDepartment> {
-  return Department.create({
-    name: params?.name ?? `Dept-${Date.now()}`,
-    description: 'Test department description',
-    location: 'Test Building, Floor 1',
-    phone: '555-0001',
-  }) as Promise<TestDepartment>;
-}
-
-async function createWard(params: { departmentId: mongoose.Types.ObjectId; name?: string; type?: string; totalBeds?: number }): Promise<TestWard> {
+async function createWard(params: { name?: string; type?: string; totalBeds?: number; location?: string; phone?: string }): Promise<TestWard> {
   return Ward.create({
-    departmentId: params.departmentId,
     name: params.name ?? `Ward-${Date.now()}`,
     type: params.type ?? 'general',
     totalBeds: params.totalBeds ?? 20,
+    location: params.location,
+    phone: params.phone,
   }) as Promise<TestWard>;
 }
 
@@ -156,8 +143,7 @@ export interface TestHelper {
     status?: string;
   }) => Promise<TestPrescription>;
   getToken: (user: { _id: { toString: () => string }; email: string; role: string }) => string;
-  createDepartment: (params?: { name?: string }) => Promise<TestDepartment>;
-  createWard: (params: { departmentId: mongoose.Types.ObjectId; name?: string; type?: string; totalBeds?: number }) => Promise<TestWard>;
+  createWard: (params: { name?: string; type?: string; totalBeds?: number; location?: string; phone?: string }) => Promise<TestWard>;
   createWardAssignment: (params: {
     wardId: mongoose.Types.ObjectId;
     patientId: mongoose.Types.ObjectId;
@@ -172,12 +158,11 @@ const testHelper: TestHelper = {
   createMedicine,
   createPrescription,
   getToken,
-  createDepartment,
   createWard,
   createWardAssignment,
 };
 
-export type { TestUser, TestDoctor, TestMedicine, TestPrescription, TestDepartment, TestWard, TestWardAssignment };
+export type { TestUser, TestDoctor, TestMedicine, TestPrescription, TestWard, TestWardAssignment };
 
 // Attach to global in a way that works with strict TypeScript
 // eslint-disable-next-line @typescript-eslint/no-explicit-any

@@ -16,7 +16,10 @@ export async function connectDB(): Promise<void> {
   const dbLogger = logger.child({ component: 'database' });
 
   mongoose.connection.on('connected', () => {
-    dbLogger.info({ event: 'mongo_connected', host: mongoose.connection.host }, 'MongoDB connected');
+    dbLogger.info(
+      { event: 'mongo_connected', host: mongoose.connection.host },
+      'MongoDB connected',
+    );
   });
 
   mongoose.connection.on('disconnected', () => {
@@ -33,6 +36,7 @@ export async function connectDB(): Promise<void> {
         // Recommended production settings
         serverSelectionTimeoutMS: 5000,
         socketTimeoutMS: 45000,
+        retryWrites: true, // Required for MongoDB Atlas
       });
       return; // Success — exit retry loop
     } catch (err) {
@@ -70,5 +74,8 @@ export async function connectDB(): Promise<void> {
  */
 export async function disconnectDB(): Promise<void> {
   await mongoose.connection.close();
-  logger.info({ component: 'database', event: 'mongo_connection_closed' }, 'MongoDB connection closed');
+  logger.info(
+    { component: 'database', event: 'mongo_connection_closed' },
+    'MongoDB connection closed',
+  );
 }

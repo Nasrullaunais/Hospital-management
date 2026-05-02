@@ -3,3 +3,4 @@
  */
 
 export { InvoiceCard } from './InvoiceCard';
+export { StatsCard } from './StatsCard';

@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import { validationResult } from 'express-validator';
-import { register, login, getMyProfile, updateMyProfile, deleteMyProfile } from './auth.controller.js';
+import { register, login, getMyProfile, updateMyProfile, deleteMyProfile, searchPatients } from './auth.controller.js';
 import { authMiddleware } from '../../shared/middlewares/authMiddleware.js';
 import { uploadSingle } from '../../shared/middlewares/uploadMiddleware.js';
 import { registerValidation, loginValidation, updateProfileValidation } from './auth.validation.js';
@@ -31,6 +31,9 @@ router.post('/auth/logout', authMiddleware, (_req, res) => {
 });
 
 // ── Protected Patient Routes ───────────────────────────────────────────────────
+
+/** GET /api/patients/search?q= — Search patients by name or email */
+router.get('/patients/search', authMiddleware, searchPatients);
 
 /** GET /api/patients/me — Get own profile */
 router.get('/patients/me', authMiddleware, getMyProfile);

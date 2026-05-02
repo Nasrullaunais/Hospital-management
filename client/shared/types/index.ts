@@ -143,6 +143,15 @@ export interface Medicine {
 
 export type PaymentStatus = 'Unpaid' | 'Pending Verification' | 'Paid' | 'Overdue';
 
+export type InvoiceItemCategory = 'consultation' | 'medicine' | 'lab_test' | 'ward' | 'procedure' | 'other';
+
+export interface InvoiceItem {
+  description: string;
+  category: InvoiceItemCategory;
+  quantity: number;
+  unitPrice: number;
+}
+
 export interface Invoice {
   _id: string;
   patientId: string | User;
@@ -153,6 +162,55 @@ export interface Invoice {
   issuedDate: string;
   dueDate?: string;
   paymentReceiptUrl?: string;
+  items?: InvoiceItem[];
+  discount?: number;
+  notes?: string;
+}
+
+export interface InvoiceStatsByStatus {
+  count: number;
+  total: number;
+}
+
+export interface InvoiceStats {
+  totalInvoices: number;
+  totalAmount: number;
+  byStatus: Record<string, InvoiceStatsByStatus>;
+  thisMonth: {
+    count: number;
+    total: number;
+  };
+}
+
+// ── Billing Suggestions ────────────────────────────────────────────────────────
+
+export interface BillingSuggestion {
+  source: 'dispensing' | 'appointment' | 'lab_report' | 'ward';
+  sourceId: string;
+  description: string;
+  category: InvoiceItemCategory;
+  quantity: number;
+  unitPrice: number;
+  date: string;
+}
+
+export interface BillingSuggestionsResponse {
+  patientId: string;
+  suggestions: BillingSuggestion[];
+  alreadyBilledCount: number;
+}
+
+export interface Payment {
+  _id: string;
+  invoiceId: string;
+  patientId: string;
+  amount: number;
+  currency: string;
+  method: 'mock_card' | 'bank_transfer' | 'stripe';
+  status: 'pending' | 'processing' | 'completed' | 'failed' | 'refunded';
+  stripePaymentIntentId?: string;
+  completedAt?: string;
+  createdAt: string;
 }
 
 // ── Prescription ─────────────────────────────────────────────────────────────────
@@ -173,6 +231,19 @@ export interface PendingPrescription {
   items: PrescriptionItem[];
   status: PrescriptionStatus;
   createdAt: string;
+}
+
+// ── Pending Billing Patient ────────────────────────────────────────────────────
+
+export interface PendingBillingPatient {
+  patientId: string;
+  patientName: string;
+  patientEmail: string;
+  unbilledCount: number;
+  unbilledSources: string[];
+  discharged: boolean;
+  wardName?: string;
+  lastActivity: string;
 }
 
 // ── Ward ────────────────────────────────────────────────────────────────────────

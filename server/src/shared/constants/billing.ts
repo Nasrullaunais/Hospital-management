@@ -1,2 +1,5 @@
 export const INVOICE_PREFIX = 'INV';
 export const MAX_INVOICE_AMOUNT = 1_000_000;
+export const DEFAULT_CONSULTATION_FEE = 2_500;
+export const DEFAULT_LAB_FEE = 1_500;
+export const DEFAULT_WARD_NIGHTLY_RATE = 2_000;

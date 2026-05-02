@@ -1,5 +1,7 @@
 # Hospital Management System — Agent Guide
 
+USE MGREP instead of GREP.
+
 ## Project Layout
 
 - `client/` — Expo React Native app (TypeScript), Expo Router file-based routing in `app/`

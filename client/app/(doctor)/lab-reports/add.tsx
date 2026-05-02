@@ -206,119 +206,6 @@ export default function AddLabReportScreen() {
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       >
         <ScrollView contentContainerStyle={styles.container} keyboardShouldPersistTaps="handled">
-          {/* Patient Selection */}
-          <Text style={[styles.sectionTitle, { color: colors.textSecondary }]}>
-            Select Patient
-          </Text>
-          <View
-            style={[
-              styles.formCard,
-              { backgroundColor: colors.surface, shadowColor: '#1B2A4A' },
-            ]}
-          >
-            {patients.length === 0 ? (
-              <View style={styles.hintBox}>
-                <Feather name="alert-circle" size={20} color={colors.warning} />
-                <View style={styles.hintContent}>
-                  <Text style={[styles.hintTitle, { color: colors.text }]}>
-                    No patients available
-                  </Text>
-                  <Text style={[styles.hint, { color: colors.textSecondary }]}>
-                    You need pending or confirmed appointments before creating lab reports.
-                  </Text>
-                </View>
-              </View>
-            ) : (
-              <ScrollView
-                horizontal
-                showsHorizontalScrollIndicator={false}
-                contentContainerStyle={styles.patientScrollContent}
-              >
-                {patients.map(p => {
-                  const isSelected = selectedPatient?.patientId === p.patientId;
-                  const statusColor =
-                    p.status === APPOINTMENT_STATUS.CONFIRMED
-                      ? colors.success
-                      : p.status === APPOINTMENT_STATUS.COMPLETED
-                        ? colors.textSecondary
-                        : p.status === APPOINTMENT_STATUS.PENDING
-                          ? colors.warning
-                          : colors.textSecondary;
-                  const formattedDate = new Date(p.appointmentDate).toLocaleDateString(
-                    'en-US',
-                    {
-                      month: 'short',
-                      day: 'numeric',
-                      hour: '2-digit',
-                      minute: '2-digit',
-                    },
-                  );
-                  return (
-                    <TouchableOpacity
-                      key={p.patientId}
-                      style={[
-                        styles.patientChip,
-                        isSelected
-                          ? {
-                              backgroundColor: colors.primaryMuted,
-                              borderColor: colors.primary,
-                            }
-                          : {
-                              backgroundColor: colors.surface,
-                              borderColor: colors.border,
-                            },
-                      ]}
-                      onPress={() => setSelectedPatient(p)}
-                    >
-                      <View
-                        style={[
-                          styles.chipAvatar,
-                          {
-                            backgroundColor: isSelected
-                              ? colors.primary
-                              : colors.textTertiary,
-                          },
-                        ]}
-                      >
-                        <Text style={styles.chipAvatarText}>
-                          {p.patientName
-                            .split(' ')
-                            .map(n => n[0])
-                            .slice(0, 2)
-                            .join('')
-                            .toUpperCase()}
-                        </Text>
-                      </View>
-                      <View style={styles.patientChipContent}>
-                        <Text
-                          style={[
-                            styles.patientChipText,
-                            { color: isSelected ? colors.primary : colors.text },
-                          ]}
-                        >
-                          {p.patientName}
-                        </Text>
-                        <View style={styles.patientChipMeta}>
-                          <View
-                            style={[styles.statusDot, { backgroundColor: statusColor }]}
-                          />
-                          <Text style={[styles.statusText, { color: statusColor }]}>
-                            {p.status}
-                          </Text>
-                          <Text
-                            style={[styles.appointmentDate, { color: colors.textTertiary }]}
-                          >
-                            {formattedDate}
-                          </Text>
-                        </View>
-                      </View>
-                    </TouchableOpacity>
-                  );
-                })}
-              </ScrollView>
-            )}
-          </View>
-
           {/* Lab Type Selection */}
           <Text style={[styles.sectionTitle, { color: colors.textSecondary }]}>
             Lab Type
@@ -369,7 +256,7 @@ export default function AddLabReportScreen() {
           </View>
 
           {/* Test Results */}
-          <Text style={[styles.sectionTitle, { color: colors.textSecondary }]}>
+          <Text style={[styles.sectionTitle, { color: colors.textSecondary, marginTop: spacing.xl }]}>
             Test Results
           </Text>
           <View
@@ -564,7 +451,7 @@ export default function AddLabReportScreen() {
           </View>
 
           {/* Interpretation */}
-          <Text style={[styles.sectionTitle, { color: colors.textSecondary }]}>
+          <Text style={[styles.sectionTitle, { color: colors.textSecondary, marginTop: spacing.xl }]}>
             Interpretation
           </Text>
           <View
@@ -594,7 +481,7 @@ export default function AddLabReportScreen() {
           </View>
 
           {/* Notes */}
-          <Text style={[styles.sectionTitle, { color: colors.textSecondary }]}>
+          <Text style={[styles.sectionTitle, { color: colors.textSecondary, marginTop: spacing.xl }]}>
             Notes
           </Text>
           <View
@@ -623,6 +510,119 @@ export default function AddLabReportScreen() {
             />
           </View>
 
+          {/* Patient Selection */}
+          <Text style={[styles.sectionTitle, { color: colors.textSecondary, marginTop: spacing.xl }]}>
+            Select Patient
+          </Text>
+          <View
+            style={[
+              styles.formCard,
+              { backgroundColor: colors.surface, shadowColor: '#1B2A4A' },
+            ]}
+          >
+            {patients.length === 0 ? (
+              <View style={styles.hintBox}>
+                <Feather name="alert-circle" size={20} color={colors.warning} />
+                <View style={styles.hintContent}>
+                  <Text style={[styles.hintTitle, { color: colors.text }]}>
+                    No patients available
+                  </Text>
+                  <Text style={[styles.hint, { color: colors.textSecondary }]}>
+                    You need pending or confirmed appointments before creating lab reports.
+                  </Text>
+                </View>
+              </View>
+            ) : (
+              <ScrollView
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                contentContainerStyle={styles.patientScrollContent}
+              >
+                {patients.map(p => {
+                  const isSelected = selectedPatient?.patientId === p.patientId;
+                  const statusColor =
+                    p.status === APPOINTMENT_STATUS.CONFIRMED
+                      ? colors.success
+                      : p.status === APPOINTMENT_STATUS.COMPLETED
+                        ? colors.textSecondary
+                        : p.status === APPOINTMENT_STATUS.PENDING
+                          ? colors.warning
+                          : colors.textSecondary;
+                  const formattedDate = new Date(p.appointmentDate).toLocaleDateString(
+                    'en-US',
+                    {
+                      month: 'short',
+                      day: 'numeric',
+                      hour: '2-digit',
+                      minute: '2-digit',
+                    },
+                  );
+                  return (
+                    <TouchableOpacity
+                      key={p.patientId}
+                      style={[
+                        styles.patientChip,
+                        isSelected
+                          ? {
+                              backgroundColor: colors.primaryMuted,
+                              borderColor: colors.primary,
+                            }
+                          : {
+                              backgroundColor: colors.surface,
+                              borderColor: colors.border,
+                            },
+                      ]}
+                      onPress={() => setSelectedPatient(p)}
+                    >
+                      <View
+                        style={[
+                          styles.chipAvatar,
+                          {
+                            backgroundColor: isSelected
+                              ? colors.primary
+                              : colors.textTertiary,
+                          },
+                        ]}
+                      >
+                        <Text style={styles.chipAvatarText}>
+                          {p.patientName
+                            .split(' ')
+                            .map(n => n[0])
+                            .slice(0, 2)
+                            .join('')
+                            .toUpperCase()}
+                        </Text>
+                      </View>
+                      <View style={styles.patientChipContent}>
+                        <Text
+                          style={[
+                            styles.patientChipText,
+                            { color: isSelected ? colors.primary : colors.text },
+                          ]}
+                        >
+                          {p.patientName}
+                        </Text>
+                        <View style={styles.patientChipMeta}>
+                          <View
+                            style={[styles.statusDot, { backgroundColor: statusColor }]}
+                          />
+                          <Text style={[styles.statusText, { color: statusColor }]}>
+                            {p.status}
+                          </Text>
+                          <Text
+                            style={[styles.appointmentDate, { color: colors.textTertiary }]}
+                          >
+                            {formattedDate}
+                          </Text>
+                        </View>
+                      </View>
+                    </TouchableOpacity>
+                  );
+                })}
+              </ScrollView>
+            )}
+          </View>
+
           {/* Submit Button */}
           <Button
             title="Create Lab Report"
@@ -649,8 +649,8 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     textTransform: 'uppercase',
     letterSpacing: 0.6,
-    marginBottom: 8,
-    marginTop: 20,
+    marginBottom: spacing.sm,
+    marginTop: spacing.lg,
   },
   formCard: {
     borderRadius: radius.lg,
@@ -668,13 +668,13 @@ const styles = StyleSheet.create({
   hintContent: { flex: 1 },
   hintTitle: { fontSize: 15, fontWeight: '600', marginBottom: 4 },
   hint: { fontSize: 14, lineHeight: 20 },
-  patientScrollContent: { gap: 8, paddingRight: 8 },
+  patientScrollContent: { gap: spacing.sm, paddingLeft: 0, paddingRight: 8 },
   patientChip: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 10,
-    paddingHorizontal: 14,
-    paddingVertical: 12,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.md,
     borderRadius: radius.md,
     borderWidth: 1.5,
     minWidth: 200,
@@ -789,6 +789,6 @@ const styles = StyleSheet.create({
   },
   submitButton: {
     marginTop: 32,
-    marginBottom: 16,
+    marginBottom: 0,
   },
 });

@@ -75,7 +75,7 @@ export default function WardListScreen() {
   }, [theme]);
 
   const renderWard = useCallback(({ item }: { item: Ward }) => {
-    const departmentName = typeof item.departmentId === 'object' ? item.departmentId.name : 'Unknown';
+    const wardLocation = item.location || 'No location';
     const occupancyPercent = Math.round((item.currentOccupancy / item.totalBeds) * 100);
     const statusStyle = getStatusStyle(item.status);
 
@@ -88,7 +88,7 @@ export default function WardListScreen() {
         <View style={styles.header}>
           <View style={styles.headerInfo}>
             <Text style={[styles.wardName, { color: theme.text }]}>{item.name}</Text>
-            <Text style={[styles.departmentName, { color: theme.textSecondary }]}>{departmentName}</Text>
+            <Text style={[styles.departmentName, { color: theme.textSecondary }]}>{wardLocation}</Text>
           </View>
           <View style={[styles.badge, { backgroundColor: statusStyle.bg, borderColor: statusStyle.border }]}>
             <Text style={[styles.badgeText, { color: statusStyle.text }]}>{item.status}</Text>

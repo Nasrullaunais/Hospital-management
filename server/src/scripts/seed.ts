@@ -25,17 +25,19 @@ import { Medicine } from '../modules/pharmacy/medicine.model.js';
 import { Invoice } from '../modules/billing/invoice.model.js';
 import { Prescription } from '../modules/prescriptions/prescription.model.js';
 import { Dispense } from '../modules/dispensing/dispense.model.js';
-import { Department } from '../modules/departments/department.model.js';
 import { Ward } from '../modules/wards/ward.model.js';
 import { WardAssignment } from '../modules/wardAssignments/wardAssignment.model.js';
 import { WardMedication } from '../modules/wardMedications/wardMedication.model.js';
+import { LabReport } from '../modules/labReports/labReport.model.js';
+import { Payment } from '../modules/billing/payment.model.js';
 
 // ── Connect ──────────────────────────────────────────────────────────────────────
 let mongoClient: MongoClient;
 
 async function connect() {
   const uri = process.env.MONGO_URI ?? 'mongodb://localhost:27017/hospital_management';
-  await mongoose.connect(uri);
+  const dbName = 'hospital-management';
+  await mongoose.connect(uri, { dbName });
   mongoClient = new MongoClient(uri);
   await mongoClient.connect();
   console.log('✅ Connected to MongoDB');
@@ -74,10 +76,11 @@ async function seed() {
     Invoice.deleteMany({}),
     Prescription.deleteMany({}),
     Dispense.deleteMany({}),
-    Department.deleteMany({}),
     Ward.deleteMany({}),
     WardAssignment.deleteMany({}),
     WardMedication.deleteMany({}),
+    LabReport.deleteMany({}),
+    Payment.deleteMany({}),
   ]);
   console.log('🧹 Cleared all collections');
 
@@ -251,69 +254,7 @@ async function seed() {
   console.log(`👤 Created ${1 + 1 + 1 + doctorUsers.length + patientUsers.length} users`);
   console.log('   Login: any email above with password "Password123"');
 
-  // ── 2. DEPARTMENTS ─────────────────────────────────────────────────────────
-  const departments = await Department.create([
-    {
-      name: 'Cardiology',
-      description: 'Heart and cardiovascular system diagnosis and treatment',
-      location: 'Building A, Floor 2',
-      phone: '+1-555-1000',
-      status: 'active',
-    },
-    {
-      name: 'Orthopedics',
-      description: 'Bone, joint, and musculoskeletal care',
-      location: 'Building A, Floor 3',
-      phone: '+1-555-1001',
-      status: 'active',
-    },
-    {
-      name: 'Neurology',
-      description: 'Brain, spine, and nervous system disorders',
-      location: 'Building B, Floor 1',
-      phone: '+1-555-1002',
-      status: 'active',
-    },
-    {
-      name: 'Pediatrics',
-      description: 'Medical care for infants, children, and adolescents',
-      location: 'Building C, Floor 1',
-      phone: '+1-555-1003',
-      status: 'active',
-    },
-    {
-      name: 'Emergency Medicine',
-      description: 'Acute care for emergencies and trauma',
-      location: 'Building A, Floor 1',
-      phone: '+1-555-1004',
-      status: 'active',
-    },
-    {
-      name: 'Internal Medicine',
-      description: 'General adult medicine and chronic disease management',
-      location: 'Building B, Floor 2',
-      phone: '+1-555-1005',
-      status: 'active',
-    },
-    {
-      name: 'General Surgery',
-      description: 'Surgical interventions across all body systems',
-      location: 'Building A, Floor 4',
-      phone: '+1-555-1006',
-      status: 'active',
-    },
-    {
-      name: 'Dermatology',
-      description: 'Skin, hair, and nail conditions',
-      location: 'Building C, Floor 2',
-      phone: '+1-555-1007',
-      status: 'inactive',
-    },
-  ]);
-  console.log(`🏥 Created ${departments.length} departments`);
-
-  // ── 3. DOCTORS ──────────────────────────────────────────────────────────────
-  const [cardioDept, orthoDept, neuroDept, pedsDept, emergencyDept, internalMed] = departments;
+  // ── 2. DOCTORS ──────────────────────────────────────────────────────────────
 
   const doctors = await Doctor.create([
     {
@@ -359,15 +300,7 @@ async function seed() {
   ]);
   console.log(`👨‍⚕️ Created ${doctors.length} doctors`);
 
-  // Set head doctors for some departments
-  cardioDept.headDoctorId = doctors[0]._id;
-  await cardioDept.save();
-  orthoDept.headDoctorId = doctors[2]._id;
-  await orthoDept.save();
-  internalMed.headDoctorId = doctors[4]._id;
-  await internalMed.save();
-
-  // ── 4. MEDICINES ───────────────────────────────────────────────────────────
+  // ── 3. MEDICINES ───────────────────────────────────────────────────────────
   const medicines = await Medicine.create([
     // Antibiotics
     { name: 'Amoxicillin 500mg', category: 'Antibiotic', price: 12.50, stockQuantity: 450, expiryDate: futureDate(730), packagingImageUrl: '/uploads/amoxicillin.jpg' },
@@ -406,7 +339,7 @@ async function seed() {
   ]);
   console.log(`💊 Created ${medicines.length} medicines`);
 
-  // ── 5. APPOINTMENTS ────────────────────────────────────────────────────────
+  // ── 4. APPOINTMENTS ────────────────────────────────────────────────────────
   const [drPetrov, drSharma, drThompson, drOkafor, drMendes] = doctors;
   const [pat1, pat2, pat3, pat4, pat5, pat6, pat7, pat8] = patientUsers;
 
@@ -501,7 +434,7 @@ async function seed() {
   await db.collection('appointments').insertMany(appointments);
   console.log(`📅 Created ${appointments.length} appointments`);
 
-  // ── 6. MEDICAL RECORDS ─────────────────────────────────────────────────────
+  // ── 5. MEDICAL RECORDS ─────────────────────────────────────────────────────
   const completedAppts = appointments.filter(a => a.status === 'Completed');
 
   const records = await MedicalRecord.create([
@@ -553,8 +486,134 @@ async function seed() {
   ]);
   console.log(`📋 Created ${records.length} medical records`);
 
-  // ── 7. PRESCRIPTIONS ───────────────────────────────────────────────────────
   const [rec1, rec2, rec3, rec4, rec5, rec6] = records;
+
+  // ── 6. LAB REPORTS ────────────────────────────────────────────────────────
+  const labReports = await LabReport.create([
+    {
+      patientId: pat6._id,
+      doctorId: drMendes._id,
+      medicalRecordId: rec1._id,
+      labType: 'hematology',
+      testDate: pastDate(10),
+      status: 'completed',
+      results: [
+        { parameter: 'Hemoglobin', value: 13.2, unit: 'g/dL', normalRange: '12.0-15.5', flag: 'normal' },
+        { parameter: 'WBC Count', value: 11.8, unit: 'x10³/µL', normalRange: '4.5-11.0', flag: 'high' },
+        { parameter: 'Platelets', value: 245, unit: 'x10³/µL', normalRange: '150-400', flag: 'normal' },
+        { parameter: 'CRP', value: 28.5, unit: 'mg/L', normalRange: '<5.0', flag: 'critical' },
+      ],
+      interpretation: 'Elevated WBC and CRP consistent with acute viral pharyngitis. Normocytic normochromic RBCs.',
+      notes: 'Repeat CBC in 2 weeks after antibiotic course.',
+    },
+    {
+      patientId: pat1._id,
+      doctorId: drOkafor._id,
+      medicalRecordId: rec2._id,
+      labType: 'radiology',
+      testDate: pastDate(19),
+      status: 'reviewed',
+      results: [
+        { parameter: 'L4-L5 Disc Space', value: 4.2, unit: 'mm', normalRange: '5.0-7.0', flag: 'low' },
+        { parameter: 'Nerve Root Compression', value: 1, unit: 'grade', normalRange: '0', flag: 'critical' },
+      ],
+      interpretation: 'MRI confirms moderate disc bulge at L4-L5 with left lateral recess stenosis and nerve root impingement at L5.',
+      notes: 'Patient referred to neurosurgery for evaluation.',
+    },
+    {
+      patientId: pat2._id,
+      doctorId: drPetrov._id,
+      medicalRecordId: rec3._id,
+      labType: 'biochemistry',
+      testDate: pastDate(14),
+      status: 'reviewed',
+      results: [
+        { parameter: 'Total Cholesterol', value: 245, unit: 'mg/dL', normalRange: '<200', flag: 'high' },
+        { parameter: 'LDL', value: 162, unit: 'mg/dL', normalRange: '<100', flag: 'high' },
+        { parameter: 'HDL', value: 38, unit: 'mg/dL', normalRange: '>40', flag: 'low' },
+        { parameter: 'Triglycerides', value: 210, unit: 'mg/dL', normalRange: '<150', flag: 'high' },
+        { parameter: 'Troponin I', value: 0.02, unit: 'ng/mL', normalRange: '<0.04', flag: 'normal' },
+      ],
+      interpretation: 'Mixed dyslipidemia with elevated LDL and triglycerides. Troponin normal — no acute cardiac event.',
+      notes: 'Continue Atorvastatin 20mg. Recommend dietary modifications. Repeat lipid panel in 3 months.',
+    },
+    {
+      patientId: pat7._id,
+      doctorId: drThompson._id,
+      medicalRecordId: rec4._id,
+      labType: 'microbiology',
+      testDate: pastDate(7),
+      status: 'completed',
+      results: [
+        { parameter: 'Wound Swab Culture', value: 0, unit: 'colonies', normalRange: 'No growth', flag: 'normal' },
+        { parameter: 'Gram Stain', value: 0, unit: 'organisms', normalRange: 'No organisms', flag: 'normal' },
+      ],
+      interpretation: 'No bacterial growth from surgical site. Wound healing progressing normally.',
+      notes: 'Continue current wound care protocol.',
+    },
+    {
+      patientId: pat3._id,
+      doctorId: drSharma._id,
+      medicalRecordId: rec5._id,
+      labType: 'serology',
+      testDate: pastDate(4),
+      status: 'reviewed',
+      results: [
+        { parameter: 'IgE Total', value: 480, unit: 'IU/mL', normalRange: '<100', flag: 'critical' },
+        { parameter: 'Eosinophil Count', value: 8.2, unit: '%', normalRange: '1-4', flag: 'high' },
+      ],
+      interpretation: 'Markedly elevated IgE and eosinophils consistent with atopic asthma exacerbation.',
+      notes: 'Trigger avoidance plan discussed. Peak flow monitoring initiated.',
+    },
+    {
+      patientId: pat1._id,
+      doctorId: drPetrov._id,
+      medicalRecordId: rec6._id,
+      labType: 'biochemistry',
+      testDate: pastDate(2),
+      status: 'completed',
+      results: [
+        { parameter: 'Troponin I', value: 0.15, unit: 'ng/mL', normalRange: '<0.04', flag: 'critical' },
+        { parameter: 'CK-MB', value: 12.5, unit: 'ng/mL', normalRange: '<5.0', flag: 'high' },
+        { parameter: 'BNP', value: 450, unit: 'pg/mL', normalRange: '<100', flag: 'critical' },
+        { parameter: 'Sodium', value: 138, unit: 'mmol/L', normalRange: '135-145', flag: 'normal' },
+        { parameter: 'Potassium', value: 3.9, unit: 'mmol/L', normalRange: '3.5-5.0', flag: 'normal' },
+      ],
+      interpretation: 'Elevated cardiac biomarkers with BNP consistent with hypertensive emergency and possible demand ischemia. No STEMI pattern.',
+      notes: 'Cardiac monitoring continuing. Repeat troponin in 6 hours.',
+    },
+    {
+      patientId: pat5._id,
+      doctorId: drPetrov._id,
+      labType: 'biochemistry',
+      testDate: pastDate(15),
+      status: 'completed',
+      results: [
+        { parameter: 'Fasting Glucose', value: 98, unit: 'mg/dL', normalRange: '70-100', flag: 'normal' },
+        { parameter: 'HbA1c', value: 5.4, unit: '%', normalRange: '<5.7', flag: 'normal' },
+        { parameter: 'Creatinine', value: 1.1, unit: 'mg/dL', normalRange: '0.6-1.2', flag: 'normal' },
+        { parameter: 'ALT', value: 32, unit: 'U/L', normalRange: '7-56', flag: 'normal' },
+      ],
+      interpretation: 'All baseline labs within normal limits. No metabolic abnormalities detected.',
+      notes: 'Routine follow-up labs as part of hypertension management.',
+    },
+    {
+      patientId: pat1._id,
+      doctorId: drOkafor._id,
+      medicalRecordId: rec2._id,
+      labType: 'radiology',
+      testDate: pastDate(18),
+      status: 'reviewed',
+      results: [
+        { parameter: 'Lumbar Spine X-Ray', value: 2, unit: 'grade', normalRange: '0-1', flag: 'high' },
+        { parameter: 'Spondylolisthesis', value: 4.0, unit: 'mm', normalRange: '<3', flag: 'high' },
+      ],
+      interpretation: 'Grade II spondylolisthesis at L4-L5. Correlates clinically with radiculopathy symptoms.',
+    },
+  ]);
+  console.log(`🔬 Created ${labReports.length} lab reports`);
+
+  // ── 7. PRESCRIPTIONS ───────────────────────────────────────────────────────
 
   const prescriptions = await Prescription.create([
     {
@@ -627,68 +686,101 @@ async function seed() {
 
   // ── 8. INVOICES ───────────────────────────────────────────────────────────
   const invoices = await Invoice.create([
-    // Paid invoices
+    // Paid — Cardiology (pat2, irregular heartbeat follow-up)
     {
       patientId: pat2._id,
       appointmentId: completedAppts[2]._id,
-      invoiceNumber: 'INV-2025-0001',
-      totalAmount: 350,
+      invoiceNumber: 'INV-2026-0001',
+      items: [
+        { description: 'Consultation Fee - Cardiology', category: 'consultation', quantity: 1, unitPrice: 200 },
+        { description: 'ECG Test', category: 'lab_test', quantity: 1, unitPrice: 100 },
+        { description: 'Blood Test - Cardiac Panel', category: 'lab_test', quantity: 1, unitPrice: 50 },
+      ],
+      discount: 0,
       paymentStatus: 'Paid',
       issuedDate: pastDate(14),
       dueDate: futureDate(16),
     },
+    // Paid — Orthopedic (pat7, knee surgery follow-up)
     {
       patientId: pat7._id,
       appointmentId: completedAppts[3]._id,
-      invoiceNumber: 'INV-2025-0002',
-      totalAmount: 400,
+      invoiceNumber: 'INV-2026-0002',
+      items: [
+        { description: 'Consultation Fee - Orthopedic Surgery', category: 'consultation', quantity: 1, unitPrice: 300 },
+        { description: 'X-Ray - Knee (Both Views)', category: 'lab_test', quantity: 1, unitPrice: 100 },
+      ],
+      discount: 0,
       paymentStatus: 'Paid',
       issuedDate: pastDate(7),
       dueDate: futureDate(23),
     },
-    // Pending verification
+    // Pending Verification — General Medicine (pat6, viral pharyngitis)
     {
       patientId: pat6._id,
-      invoiceNumber: 'INV-2025-0003',
-      totalAmount: 250,
+      invoiceNumber: 'INV-2026-0003',
+      items: [
+        { description: 'Consultation Fee - General Medicine', category: 'consultation', quantity: 1, unitPrice: 150 },
+        { description: 'CBC Blood Test', category: 'lab_test', quantity: 1, unitPrice: 100 },
+      ],
+      discount: 0,
       paymentStatus: 'Pending Verification',
       issuedDate: pastDate(5),
       dueDate: futureDate(25),
       paymentReceiptUrl: '/uploads/receipt_pat6_inv3.pdf',
     },
-    // Overdue
+    // Overdue — Neurology (pat3, childhood asthma)
     {
       patientId: pat3._id,
-      invoiceNumber: 'INV-2025-0004',
-      totalAmount: 320,
+      invoiceNumber: 'INV-2026-0004',
+      items: [
+        { description: 'Consultation Fee - Neurology', category: 'consultation', quantity: 1, unitPrice: 250 },
+        { description: 'CT Scan - Brain', category: 'lab_test', quantity: 1, unitPrice: 70 },
+      ],
+      discount: 0,
       paymentStatus: 'Overdue',
       issuedDate: pastDate(45),
       dueDate: pastDate(15),
     },
-    // Unpaid recent
+    // Unpaid — Internal Medicine (pat4, annual physical)
     {
       patientId: pat4._id,
-      invoiceNumber: 'INV-2025-0005',
-      totalAmount: 220,
+      invoiceNumber: 'INV-2026-0005',
+      items: [
+        { description: 'Annual Physical Examination', category: 'consultation', quantity: 1, unitPrice: 200 },
+        { description: 'Blood Pressure Monitoring', category: 'procedure', quantity: 1, unitPrice: 20 },
+      ],
+      discount: 0,
       paymentStatus: 'Unpaid',
       issuedDate: pastDate(2),
       dueDate: futureDate(28),
     },
-    // Ward stay invoice
+    // Paid — Ward stay (pat1, cardiac ICU 3 days)
     {
       patientId: pat1._id,
       appointmentId: completedAppts[5]._id,
-      invoiceNumber: 'INV-2025-0006',
-      totalAmount: 1850,
+      invoiceNumber: 'INV-2026-0006',
+      items: [
+        { description: 'Cardiac ICU - Bed Charge (3 days)', category: 'ward', quantity: 3, unitPrice: 500 },
+        { description: 'IV Amlodipine Administration', category: 'medicine', quantity: 3, unitPrice: 50 },
+        { description: 'Cardiac Monitoring Fee', category: 'procedure', quantity: 1, unitPrice: 200 },
+      ],
+      discount: 0,
       paymentStatus: 'Paid',
       issuedDate: pastDate(3),
       dueDate: pastDate(3),
     },
-    // Unpaid for patient in ward (current)
+    // Unpaid — Ward stay ongoing (pat1, cardiac ICU extension)
     {
       patientId: pat1._id,
-      invoiceNumber: 'INV-2025-0007',
-      totalAmount: 2800,
+      invoiceNumber: 'INV-2026-0007',
+      items: [
+        { description: 'Cardiac ICU - Bed Charge (4 days)', category: 'ward', quantity: 4, unitPrice: 500 },
+        { description: 'Emergency Consultation Fee', category: 'consultation', quantity: 1, unitPrice: 300 },
+        { description: 'Cardiac Lab Panel', category: 'lab_test', quantity: 1, unitPrice: 200 },
+        { description: 'Medications - Amlodipine, Atorvastatin', category: 'medicine', quantity: 1, unitPrice: 300 },
+      ],
+      discount: 0,
       paymentStatus: 'Unpaid',
       issuedDate: pastDate(1),
       dueDate: futureDate(29),
@@ -696,90 +788,149 @@ async function seed() {
   ]);
   console.log(`💰 Created ${invoices.length} invoices`);
 
-  // ── 9. WARDS ──────────────────────────────────────────────────────────────
-  const wardDepts = [cardioDept, orthoDept, emergencyDept, internalMed];
+  // ── 9. PAYMENTS ──────────────────────────────────────────────────────────
+  const [inv1, inv2, inv3, inv4, inv5, inv6, inv7] = invoices;
+
+  const payments = await Payment.create([
+    {
+      invoiceId: inv1._id,
+      patientId: pat2._id,
+      amount: 350,
+      currency: 'LKR',
+      method: 'bank_transfer',
+      status: 'completed',
+      completedAt: pastDate(13),
+    },
+    {
+      invoiceId: inv2._id,
+      patientId: pat7._id,
+      amount: 400,
+      currency: 'LKR',
+      method: 'mock_card',
+      status: 'completed',
+      completedAt: pastDate(6),
+    },
+    {
+      invoiceId: inv6._id,
+      patientId: pat1._id,
+      amount: 1850,
+      currency: 'LKR',
+      method: 'bank_transfer',
+      status: 'completed',
+      completedAt: pastDate(3),
+    },
+    {
+      invoiceId: inv3._id,
+      patientId: pat6._id,
+      amount: 250,
+      currency: 'LKR',
+      method: 'bank_transfer',
+      status: 'processing',
+      receiptUrl: '/uploads/receipt_pat6_inv3.pdf',
+    },
+    {
+      invoiceId: inv5._id,
+      patientId: pat4._id,
+      amount: 220,
+      currency: 'LKR',
+      method: 'mock_card',
+      status: 'pending',
+    },
+  ]);
+  console.log(`💳 Created ${payments.length} payments`);
+
+  // ── 10. WARDS ──────────────────────────────────────────────────────────────
 
   const wards = await Ward.create([
     // Cardiology wards
     {
-      departmentId: cardioDept._id,
       name: 'Cardiac ICU',
       type: 'icu',
       totalBeds: 6,
       currentOccupancy: 2,
       status: 'available',
+      location: 'Building A, Floor 2',
+      phone: '+1-555-1000',
     },
     {
-      departmentId: cardioDept._id,
       name: 'Cardiac Ward A',
       type: 'private',
       totalBeds: 10,
       currentOccupancy: 4,
       status: 'available',
+      location: 'Building A, Floor 2',
+      phone: '+1-555-1000',
     },
     {
-      departmentId: cardioDept._id,
       name: 'Cardiac Ward B',
       type: 'general',
       totalBeds: 20,
       currentOccupancy: 19,
       status: 'full',
+      location: 'Building A, Floor 2',
+      phone: '+1-555-1000',
     },
     // Orthopedics
     {
-      departmentId: orthoDept._id,
       name: 'Ortho Recovery Unit',
       type: 'general',
       totalBeds: 15,
       currentOccupancy: 8,
       status: 'available',
+      location: 'Building A, Floor 3',
+      phone: '+1-555-1001',
     },
     {
-      departmentId: orthoDept._id,
       name: 'Ortho Private Rooms',
       type: 'private',
       totalBeds: 8,
       currentOccupancy: 3,
       status: 'available',
+      location: 'Building A, Floor 3',
+      phone: '+1-555-1001',
     },
     // Emergency
     {
-      departmentId: emergencyDept._id,
       name: 'Emergency Observation',
       type: 'emergency',
       totalBeds: 12,
       currentOccupancy: 7,
       status: 'available',
+      location: 'Building A, Floor 1',
+      phone: '+1-555-1004',
     },
     {
-      departmentId: emergencyDept._id,
       name: 'Critical Care Bay',
       type: 'icu',
       totalBeds: 4,
       currentOccupancy: 3,
       status: 'available',
+      location: 'Building A, Floor 1',
+      phone: '+1-555-1004',
     },
     // Internal Medicine
     {
-      departmentId: internalMed._id,
       name: 'General Medicine A',
       type: 'general',
       totalBeds: 25,
       currentOccupancy: 12,
       status: 'available',
+      location: 'Building B, Floor 2',
+      phone: '+1-555-1005',
     },
     {
-      departmentId: internalMed._id,
       name: 'General Medicine B',
       type: 'general',
       totalBeds: 25,
       currentOccupancy: 25,
       status: 'full',
+      location: 'Building B, Floor 2',
+      phone: '+1-555-1005',
     },
   ]);
   console.log(`🛏️  Created ${wards.length} wards`);
 
-  // ── 10. WARD ASSIGNMENTS ───────────────────────────────────────────────────
+  // ── 11. WARD ASSIGNMENTS ───────────────────────────────────────────────────
   const cardioICU = wards[0];
   const orthoRecovery = wards[3];
   const emergencyObs = wards[5];
@@ -861,7 +1012,7 @@ async function seed() {
   genMedA.currentOccupancy = 12;
   await genMedA.save();
 
-  // ── 11. WARD MEDICATIONS ───────────────────────────────────────────────────
+  // ── 12. WARD MEDICATIONS ───────────────────────────────────────────────────
   const [assign1, assign2, assign3] = wardAssignments.filter(a => a.status === 'active');
 
   const wardMedications = await WardMedication.create([
@@ -952,7 +1103,7 @@ async function seed() {
   ]);
   console.log(`💉 Created ${wardMedications.length} ward medications`);
 
-  // ── 12. DISPENSING ─────────────────────────────────────────────────────────
+  // ── 13. DISPENSING ─────────────────────────────────────────────────────────
   const fulfilledPrescs = prescriptions.filter(p => p.status === 'fulfilled');
 
   const dispenses = await Dispense.create([
@@ -1032,14 +1183,15 @@ async function seed() {
   console.log('═══════════════════════════════════════════');
   console.log('Collections populated:');
   console.log(`  • Users:           ${1 + 1 + 1 + doctorUsers.length + patientUsers.length}`);
-  console.log(`  • Departments:     ${departments.length}`);
   console.log(`  • Doctors:         ${doctors.length}`);
   console.log(`  • Wards:           ${wards.length}`);
   console.log(`  • Medicines:       ${medicines.length}`);
   console.log(`  • Appointments:   ${appointments.length}`);
   console.log(`  • Medical Records: ${records.length}`);
+  console.log(`  • Lab Reports:     ${labReports.length}`);
   console.log(`  • Prescriptions:   ${prescriptions.length}`);
   console.log(`  • Invoices:        ${invoices.length}`);
+  console.log(`  • Payments:        ${payments.length}`);
   console.log(`  • Ward Assignments:${wardAssignments.length}`);
   console.log(`  • Ward Medications:${wardMedications.length}`);
   console.log(`  • Dispense Records:${dispenses.length}`);

@@ -1,9 +1,6 @@
 import { body, param, query } from 'express-validator';
 
 export const createWardValidation = [
-  body('departmentId')
-    .isMongoId()
-    .withMessage('Department ID must be a valid MongoDB ObjectId'),
   body('name')
     .trim()
     .notEmpty()
@@ -23,10 +20,6 @@ export const createWardValidation = [
 ];
 
 export const updateWardValidation = [
-  body('departmentId')
-    .optional()
-    .isMongoId()
-    .withMessage('Department ID must be a valid MongoDB ObjectId'),
   body('name')
     .optional()
     .trim()
@@ -68,7 +61,6 @@ export const wardIdValidation = [
 ];
 
 export const listWardsValidation = [
-  query('departmentId').optional().isMongoId(),
   query('type').optional().isIn(['general', 'private', 'icu', 'emergency']),
   query('status').optional().isIn(['available', 'full', 'maintenance']),
 ];

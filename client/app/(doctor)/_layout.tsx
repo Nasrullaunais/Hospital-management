@@ -78,7 +78,7 @@ export default function DoctorLayout() {
           options={{
             headerShown: true,
             title: 'New Patient Record',
-            headerStyle: { backgroundColor: theme.surface },
+            headerStyle: { backgroundColor: theme.background },
             headerTintColor: theme.primary,
             headerTitleStyle: { fontWeight: '600', fontSize: 16 },
             headerShadowVisible: false,
@@ -90,7 +90,7 @@ export default function DoctorLayout() {
           options={{
             headerShown: true,
             title: 'Record Info',
-            headerStyle: { backgroundColor: theme.surface },
+            headerStyle: { backgroundColor: theme.background },
             headerTintColor: theme.primary,
             headerTitleStyle: { fontWeight: '600', fontSize: 16 },
             headerShadowVisible: false,
@@ -110,7 +110,7 @@ export default function DoctorLayout() {
           options={{
             headerShown: true,
             title: 'New Lab Report',
-            headerStyle: { backgroundColor: theme.surface },
+            headerStyle: { backgroundColor: theme.background },
             headerTintColor: theme.primary,
             headerTitleStyle: { fontWeight: '600', fontSize: 16 },
             headerShadowVisible: false,
@@ -122,7 +122,7 @@ export default function DoctorLayout() {
           options={{
             headerShown: true,
             title: 'Lab Report',
-            headerStyle: { backgroundColor: theme.surface },
+            headerStyle: { backgroundColor: theme.background },
             headerTintColor: theme.primary,
             headerTitleStyle: { fontWeight: '600', fontSize: 16 },
             headerShadowVisible: false,

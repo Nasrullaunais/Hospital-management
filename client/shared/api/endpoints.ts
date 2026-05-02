@@ -15,6 +15,7 @@ export const ENDPOINTS = {
   },
   PATIENTS: {
     ME: '/patients/me',
+    SEARCH: '/patients/search',
   },
 
   // Member 2 — Doctors
@@ -67,10 +68,22 @@ export const ENDPOINTS = {
   // Member 6 — Billing
   INVOICES: {
     BASE: '/invoices',
+    STATS: '/invoices/stats',
     MY_BILLS: '/invoices/my-bills',
     BY_ID: (id: string) => `/invoices/${id}`,
     UPLOAD_RECEIPT: (id: string) => `/invoices/${id}/upload-receipt`,
     VERIFY: (id: string) => `/invoices/${id}/verify`,
+    PENDING_PATIENTS: '/invoices/pending-patients',
+    SUGGESTIONS: (patientId: string, appointmentId?: string) => {
+      const base = `/invoices/suggestions/${patientId}`;
+      return appointmentId ? `${base}?appointmentId=${appointmentId}` : base;
+    },
+  },
+  PAYMENTS: {
+    BASE: '/payments',
+    BY_INVOICE: (id: string) => `/payments/invoice/${id}`,
+    BY_ID: (id: string) => `/payments/${id}`,
+    PROCESS: (id: string) => `/payments/${id}/process`,
   },
 
   // Member 7 — Prescriptions

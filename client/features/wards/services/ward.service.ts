@@ -8,26 +8,27 @@ import type { ApiSuccessResponse } from '@/shared/types';
 import type { Ward } from '@/shared/types';
 
 export interface WardFilters {
-  departmentId?: string;
   type?: 'general' | 'private' | 'icu' | 'emergency';
   status?: 'available' | 'full' | 'maintenance';
 }
 
 export interface CreateWardPayload {
-  departmentId: string;
   name: string;
   type: 'general' | 'private' | 'icu' | 'emergency';
   totalBeds: number;
   currentOccupancy?: number;
+  location?: string;
+  phone?: string;
 }
 
 export interface UpdateWardPayload {
-  departmentId?: string;
   name?: string;
   type?: 'general' | 'private' | 'icu' | 'emergency';
   totalBeds?: number;
   currentOccupancy?: number;
   status?: 'available' | 'full' | 'maintenance';
+  location?: string;
+  phone?: string;
 }
 
 export interface UpdateBedsPayload {

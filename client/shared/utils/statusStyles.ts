@@ -11,6 +11,8 @@ export function getPaymentStatusStyle(status: string, theme: ThemeColors) {
       return { bg: theme.warningBg, text: theme.warning };
     case 'paid':
       return { bg: theme.successBg, text: theme.success };
+    case 'overdue':
+      return { bg: theme.error, text: '#FFFFFF' };
     default:
       return { bg: theme.surfaceTertiary, text: theme.textSecondary };
   }

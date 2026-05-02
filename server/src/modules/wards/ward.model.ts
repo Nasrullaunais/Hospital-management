@@ -4,8 +4,9 @@ import mongoose, { type Document, Schema } from 'mongoose';
 
 export interface IWard extends Document {
   _id: mongoose.Types.ObjectId;
-  departmentId: mongoose.Types.ObjectId;
   name: string;
+  location: string;
+  phone: string;
   type: 'general' | 'private' | 'icu' | 'emergency';
   totalBeds: number;
   currentOccupancy: number;
@@ -18,16 +19,21 @@ export interface IWard extends Document {
 
 const wardSchema = new Schema<IWard>(
   {
-    departmentId: {
-      type: Schema.Types.ObjectId,
-      ref: 'Department',
-      required: [true, 'Department ID is required'],
-    },
     name: {
       type: String,
       required: [true, 'Ward name is required'],
       trim: true,
       maxlength: [100, 'Ward name cannot exceed 100 characters'],
+    },
+    location: {
+      type: String,
+      trim: true,
+      maxlength: [200, 'Location cannot exceed 200 characters'],
+    },
+    phone: {
+      type: String,
+      trim: true,
+      maxlength: [20, 'Phone cannot exceed 20 characters'],
     },
     type: {
       type: String,
@@ -64,7 +70,6 @@ const wardSchema = new Schema<IWard>(
 );
 
 // ── Indexes ────────────────────────────────────────────────────────────────────
-wardSchema.index({ departmentId: 1 });
 wardSchema.index({ type: 1 });
 wardSchema.index({ status: 1 });
 

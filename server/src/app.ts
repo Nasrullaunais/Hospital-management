@@ -4,7 +4,6 @@ import helmet from 'helmet';
 import { randomUUID } from 'crypto';
 import path from 'path';
 import { fileURLToPath } from 'url';
-import request from 'supertest';
 import { env } from './config/env.js';
 import router from './routes/index.js';
 import { errorHandler } from './shared/middlewares/errorHandler.js';
@@ -83,8 +82,11 @@ app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
 app.use(router);
 app.use(errorHandler);
 
-// createServer wrapper for testing with inject() interface
-export function createServer() {
+// createServer wrapper for testing with inject() interface.
+// Uses dynamic import because `supertest` is a devDependency —
+// not available in the production Docker image (--production).
+export async function createServer() {
+  const { default: request } = await import('supertest');
   const agent = request.agent(app);
 
   return {

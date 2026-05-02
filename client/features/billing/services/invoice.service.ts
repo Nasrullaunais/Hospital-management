@@ -4,30 +4,62 @@
  */
 import { apiClient } from '@/shared/api/client';
 import { ENDPOINTS } from '@/shared/api/endpoints';
-import type { Invoice, PaymentStatus, ApiSuccessResponse } from '@/shared/types';
+import type {
+  Invoice,
+  InvoiceItem,
+  InvoiceStats,
+  PaymentStatus,
+  ApiSuccessResponse,
+  BillingSuggestion,
+  BillingSuggestionsResponse,
+  PendingBillingPatient,
+} from '@/shared/types';
+
+// ── Currency Formatting ────────────────────────────────────────────────────────
+
+export const formatCurrency = (amount: number): string => {
+  return `Rs. ${amount.toLocaleString('en-LK', {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  })}`;
+};
+
+// ── Create Invoice Payload ─────────────────────────────────────────────────────
 
 export interface CreateInvoicePayload {
   patientId: string;
-  totalAmount: number;
+  items: InvoiceItem[];
   appointmentId?: string;
-}
-
-export interface CreateInvoicePayloadWithOptionalAppointment extends CreateInvoicePayload {
-  appointmentId?: string;
+  discount?: number;
+  notes?: string;
 }
 
 type AssertValidAppointmentId<T extends CreateInvoicePayload> =
-  T['appointmentId'] extends undefined ? T :
-  T['appointmentId'] extends '' ? never : T;
+  T['appointmentId'] extends undefined ? T
+    : T['appointmentId'] extends '' ? never : T;
 
 export type ValidCreateInvoicePayload = AssertValidAppointmentId<CreateInvoicePayload>;
 
+// ── Filters ────────────────────────────────────────────────────────────────────
+
 export interface InvoiceFilters {
-  paymentStatus?: PaymentStatus;
+  status?: PaymentStatus;
   patientId?: string;
 }
 
+// ── Service ────────────────────────────────────────────────────────────────────
+
 export const invoiceService = {
+  /**
+   * Fetch aggregate invoice stats for the admin dashboard.
+   */
+  getInvoiceStats: async (): Promise<InvoiceStats> => {
+    const res = await apiClient.get<ApiSuccessResponse<InvoiceStats>>(
+      ENDPOINTS.INVOICES.STATS,
+    );
+    return res.data.data;
+  },
+
   /**
    * Create a new invoice for a patient. Admin only.
    */
@@ -53,11 +85,13 @@ export const invoiceService = {
    * Fetch all invoices (admin view), with optional filters.
    */
   getAllInvoices: async (filters?: InvoiceFilters): Promise<Invoice[]> => {
+    const params: Record<string, string> = {};
+    if (filters?.status) params.status = filters.status;
+    if (filters?.patientId) params.patientId = filters.patientId;
+
     const res = await apiClient.get<ApiSuccessResponse<{ invoices: Invoice[]; count: number }>>(
       ENDPOINTS.INVOICES.BASE,
-      {
-        params: filters,
-      },
+      { params },
     );
     return res.data.data.invoices;
   },
@@ -104,5 +138,25 @@ export const invoiceService = {
    */
   deleteInvoice: async (id: string): Promise<void> => {
     await apiClient.delete(ENDPOINTS.INVOICES.BY_ID(id));
+  },
+
+  /**
+   * Fetch patients with unbilled charges (for receptionist dashboard).
+   */
+  getPendingPatients: async (): Promise<PendingBillingPatient[]> => {
+    const res = await apiClient.get<ApiSuccessResponse<PendingBillingPatient[]>>(
+      ENDPOINTS.INVOICES.PENDING_PATIENTS,
+    );
+    return res.data.data;
+  },
+
+  /**
+   * Fetch billing suggestions for a patient (unbilled dispensing, appointments, etc.).
+   */
+  getSuggestions: async (patientId: string, appointmentId?: string): Promise<BillingSuggestionsResponse> => {
+    const res = await apiClient.get<ApiSuccessResponse<BillingSuggestionsResponse>>(
+      ENDPOINTS.INVOICES.SUGGESTIONS(patientId, appointmentId),
+    );
+    return res.data.data;
   },
 };

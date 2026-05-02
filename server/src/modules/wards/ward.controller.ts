@@ -2,7 +2,6 @@ import type { Request, Response, NextFunction } from 'express';
 import mongoose from 'mongoose';
 import { validationResult } from 'express-validator';
 import { Ward } from './ward.model.js';
-import { Department } from '../departments/department.model.js';
 import { ApiError } from '../../shared/utils/ApiError.js';
 
 // ── Helpers ────────────────────────────────────────────────────────────────────
@@ -22,10 +21,6 @@ export const createWard = async (req: Request, res: Response, next: NextFunction
   const errors = validationResult(req);
   if (!errors.isEmpty()) return next(new ApiError(422, 'Validation failed'));
   try {
-    // Verify department exists
-    const department = await Department.findById(req.body.departmentId);
-    if (!department) return next(ApiError.badRequest('Department not found'));
-
     const totalBeds = req.body.totalBeds;
     const currentOccupancy = req.body.currentOccupancy || 0;
     const status = autoSetWardStatus(currentOccupancy, totalBeds);
@@ -49,7 +44,6 @@ export const getWards = async (req: Request, res: Response, next: NextFunction):
   if (!errors.isEmpty()) return next(new ApiError(422, 'Validation failed'));
   try {
     const filter: Record<string, unknown> = {};
-    if (req.query.departmentId) filter.departmentId = req.query.departmentId;
     if (req.query.type) filter.type = req.query.type;
     if (req.query.status) filter.status = req.query.status;
 
@@ -59,7 +53,6 @@ export const getWards = async (req: Request, res: Response, next: NextFunction):
 
     const [wards, total] = await Promise.all([
       Ward.find(filter)
-        .populate('departmentId', 'name location')
         .sort({ name: 1 })
         .skip(skip)
         .limit(limit),
@@ -86,7 +79,7 @@ export const getWardById = async (req: Request, res: Response, next: NextFunctio
       return next(ApiError.badRequest('Invalid ward id'));
     }
 
-    const ward = await Ward.findById(wardId).populate('departmentId', 'name location phone');
+    const ward = await Ward.findById(wardId);
     if (!ward) return next(ApiError.notFound('Ward not found'));
     res.json({ success: true, data: { ward } });
   } catch (err) {
@@ -104,13 +97,7 @@ export const updateWard = async (req: Request, res: Response, next: NextFunction
       return next(ApiError.badRequest('Invalid ward id'));
     }
 
-    // If updating department, verify it exists
-    if (req.body.departmentId) {
-      const department = await Department.findById(req.body.departmentId);
-      if (!department) return next(ApiError.badRequest('Department not found'));
-    }
-
-    const allowed = ['departmentId', 'name', 'type', 'totalBeds', 'currentOccupancy', 'status'];
+    const allowed = ['name', 'type', 'totalBeds', 'currentOccupancy', 'status'];
     const updates: Record<string, unknown> = {};
     for (const key of allowed) {
       if (req.body[key] !== undefined) updates[key] = req.body[key];

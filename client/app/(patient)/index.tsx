@@ -109,12 +109,6 @@ export default function PatientDashboard() {
           </View>
           <View style={styles.gridRow}>
             <NavTile
-              title="Departments"
-              icon="grid"
-              bg={colors.primaryMuted}
-              onPress={() => router.push('/(patient)/departments')}
-            />
-            <NavTile
               title="Wards"
               icon="home"
               bg={colors.infoBg}

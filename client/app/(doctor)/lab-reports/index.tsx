@@ -8,6 +8,7 @@ import {
   StyleSheet,
   RefreshControl,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { Feather } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import Colors from '@/constants/Colors';
@@ -212,7 +213,7 @@ export default function LabReportsIndexScreen() {
   }, [colors, router]);
 
   const ListHeaderComponent = useMemo(() => (
-    <View>
+    <View style={{ paddingBottom: spacing.sm }}>
       <View style={styles.header}>
         <Text style={[styles.title, { color: colors.text }]}>Lab Reports</Text>
         <TouchableOpacity
@@ -281,14 +282,16 @@ export default function LabReportsIndexScreen() {
 
   if (loadingPatients) {
     return (
-      <View style={[styles.centered, { backgroundColor: colors.background }]}>
-        <ActivityIndicator size="large" color={colors.primary} />
-      </View>
+      <SafeAreaView edges={['top']} style={{ flex: 1, backgroundColor: colors.background }}>
+        <View style={[styles.centered, { backgroundColor: colors.background }]}>
+          <ActivityIndicator size="large" color={colors.primary} />
+        </View>
+      </SafeAreaView>
     );
   }
 
   return (
-    <View style={[styles.container, { backgroundColor: colors.background }]}>
+    <SafeAreaView edges={['top']} style={[styles.container, { backgroundColor: colors.background }]}>
       <FlatList
         data={selectedPatientId ? labReports : []}
         keyExtractor={(item) => item._id}
@@ -311,15 +314,15 @@ export default function LabReportsIndexScreen() {
         }
         showsVerticalScrollIndicator={false}
       />
-    </View>
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
   centered: { flex: 1, justifyContent: 'center', alignItems: 'center' },
-  listContainer: { paddingBottom: TAB_BAR_HEIGHT + spacing.lg },
-  emptyContainer: { flex: 1, paddingBottom: TAB_BAR_HEIGHT + spacing.lg },
+  listContainer: { paddingBottom: TAB_BAR_HEIGHT + spacing.lg, paddingHorizontal: spacing.md },
+  emptyContainer: { flex: 1, paddingBottom: TAB_BAR_HEIGHT + spacing.lg, paddingHorizontal: spacing.md },
 
   header: {
     flexDirection: 'row',
@@ -327,7 +330,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingHorizontal: spacing.md,
     paddingTop: spacing.lg,
-    paddingBottom: spacing.md,
+    paddingBottom: spacing.sm,
   },
   title: { fontSize: 24, fontWeight: '700' },
   addButton: {
@@ -346,9 +349,10 @@ const styles = StyleSheet.create({
     textTransform: 'uppercase',
     letterSpacing: 0.5,
     paddingHorizontal: spacing.md,
+    marginTop: spacing.xs,
     marginBottom: spacing.sm,
   },
-  patientList: { paddingHorizontal: spacing.md, gap: spacing.sm },
+  patientList: { paddingHorizontal: spacing.md, gap: spacing.xs, marginBottom: spacing.sm },
   patientChip: {
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.sm,
@@ -370,8 +374,7 @@ const styles = StyleSheet.create({
   reportCard: {
     borderRadius: radius.lg,
     padding: spacing.md,
-    marginHorizontal: spacing.md,
-    marginBottom: spacing.sm,
+    marginBottom: spacing.md,
     borderWidth: 1,
     ...shadows.card,
   },

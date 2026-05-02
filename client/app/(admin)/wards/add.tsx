@@ -23,8 +23,9 @@ export default function AddWardScreen() {
   const colorScheme = useColorScheme() ?? 'light';
   const colors = Colors[colorScheme];
 
-  const [departmentId, setDepartmentId] = useState('');
   const [name, setName] = useState('');
+  const [location, setLocation] = useState('');
+  const [phone, setPhone] = useState('');
   const [type, setType] = useState<typeof WARD_TYPES[number]>('general');
   const [totalBeds, setTotalBeds] = useState('');
   const [currentOccupancy, setCurrentOccupancy] = useState('0');
@@ -32,7 +33,6 @@ export default function AddWardScreen() {
 
   const handleSubmit = async () => {
     const validationErrors: string[] = [];
-    if (!departmentId.trim()) validationErrors.push('Department ID is required.');
     if (!name.trim()) validationErrors.push('Ward name is required.');
     if (!totalBeds.trim() || Number(totalBeds) <= 0) {
       validationErrors.push('Valid total beds count is required (must be greater than 0).');
@@ -54,11 +54,12 @@ export default function AddWardScreen() {
     setSubmitting(true);
     try {
       await wardService.createWard({
-        departmentId: departmentId.trim(),
         name: name.trim(),
         type,
         totalBeds: Number(totalBeds),
         currentOccupancy: Number(currentOccupancy) || 0,
+        location: location.trim() || undefined,
+        phone: phone.trim() || undefined,
       });
       Alert.alert('Success', 'Ward created successfully.', [
         { text: 'OK', onPress: () => router.back() },
@@ -106,15 +107,6 @@ export default function AddWardScreen() {
             >
               WARD DETAILS
             </Text>
-
-            <Input
-              label="Department ID"
-              placeholder="MongoDB _id of the parent department"
-              value={departmentId}
-              onChangeText={setDepartmentId}
-              autoCapitalize="none"
-              autoCorrect={false}
-            />
 
             <Input
               label="Ward Name"
@@ -180,6 +172,21 @@ export default function AddWardScreen() {
               value={currentOccupancy}
               onChangeText={setCurrentOccupancy}
               keyboardType="number-pad"
+            />
+
+            <Input
+              label="Location"
+              placeholder="e.g. Building A, 2nd Floor"
+              value={location}
+              onChangeText={setLocation}
+            />
+
+            <Input
+              label="Phone"
+              placeholder="e.g. +1-555-0123"
+              value={phone}
+              onChangeText={setPhone}
+              keyboardType="phone-pad"
             />
           </View>
 

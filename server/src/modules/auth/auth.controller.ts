@@ -206,3 +206,30 @@ export const deleteMyProfile = async (
     next(err);
   }
 };
+
+export const searchPatients = async (
+  req: Request,
+  res: Response,
+  next: NextFunction,
+): Promise<void> => {
+  try {
+    const query = (req.query.q as string) || '';
+    if (query.length < 2) {
+      res.json({ success: true, data: [] });
+      return;
+    }
+
+    const regex = new RegExp(query.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'i');
+    const patients = await User.find({
+      role: 'patient',
+      $or: [{ name: regex }, { email: regex }],
+    })
+      .select('name email phone')
+      .limit(10)
+      .lean();
+
+    res.json({ success: true, data: patients });
+  } catch (err) {
+    next(err);
+  }
+};

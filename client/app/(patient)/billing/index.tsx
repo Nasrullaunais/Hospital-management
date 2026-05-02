@@ -4,6 +4,7 @@ import {
   Text,
   FlatList,
   TouchableOpacity,
+  Pressable,
   ActivityIndicator,
   StyleSheet,
   RefreshControl,
@@ -67,7 +68,14 @@ export default function BillingScreen() {
   };
 
   const renderInvoice = ({ item }: { item: Invoice }) => (
-    <InvoiceCard invoice={item} isAdmin={isAdmin} onUpdate={handleInvoiceUpdate} />
+    <Pressable
+      onPress={() => router.push(`/(patient)/billing/${item._id}`)}
+      style={({ pressed }) => [
+        { opacity: pressed ? 0.85 : 1 },
+      ]}
+    >
+      <InvoiceCard invoice={item} isAdmin={isAdmin} userRole="patient" onUpdate={handleInvoiceUpdate} />
+    </Pressable>
   );
 
   if (loading && invoices.length === 0) {

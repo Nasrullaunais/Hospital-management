@@ -24,14 +24,13 @@ beforeAll(async () => {
   const uri = mongoServer.getUri();
   await mongoose.connect(uri);
 
-  server = createServer();
+  server = await createServer();
   await import('../../../tests/testHelper.js');
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const th = (globalThis as any).testHelper;
 
-  const dept = await th.createDepartment();
-  const ward = await th.createWard({ departmentId: dept._id });
+  const ward = await th.createWard();
   testWardId = ward._id as mongoose.Types.ObjectId;
 
   const patient = await th.createUser({ role: 'patient' });

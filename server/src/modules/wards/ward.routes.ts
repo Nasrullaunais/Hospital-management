@@ -27,7 +27,7 @@ router.post(
   createWard,
 );
 
-/** GET /api/wards — Authenticated, supports ?departmentId=, ?type=, ?status= filters */
+/** GET /api/wards — Authenticated, supports ?type=, ?status= filters */
 router.get('/', authMiddleware, listWardsValidation, getWards);
 
 /** GET /api/wards/:id — Authenticated */

@@ -7,7 +7,7 @@ import { useAuth } from '@/shared/context/AuthContext';
 import { getRoleHomeRoute } from '@/shared/constants/roleRoutes';
 import { CustomTabBar, TabItem } from '@/components/ui/CustomTabBar';
 
-const TAB_SCREENS = ['index', 'beds', 'patients', 'medications', 'profile'];
+const TAB_SCREENS = ['index', 'beds', 'patients', 'billing', 'medications', 'profile'];
 
 export default function ReceptionistLayout() {
   const colorScheme = useColorScheme() ?? 'light';
@@ -21,7 +21,8 @@ export default function ReceptionistLayout() {
     { key: 'index', title: 'Dashboard', icon: 'home' },
     { key: 'beds', title: 'Beds', icon: 'layers' },
     { key: 'patients', title: 'Patients', icon: 'users' },
-    { key: 'medications', title: 'Medications', icon: 'package' },
+    { key: 'billing', title: 'Billing', icon: 'dollar-sign' },
+    { key: 'medications', title: 'Meds', icon: 'package' },
     { key: 'profile', title: 'Profile', icon: 'user' },
   ];
 
@@ -77,6 +78,7 @@ export default function ReceptionistLayout() {
         <Stack.Screen name="index" options={{ headerShown: false }} />
         <Stack.Screen name="beds/index" options={{ headerShown: false }} />
         <Stack.Screen name="patients/index" options={{ headerShown: false }} />
+        <Stack.Screen name="billing/index" options={{ headerShown: false }} />
         <Stack.Screen name="medications/index" options={{ headerShown: false }} />
         <Stack.Screen name="profile" options={{ headerShown: false }} />
 
@@ -102,6 +104,14 @@ export default function ReceptionistLayout() {
           options={{
             headerShown: true,
             title: 'Assign Patient',
+            ...detailHeaderOptions,
+          }}
+        />
+        <Stack.Screen
+          name="billing/create"
+          options={{
+            headerShown: true,
+            title: 'New Invoice',
             ...detailHeaderOptions,
           }}
         />

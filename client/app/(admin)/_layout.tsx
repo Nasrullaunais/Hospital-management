@@ -9,14 +9,13 @@ import { CustomTabBar, TabItem } from '@/components/ui/CustomTabBar';
 import { ErrorBoundary } from '@/components/ui/ErrorBoundary';
 import { ROLES } from '@/shared/constants/roles';
 
-const TAB_KEYS = ['index', 'doctors', 'billing', 'pharmacy', 'departments', 'wards', 'profile'] as const;
+const TAB_KEYS = ['index', 'users', 'billing', 'pharmacy', 'wards', 'profile'] as const;
 
 const TAB_PATH_MAP: Record<(typeof TAB_KEYS)[number], string> = {
   index: '/(admin)',
-  doctors: '/(admin)/doctors',
+  users: '/(admin)/users',
   billing: '/(admin)/billing',
   pharmacy: '/(admin)/pharmacy',
-  departments: '/(admin)/departments',
   wards: '/(admin)/wards',
   profile: '/(admin)/profile',
 };
@@ -31,10 +30,9 @@ export default function AdminLayout() {
 
   const tabs: TabItem[] = [
     { key: 'index', title: 'Dashboard', icon: 'grid' },
-    { key: 'doctors', title: 'Users', icon: 'users' },
+    { key: 'users', title: 'Users', icon: 'users' },
     { key: 'billing', title: 'Finance', icon: 'dollar-sign' },
     { key: 'pharmacy', title: 'Inventory', icon: 'package' },
-    { key: 'departments', title: 'Depts', icon: 'layers' },
     { key: 'wards', title: 'Wards', icon: 'home' },
     { key: 'profile', title: 'Profile', icon: 'user' },
   ];
@@ -85,10 +83,9 @@ export default function AdminLayout() {
           }}
         >
           <Stack.Screen name="index" options={{ headerShown: false }} />
-          <Stack.Screen name="doctors/index" options={{ headerShown: false }} />
+          <Stack.Screen name="users/index" options={{ headerShown: false }} />
           <Stack.Screen name="billing/index" options={{ headerShown: false }} />
           <Stack.Screen name="pharmacy/index" options={{ headerShown: false }} />
-          <Stack.Screen name="departments/index" options={{ headerShown: false }} />
           <Stack.Screen name="wards/index" options={{ headerShown: false }} />
           <Stack.Screen name="profile" options={{ headerShown: false }} />
 
@@ -109,30 +106,6 @@ export default function AdminLayout() {
             options={{
               headerShown: true,
               title: 'New Doctor',
-              headerStyle: { backgroundColor: theme.surface },
-              headerTintColor: theme.primary,
-              headerTitleStyle: { fontWeight: '600', fontSize: 16 },
-              headerShadowVisible: false,
-              headerBackTitleVisible: false,
-            }}
-          />
-          <Stack.Screen
-            name="departments/[id]"
-            options={{
-              headerShown: true,
-              title: 'Department Info',
-              headerStyle: { backgroundColor: theme.surface },
-              headerTintColor: theme.primary,
-              headerTitleStyle: { fontWeight: '600', fontSize: 16 },
-              headerShadowVisible: false,
-              headerBackTitleVisible: false,
-            }}
-          />
-          <Stack.Screen
-            name="departments/add"
-            options={{
-              headerShown: true,
-              title: 'New Department',
               headerStyle: { backgroundColor: theme.surface },
               headerTintColor: theme.primary,
               headerTitleStyle: { fontWeight: '600', fontSize: 16 },
@@ -193,6 +166,30 @@ export default function AdminLayout() {
             options={{
               headerShown: true,
               title: 'New Medication',
+              headerStyle: { backgroundColor: theme.surface },
+              headerTintColor: theme.primary,
+              headerTitleStyle: { fontWeight: '600', fontSize: 16 },
+              headerShadowVisible: false,
+              headerBackTitleVisible: false,
+            }}
+          />
+          <Stack.Screen
+            name="staff/index"
+            options={{
+              headerShown: true,
+              title: 'Staff',
+              headerStyle: { backgroundColor: theme.surface },
+              headerTintColor: theme.primary,
+              headerTitleStyle: { fontWeight: '600', fontSize: 16 },
+              headerShadowVisible: false,
+              headerBackTitleVisible: false,
+            }}
+          />
+          <Stack.Screen
+            name="staff/add"
+            options={{
+              headerShown: true,
+              title: 'New Staff',
               headerStyle: { backgroundColor: theme.surface },
               headerTintColor: theme.primary,
               headerTitleStyle: { fontWeight: '600', fontSize: 16 },

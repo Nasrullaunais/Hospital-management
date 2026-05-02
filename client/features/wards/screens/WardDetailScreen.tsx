@@ -104,7 +104,7 @@ export default function WardDetailScreen() {
   }
 
   const isAdmin = user?.role === 'admin';
-  const departmentName = typeof ward.departmentId === 'object' ? ward.departmentId.name : 'Unknown';
+  const wardLocation = ward.location || 'No location';
   const occupancyPercent = Math.round((ward.currentOccupancy / ward.totalBeds) * 100);
   const initial = ward.name ? ward.name.charAt(0).toUpperCase() : 'W';
 
@@ -124,7 +124,8 @@ export default function WardDetailScreen() {
           <Text style={styles.avatarText}>{initial}</Text>
         </View>
         <Text style={[styles.name, { color: c.text }]}>{ward.name}</Text>
-        <Text style={[styles.subtitle, { color: c.textSecondary }]}>{departmentName}</Text>
+        <Text style={[styles.subtitle, { color: c.textSecondary }]}>{wardLocation}</Text>
+        <Text style={[styles.subtitle, { color: c.textSecondary }]}>{ward.phone || 'No phone'}</Text>
         <View style={styles.roleRow}>
           <View style={[styles.roleBadge, { backgroundColor: c.primaryMuted }]}>
             <Text style={[styles.roleBadgeText, { color: c.primary }]}>

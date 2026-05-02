@@ -5,6 +5,7 @@ import appointmentRoutes from '../modules/appointments/appointment.routes.js';
 import recordRoutes from '../modules/records/record.routes.js';
 import medicineRoutes from '../modules/pharmacy/medicine.routes.js';
 import invoiceRoutes from '../modules/billing/invoice.routes.js';
+import paymentRoutes from '../modules/billing/payment.routes.js';
 import prescriptionRoutes from '../modules/prescriptions/prescription.routes.js';
 import dispenseRoutes from '../modules/dispensing/dispense.routes.js';
 import wardRoutes from '../modules/wards/ward.routes.js';
@@ -56,6 +57,7 @@ router.use('/api/medicines', medicineRoutes);
 
 // Member 6: Billing
 router.use('/api/invoices', invoiceRoutes);
+router.use('/api/payments', paymentRoutes);
 
 // Member 7: Prescriptions
 router.use('/api/prescriptions', prescriptionRoutes);

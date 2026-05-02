@@ -183,7 +183,7 @@ export default function LabReportDetailScreen() {
           options={{
             title: 'Lab Report',
             headerShown: true,
-            headerStyle: { backgroundColor: colors.surface },
+            headerStyle: { backgroundColor: colors.background },
             headerTintColor: colors.primary,
             headerTitleStyle: { fontWeight: '600', fontSize: 16 },
             headerShadowVisible: false,
@@ -210,7 +210,7 @@ export default function LabReportDetailScreen() {
           options={{
             title: 'Lab Report',
             headerShown: true,
-            headerStyle: { backgroundColor: colors.surface },
+            headerStyle: { backgroundColor: colors.background },
             headerTintColor: colors.primary,
             headerTitleStyle: { fontWeight: '600', fontSize: 16 },
             headerShadowVisible: false,
@@ -258,7 +258,7 @@ export default function LabReportDetailScreen() {
         options={{
           title: 'Lab Report',
           headerShown: true,
-          headerStyle: { backgroundColor: colors.surface },
+          headerStyle: { backgroundColor: colors.background },
           headerTintColor: colors.primary,
           headerTitleStyle: { fontWeight: '600', fontSize: 16 },
           headerShadowVisible: false,
@@ -612,7 +612,8 @@ const styles = StyleSheet.create({
   content: {
     padding: spacing.md,
     paddingBottom: TAB_BAR_HEIGHT + spacing.lg,
-    gap: 12,
+    paddingTop: spacing.xs,
+    gap: spacing.md,
   },
   profileCard: {
     borderRadius: radius.lg,
@@ -656,13 +657,14 @@ const styles = StyleSheet.create({
   statusRow: {
     flexDirection: 'row',
     alignItems: 'center',
+    paddingHorizontal: spacing.md,
   },
   doctorRow: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
     borderRadius: radius.md,
-    padding: 12,
+    padding: spacing.md,
   },
   doctorName: {
     fontSize: 13,
@@ -681,7 +683,7 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     textTransform: 'uppercase',
     letterSpacing: 0.5,
-    marginBottom: 12,
+    marginBottom: spacing.sm,
   },
   cardValue: {
     fontSize: 15,
@@ -701,7 +703,7 @@ const styles = StyleSheet.create({
   tableRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: 10,
+    paddingVertical: 12,
     paddingHorizontal: 4,
     borderBottomWidth: StyleSheet.hairlineWidth,
   },
@@ -720,8 +722,8 @@ const styles = StyleSheet.create({
     fontWeight: '700',
   },
   actionsSection: {
-    gap: 12,
-    marginTop: 8,
+    gap: spacing.md,
+    marginTop: spacing.sm,
   },
   actionButton: {
     flexDirection: 'row',
@@ -730,7 +732,7 @@ const styles = StyleSheet.create({
     gap: 8,
     borderWidth: 1,
     borderRadius: radius.md,
-    paddingVertical: 14,
+    paddingVertical: spacing.md,
   },
   actionButtonText: {
     fontWeight: '600',

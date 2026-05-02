@@ -70,7 +70,7 @@ export default function AdminDashboard() {
 
         <View style={styles.statsRow}>
           <Pressable
-            onPress={navigateTo('/(admin)/doctors')}
+            onPress={navigateTo('/(admin)/users')}
             style={({ pressed }) => [
               styles.statCard,
               shadows.card,
@@ -122,7 +122,7 @@ export default function AdminDashboard() {
           </Pressable>
 
           <Pressable
-            onPress={navigateTo('/(admin)/departments')}
+            onPress={navigateTo('/(admin)/wards')}
             style={({ pressed }) => [
               styles.statCard,
               shadows.card,
@@ -231,7 +231,7 @@ export default function AdminDashboard() {
           </Pressable>
 
           <Pressable
-            onPress={navigateTo('/(admin)/departments')}
+            onPress={navigateTo('/(admin)/wards')}
             style={({ pressed }) => [
               styles.actionTile,
               styles.actionSecondary,
@@ -255,14 +255,43 @@ export default function AdminDashboard() {
               Manage Wards
             </Text>
             <Text style={[styles.actionSub, { color: colors.textTertiary }]}>
-              Department overview
+              Ward overview
+            </Text>
+          </Pressable>
+
+          <Pressable
+            onPress={navigateTo('/(admin)/staff/add')}
+            style={({ pressed }) => [
+              styles.actionTile,
+              styles.actionSecondary,
+              shadows.card,
+              {
+                backgroundColor: colors.surface,
+                shadowColor: '#1B2A4A',
+                opacity: pressed ? 0.88 : 1,
+              },
+            ]}
+          >
+            <View
+              style={[
+                styles.actionIconWrap,
+                { backgroundColor: colors.primaryMuted },
+              ]}
+            >
+              <Feather name="user-check" size={22} color={colors.primary} />
+            </View>
+            <Text style={[styles.actionTitle, { color: colors.text }]}>
+              Add Staff
+            </Text>
+            <Text style={[styles.actionSub, { color: colors.textTertiary }]}>
+              Receptionist / Pharmacist
             </Text>
           </Pressable>
         </View>
 
         <Card title="Operations" subtitle="System management tools">
           <Pressable
-            onPress={navigateTo('/(admin)/doctors')}
+            onPress={navigateTo('/(admin)/users')}
             style={({ pressed }) => [
               styles.opsRow,
               {
@@ -337,7 +366,32 @@ export default function AdminDashboard() {
           <View style={[styles.opsDivider, { backgroundColor: colors.divider }]} />
 
           <Pressable
-            onPress={navigateTo('/(admin)/departments')}
+            onPress={navigateTo('/(admin)/staff')}
+            style={({ pressed }) => [
+              styles.opsRow,
+              {
+                backgroundColor: pressed
+                  ? colors.surfaceTertiary
+                  : 'transparent',
+              },
+            ]}
+          >
+            <Feather name="users" size={18} color={colors.primary} />
+            <Text style={[styles.opsRowText, { color: colors.text }]}>
+              Staff Directory
+            </Text>
+            <View style={styles.opsSpacer} />
+            <Feather
+              name="chevron-right"
+              size={18}
+              color={colors.textTertiary}
+            />
+          </Pressable>
+
+          <View style={[styles.opsDivider, { backgroundColor: colors.divider }]} />
+
+          <Pressable
+            onPress={navigateTo('/(admin)/wards')}
             style={({ pressed }) => [
               styles.opsRow,
               styles.opsRowLast,
@@ -350,7 +404,7 @@ export default function AdminDashboard() {
           >
             <Feather name="grid" size={18} color={colors.primary} />
             <Text style={[styles.opsRowText, { color: colors.text }]}>
-              Department Management
+              Ward Management
             </Text>
             <View style={styles.opsSpacer} />
             <Feather

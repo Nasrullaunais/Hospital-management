@@ -5,16 +5,15 @@
  *
  * Seeding order (respects ObjectId dependencies):
  *  1. Users (register) — creates admin, doctors, patients, pharmacist, receptionist
- *  2. Departments
- *  3. Wards
- *  4. Doctors (requires userId + multipart file) — user role must be 'doctor'
- *  5. Appointments (requires patientId + doctorId from JWT)
- *  6. Medical Records (requires doctorId from JWT + patientId)
- *  7. Medicines (requires multipart file)
- *  8. Prescriptions (requires patientId + doctorId from JWT)
- *  9. Invoices (requires patientId)
- * 10. Ward Assignments (requires patientId + wardId)
- * 11. Ward Medications (requires wardAssignmentId + medicineId)
+ *  2. Wards
+ *  3. Doctors (requires userId + multipart file) — user role must be 'doctor'
+ *  4. Appointments (requires patientId + doctorId from JWT)
+ *  5. Medical Records (requires doctorId from JWT + patientId)
+ *  6. Medicines (requires multipart file)
+ *  7. Prescriptions (requires patientId + doctorId from JWT)
+ *  8. Invoices (requires patientId)
+ *  9. Ward Assignments (requires patientId + wardId)
+ * 10. Ward Medications (requires wardAssignmentId + medicineId)
  */
 
 import { FormData } from 'undici';
@@ -40,7 +39,6 @@ let patientTokens: TokenPair[] = [];
 let pharmacistToken: TokenPair | null = null;
 let receptionistToken: TokenPair | null = null;
 
-const departments: CreatedEntity[] = [];
 const wards: CreatedEntity[] = [];
 const doctors: CreatedEntity[] = [];
 const appointments: CreatedEntity[] = [];
@@ -104,7 +102,7 @@ function getImageUrl(seed: string, width = 400, height = 300): string {
 }
 
 async function seedUsers(): Promise<void> {
-  console.log('\n[1/11] Seeding Users...');
+  console.log('\n[1/10] Seeding Users...');
 
   await apiPost<{ token: string; user: CreatedEntity }>(
     '/auth/register',
@@ -223,55 +221,32 @@ async function updateDoctorRoles(): Promise<void> {
   }
 }
 
-async function seedDepartments(): Promise<void> {
-  console.log('\n[2/11] Seeding Departments...');
-
-  const deptData = [
-    { name: 'Cardiology', description: 'Heart and cardiovascular system care', location: 'Building A, Floor 2', phone: '555-0101' },
-    { name: 'Neurology', description: 'Brain and nervous system disorders', location: 'Building A, Floor 3', phone: '555-0102' },
-    { name: 'Orthopedics', description: 'Bone, joint, and muscle treatment', location: 'Building B, Floor 1', phone: '555-0103' },
-    { name: 'Pediatrics', description: 'Medical care for infants, children, and adolescents', location: 'Building B, Floor 2', phone: '555-0104' },
-    { name: 'Dermatology', description: 'Skin, hair, and nail conditions', location: 'Building C, Floor 1', phone: '555-0105' },
-    { name: 'General Medicine', description: 'Primary care and general health services', location: 'Building A, Floor 1', phone: '555-0106' },
-    { name: 'Emergency', description: '24/7 emergency and trauma care', location: 'Building D, Ground Floor', phone: '555-0100' },
-    { name: 'Pharmacy', description: 'In-house pharmacy and medication dispensing', location: 'Building A, Floor 1', phone: '555-0107' },
-  ];
-
-  for (const d of deptData) {
-    const wrapped = await apiPost<{ department: CreatedEntity }>('/departments', d, adminToken);
-    const created = wrapped.department;
-    departments.push(created);
-    console.log(`  ✓ ${d.name}`);
-    await delay(200);
-  }
-}
-
 async function seedWards(): Promise<void> {
-  console.log('\n[3/11] Seeding Wards...');
+  console.log('\n[2/10] Seeding Wards...');
 
   const wardData = [
-    { deptIdx: 0, name: 'Cardiac ICU', type: 'icu', beds: 8 },
-    { deptIdx: 0, name: 'Cardiac Ward A', type: 'private', beds: 20 },
-    { deptIdx: 1, name: 'Neuro ICU', type: 'icu', beds: 6 },
-    { deptIdx: 1, name: 'Neuro Ward', type: 'general', beds: 24 },
-    { deptIdx: 2, name: 'Ortho Ward 1', type: 'general', beds: 30 },
-    { deptIdx: 2, name: 'Ortho Private', type: 'private', beds: 12 },
-    { deptIdx: 3, name: 'Pediatric Ward', type: 'general', beds: 25 },
-    { deptIdx: 3, name: 'NICU', type: 'icu', beds: 10 },
-    { deptIdx: 4, name: 'Derma Ward', type: 'general', beds: 15 },
-    { deptIdx: 5, name: 'General Ward A', type: 'general', beds: 40 },
-    { deptIdx: 5, name: 'Private Rooms B', type: 'private', beds: 20 },
-    { deptIdx: 6, name: 'Emergency Beds', type: 'emergency', beds: 30 },
-    { deptIdx: 6, name: 'Critical Care', type: 'icu', beds: 10 },
+    { name: 'Cardiac ICU', type: 'icu', beds: 8, location: 'Building A, Floor 2', phone: '555-0100' },
+    { name: 'Cardiac Ward A', type: 'private', beds: 20, location: 'Building A, Floor 2', phone: '555-0100' },
+    { name: 'Neuro ICU', type: 'icu', beds: 6, location: 'Building A, Floor 3', phone: '555-0100' },
+    { name: 'Neuro Ward', type: 'general', beds: 24, location: 'Building A, Floor 3', phone: '555-0100' },
+    { name: 'Ortho Ward 1', type: 'general', beds: 30, location: 'Building B, Floor 1', phone: '555-0100' },
+    { name: 'Ortho Private', type: 'private', beds: 12, location: 'Building B, Floor 1', phone: '555-0100' },
+    { name: 'Pediatric Ward', type: 'general', beds: 25, location: 'Building B, Floor 2', phone: '555-0100' },
+    { name: 'NICU', type: 'icu', beds: 10, location: 'Building B, Floor 2', phone: '555-0100' },
+    { name: 'Derma Ward', type: 'general', beds: 15, location: 'Building C, Floor 1', phone: '555-0100' },
+    { name: 'General Ward A', type: 'general', beds: 40, location: 'Building A, Floor 1', phone: '555-0100' },
+    { name: 'Private Rooms B', type: 'private', beds: 20, location: 'Building A, Floor 1', phone: '555-0100' },
+    { name: 'Emergency Beds', type: 'emergency', beds: 30, location: 'Building D, Ground Floor', phone: '555-0100' },
+    { name: 'Critical Care', type: 'icu', beds: 10, location: 'Building D, Ground Floor', phone: '555-0100' },
   ];
 
   for (const w of wardData) {
-    const dept = departments[w.deptIdx];
     const payload = {
-      departmentId: dept._id,
       name: w.name,
       type: w.type,
       totalBeds: w.beds,
+      location: w.location,
+      phone: w.phone,
     };
     const created = await apiPost<CreatedEntity>('/wards', payload, adminToken);
     wards.push(created);
@@ -281,7 +256,7 @@ async function seedWards(): Promise<void> {
 }
 
 async function seedDoctors(): Promise<void> {
-  console.log('\n[4/11] Seeding Doctors (profiles)...');
+  console.log('\n[3/10] Seeding Doctors (profiles)...');
 
   const doctorSpecs = [
     { userIdx: 0, specialization: 'Cardiology', experienceYears: 12, fee: 350 },
@@ -312,7 +287,7 @@ async function seedDoctors(): Promise<void> {
 }
 
 async function seedAppointments(): Promise<void> {
-  console.log('\n[5/11] Seeding Appointments...');
+  console.log('\n[4/10] Seeding Appointments...');
 
   const apptData = [
     { patientIdx: 0, doctorIdx: 0, date: '2026-05-01T09:00:00Z', reason: 'Chest pain and shortness of breath' },
@@ -347,7 +322,7 @@ async function seedAppointments(): Promise<void> {
 }
 
 async function seedMedicalRecords(): Promise<void> {
-  console.log('\n[6/11] Seeding Medical Records...');
+  console.log('\n[5/10] Seeding Medical Records...');
 
   const recordData = [
     { patientIdx: 0, doctorIdx: 0, apptIdx: 0, diagnosis: 'Hypertension Stage 1 - slightly elevated blood pressure requiring lifestyle modifications', prescription: 'Lisinopril 10mg once daily, Low sodium diet' },
@@ -382,7 +357,7 @@ async function seedMedicalRecords(): Promise<void> {
 }
 
 async function seedMedicines(): Promise<void> {
-  console.log('\n[7/11] Seeding Medicines...');
+  console.log('\n[6/10] Seeding Medicines...');
 
   const medicineData = [
     { name: 'Amoxicillin 500mg', category: 'Antibiotic', price: 8.50, stock: 500, expiry: '2027-06-30', seed: 'amoxicillin' },
@@ -438,7 +413,7 @@ async function seedMedicines(): Promise<void> {
 }
 
 async function seedPrescriptions(): Promise<void> {
-  console.log('\n[8/11] Seeding Prescriptions...');
+  console.log('\n[7/10] Seeding Prescriptions...');
 
   if (medicines.length === 0) {
     console.log('  ⚠ Skipping prescriptions - no medicines created');
@@ -491,7 +466,7 @@ async function seedPrescriptions(): Promise<void> {
 }
 
 async function seedInvoices(): Promise<void> {
-  console.log('\n[9/11] Seeding Invoices...');
+  console.log('\n[8/10] Seeding Invoices...');
 
   const invoiceData = [
     { patientIdx: 0, apptIdx: 0, amount: 350, status: 'Paid' },
@@ -525,7 +500,7 @@ async function seedInvoices(): Promise<void> {
 }
 
 async function seedWardAssignments(): Promise<void> {
-  console.log('\n[10/11] Seeding Ward Assignments...');
+  console.log('\n[9/10] Seeding Ward Assignments...');
 
   const assignmentData = [
     { patientIdx: 0, wardIdx: 0, bed: 1, admit: '2026-04-20', discharge: '2026-04-27' },
@@ -554,7 +529,7 @@ async function seedWardAssignments(): Promise<void> {
 }
 
 async function seedWardMedications(): Promise<void> {
-  console.log('\n[11/11] Seeding Ward Medications...');
+  console.log('\n[10/10] Seeding Ward Medications...');
 
   if (medicines.length === 0 || wardAssignments.length === 0) {
     console.log('  ⚠ Skipping ward medications');
@@ -607,9 +582,6 @@ async function main() {
     await createAdminUser();
     await delay(500);
 
-    await seedDepartments();
-    await delay(500);
-
     await seedWards();
     await delay(500);
 
@@ -642,7 +614,6 @@ async function main() {
 
     console.log('\n── Summary ──────────────────────────────────────────────────');
     console.log(`  Users:        ${1 + doctorTokens.length + 1 + 1 + patientTokens.length}`);
-    console.log(`  Departments:  ${departments.length}`);
     console.log(`  Wards:        ${wards.length}`);
     console.log(`  Doctors:      ${doctors.length}`);
     console.log(`  Appointments:  ${appointments.length}`);

@@ -180,7 +180,7 @@ export default function RecordDetailScreen() {
         options={{
           title: 'Record Info',
           headerShown: true,
-          headerStyle: { backgroundColor: colors.surface },
+          headerStyle: { backgroundColor: colors.background },
           headerTintColor: colors.primary,
           headerTitleStyle: { fontWeight: '600', fontSize: 16 },
           headerShadowVisible: false,

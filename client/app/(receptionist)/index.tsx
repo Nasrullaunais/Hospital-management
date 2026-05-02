@@ -13,6 +13,8 @@ import { Feather } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { Card, Button, Badge, ErrorState, EmptyState } from '@/components/ui';
 import { wardReceptionistService, type WardStats, type WardAssignment } from '@/features/wardReceptionist/services/wardReceptionist.service';
+import { invoiceService } from '@/features/billing/services/invoice.service';
+import type { PendingBillingPatient } from '@/shared/types';
 import Colors from '@/constants/Colors';
 import { useColorScheme } from '@/components/useColorScheme';
 import { spacing, radius, shadows } from '@/constants/ThemeTokens';
@@ -37,6 +39,9 @@ export default function WardDashboardScreen() {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  const [pendingBilling, setPendingBilling] = useState<PendingBillingPatient[]>([]);
+  const [pendingBillingLoading, setPendingBillingLoading] = useState(false);
 
   const fetchData = useCallback(async () => {
     try {
@@ -67,6 +72,14 @@ export default function WardDashboardScreen() {
         .sort((a, b) => new Date(a.expectedDischarge).getTime() - new Date(b.expectedDischarge).getTime());
 
       setUpcomingDischarges(discharges);
+
+      // Fetch pending billing patients
+      try {
+        const billingData = await invoiceService.getPendingPatients();
+        setPendingBilling(billingData);
+      } catch {
+        // Silent - billing section is optional
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to load dashboard data.');
     }
@@ -233,6 +246,72 @@ export default function WardDashboardScreen() {
             ))
           )}
         </Card>
+
+        {/* Ready for Billing */}
+        {pendingBilling.length > 0 && (
+          <Card style={styles.sectionCard} testID="ready-for-billing">
+            <View style={styles.sectionHeader}>
+              <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                <View style={[styles.sectionIconContainer, { backgroundColor: theme.warningBg }]}>
+                  <Feather name="dollar-sign" size={20} color={theme.warning} />
+                </View>
+                <Text style={[styles.sectionTitle, { color: theme.text }]}>Ready for Billing</Text>
+                <Badge label={String(pendingBilling.length)} variant="warning" style={{ marginLeft: spacing.sm }} />
+              </View>
+            </View>
+
+            {pendingBilling.map((patient) => (
+              <TouchableOpacity
+                key={patient.patientId}
+                onPress={() => router.push({
+                  pathname: '/(receptionist)/billing/create',
+                  params: { patientId: patient.patientId, patientName: patient.patientName, patientEmail: patient.patientEmail }
+                })}
+                activeOpacity={0.7}
+                style={{
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  paddingVertical: spacing.sm,
+                  borderTopWidth: 1,
+                  borderTopColor: theme.divider,
+                }}
+              >
+                <View style={{ flex: 1 }}>
+                  <Text style={{ fontWeight: '600', fontSize: 15, color: theme.text }}>{patient.patientName}</Text>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 2 }}>
+                    {patient.discharged && (
+                      <View style={{ flexDirection: 'row', alignItems: 'center', marginRight: spacing.sm }}>
+                        <Feather name="log-out" size={10} color={theme.warning} style={{ marginRight: 2 }} />
+                        <Text style={{ fontSize: 11, color: theme.warning }}>Discharged</Text>
+                      </View>
+                    )}
+                    {patient.wardName && (
+                      <Text style={{ fontSize: 11, color: theme.textTertiary }}>{patient.wardName}</Text>
+                    )}
+                  </View>
+                  <Text style={{ fontSize: 11, color: theme.textSecondary, marginTop: 2 }}>
+                    {patient.unbilledCount} unbilled item{patient.unbilledCount > 1 ? 's' : ''} &middot; {patient.unbilledSources.map(s => s.replace(/_/g, ' ')).join(', ')}
+                  </Text>
+                </View>
+                <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                  <Text style={{ fontSize: 11, color: theme.textTertiary, marginRight: spacing.sm }}>
+                    {new Date(patient.lastActivity).toLocaleDateString()}
+                  </Text>
+                  <Feather name="chevron-right" size={18} color={theme.textTertiary} />
+                </View>
+              </TouchableOpacity>
+            ))}
+          </Card>
+        )}
+
+        {!pendingBillingLoading && pendingBilling.length === 0 && (
+          <Card style={styles.sectionCard}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', padding: spacing.sm }}>
+              <Feather name="check-circle" size={16} color={theme.success} style={{ marginRight: spacing.sm }} />
+              <Text style={{ fontSize: 13, color: theme.textSecondary }}>All patients billed. No pending charges.</Text>
+            </View>
+          </Card>
+        )}
 
         {/* Quick Actions */}
         <Card title="Quick Actions" style={styles.sectionCard}>

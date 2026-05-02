@@ -1,4 +1,4 @@
-# Module: Departments & Wards
+# Module: Wards
 
 **Assigned to:** Member X — Phase 2
 
@@ -6,7 +6,7 @@
 
 ## Scope
 
-Manage hospital departments and wards, including department details, head doctors, and ward management with bed tracking.
+Manage hospital wards with bed tracking. Wards are standalone entities categorized by type (general, private, icu, emergency).
 
 ---
 
@@ -38,7 +38,6 @@ Manage hospital departments and wards, including department details, head doctor
 
 #### Query Filters (GET /api/wards)
 ```
-?departmentId=65abc123...
 ?type=general
 ?type=private
 ?type=icu
@@ -54,8 +53,9 @@ Manage hospital departments and wards, including department details, head doctor
 
 ```typescript
 {
-  departmentId: ObjectId    // required, ref: Department
   name: string              // required, max 100 chars
+  location: string          // optional, max 200 chars
+  phone: string             // optional, max 20 chars
   type: 'general' | 'private' | 'icu' | 'emergency'
   totalBeds: number         // required, min: 1
   currentOccupancy: number  // optional, min: 0, max: totalBeds

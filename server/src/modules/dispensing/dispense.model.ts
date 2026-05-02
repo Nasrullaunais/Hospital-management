@@ -1,4 +1,24 @@
-import mongoose from 'mongoose';
+import mongoose, { type Document, Schema } from 'mongoose';
+
+export interface IDispense extends Document {
+  _id: mongoose.Types.ObjectId;
+  prescriptionId: mongoose.Types.ObjectId;
+  patientId: mongoose.Types.ObjectId;
+  pharmacistId: mongoose.Types.ObjectId;
+  dispensedItems: Array<{
+    medicineId: mongoose.Types.ObjectId;
+    medicineName: string;
+    dosage?: string;
+    quantityPrescribed: number;
+    quantityDispensed: number;
+    instructions?: string;
+  }>;
+  status: 'fulfilled' | 'partial' | 'cancelled';
+  fulfilledAt: Date;
+  invoiceId?: mongoose.Types.ObjectId | null;
+  createdAt: Date;
+  updatedAt: Date;
+}
 
 const dispensedItemSchema = new mongoose.Schema(
   {
@@ -20,6 +40,7 @@ const dispenseSchema = new mongoose.Schema(
     dispensedItems: { type: [dispensedItemSchema], required: true },
     status: { type: String, enum: ['fulfilled', 'partial', 'cancelled'], default: 'fulfilled' },
     fulfilledAt: { type: Date, default: Date.now },
+    invoiceId: { type: Schema.Types.ObjectId, ref: 'Invoice', default: null },
   },
   { timestamps: true },
 );
@@ -29,5 +50,6 @@ dispenseSchema.index({ patientId: 1, fulfilledAt: -1 });
 dispenseSchema.index({ pharmacistId: 1, fulfilledAt: -1 });
 dispenseSchema.index({ pharmacistId: 1 });
 dispenseSchema.index({ prescriptionId: 1 });
+dispenseSchema.index({ invoiceId: 1 });
 
-export const Dispense = mongoose.model('Dispense', dispenseSchema);
+export const Dispense = mongoose.model<IDispense>('Dispense', dispenseSchema);

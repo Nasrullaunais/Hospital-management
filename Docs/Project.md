@@ -265,7 +265,7 @@ This is a full-stack Hospital Management System designed with the following prin
 
 ---
 
-### Phase 6: Billing, Insurance & Deployment (Member 6)
+### Phase 6: Billing & Deployment (Member 6)
 
 **Goal**: Handle hospital finances and ensure the system is live on the internet.
 

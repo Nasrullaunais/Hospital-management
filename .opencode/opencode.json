@@ -1,19 +1,11 @@
 {
   "$schema": "https://opencode.ai/config.json",
   "mcp": {
-    "github": {
-      "type": "local",
-      "command": ["npx", "-y", "@modelcontextprotocol/server-github"],
-      "enabled": true,
-      "environment": {
-        "GITHUB_TOKEN": "{env:GITHUB_TOKEN}"
-      }
-    },
     "mongodb": {
       "type": "local",
       "command": ["npx", "-y", "@mongodb-js/mongodb-mcp-server"],
       "environment": {
-        "MDB_MCP_CONNECTION_STRING": "mongodb://admin:leo12345@localhost:27017/hospital-management?authSource=admin"
+        "MDB_MCP_CONNECTION_STRING": "mongodb+srv://it24101774_db_user:leo15806@hospital-management-clu.0v47ubw.mongodb.net/?appName=hospital-management-cluster"
       }
     },
     "MiniMax": {
@@ -26,19 +18,5 @@
       "enabled": true
     }
   },
-  "plugin": [
-    "list"
-  ]
-
+  "plugin": ["list"]
 }
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-

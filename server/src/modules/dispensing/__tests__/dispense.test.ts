@@ -21,7 +21,7 @@ beforeAll(async () => {
   mongoServer = await MongoMemoryServer.create();
   const uri = mongoServer.getUri();
   await mongoose.connect(uri);
-  server = createServer();
+  server = await createServer();
   await import('../../../tests/testHelper.js');
   testPatient = await global.testHelper.createUser({ role: 'patient' });
   testDoctor = await global.testHelper.createUser({ role: 'doctor' });

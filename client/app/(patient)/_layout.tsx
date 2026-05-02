@@ -111,18 +111,6 @@ export default function PatientLayout() {
           }}
         />
         <Stack.Screen
-          name="departments/index"
-          options={{
-            headerShown: true,
-            title: 'Departments',
-            headerTintColor: theme.primary,
-            headerTitleStyle: { fontWeight: '600', fontSize: 16 },
-            headerStyle: { backgroundColor: theme.surface },
-            headerShadowVisible: false,
-            headerBackTitleVisible: false,
-          }}
-        />
-        <Stack.Screen
           name="wards/index"
           options={{
             headerShown: true,
@@ -183,15 +171,40 @@ export default function PatientLayout() {
           }}
         />
         <Stack.Screen
-          name="departments/[id]"
+          name="billing/pay/[id]"
           options={{
             headerShown: true,
-            title: 'Department Info',
+            title: 'Make Payment',
             headerTintColor: theme.primary,
             headerTitleStyle: { fontWeight: '600', fontSize: 16 },
             headerStyle: { backgroundColor: theme.surface },
             headerShadowVisible: false,
             headerBackTitleVisible: false,
+          }}
+        />
+        <Stack.Screen
+          name="billing/pay/confirm/[id]"
+          options={{
+            headerShown: true,
+            title: 'Confirm Payment',
+            headerTintColor: theme.primary,
+            headerTitleStyle: { fontWeight: '600', fontSize: 16 },
+            headerStyle: { backgroundColor: theme.surface },
+            headerShadowVisible: false,
+            headerBackTitleVisible: false,
+          }}
+        />
+        <Stack.Screen
+          name="billing/pay/success/[id]"
+          options={{
+            headerShown: true,
+            title: 'Payment',
+            headerTintColor: theme.primary,
+            headerTitleStyle: { fontWeight: '600', fontSize: 16 },
+            headerStyle: { backgroundColor: theme.surface },
+            headerShadowVisible: false,
+            headerBackTitleVisible: false,
+            headerBackVisible: false,
           }}
         />
         <Stack.Screen

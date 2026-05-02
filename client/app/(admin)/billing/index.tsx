@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useState, useMemo } from 'react';
+import React, { useCallback, useEffect, useState, useMemo, useRef } from 'react';
 import { ROLES } from '@/shared/constants/roles';
 import {
   View,
@@ -8,6 +8,7 @@ import {
   ActivityIndicator,
   StyleSheet,
   RefreshControl,
+  ScrollView,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Feather } from '@expo/vector-icons';
@@ -15,10 +16,21 @@ import { useRouter } from 'expo-router';
 import Colors from '@/constants/Colors';
 import { useColorScheme } from '@/components/useColorScheme';
 import { invoiceService } from '@/features/billing/services/invoice.service';
-import { InvoiceCard } from '@/features/billing/components';
+import { InvoiceCard, StatsCard } from '@/features/billing/components';
 import { useAuth } from '@/shared/context/AuthContext';
 import { spacing, radius, shadows, typography } from '@/constants/ThemeTokens';
-import type { Invoice } from '@/shared/types';
+import type { Invoice, PaymentStatus } from '@/shared/types';
+
+type FilterOption = PaymentStatus | 'All';
+const FILTER_OPTIONS: FilterOption[] = ['All', 'Unpaid', 'Pending Verification', 'Paid', 'Overdue'];
+
+const FILTER_COLORS: Record<FilterOption, { chip: string; bg: string }> = {
+  All: { chip: 'primary', bg: 'primaryMuted' },
+  Unpaid: { chip: 'error', bg: 'errorBg' },
+  'Pending Verification': { chip: 'warning', bg: 'warningBg' },
+  Paid: { chip: 'success', bg: 'successBg' },
+  Overdue: { chip: 'error', bg: 'errorBg' },
+};
 
 const makeStyles = (colorScheme: 'light' | 'dark') => StyleSheet.create({
   container: { flex: 1, backgroundColor: Colors[colorScheme].surfaceTertiary },
@@ -34,7 +46,7 @@ const makeStyles = (colorScheme: 'light' | 'dark') => StyleSheet.create({
     alignItems: 'center',
     padding: spacing.sm,
   },
-  listContainer: { padding: spacing.md },
+  listContainer: { paddingHorizontal: spacing.md, paddingBottom: spacing.xl },
   emptyContainer: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: spacing.lg },
   header: {
     fontSize: typography.xl,
@@ -59,6 +71,32 @@ const makeStyles = (colorScheme: 'light' | 'dark') => StyleSheet.create({
   errorText: { fontSize: typography.sm, marginBottom: spacing.sm },
   retryText: { fontWeight: typography.semibold, fontSize: typography.sm },
   emptyText: { color: Colors[colorScheme].textTertiary, fontSize: typography.sm, textAlign: 'center' },
+
+  // Filter chips
+  filterContainer: {
+    marginBottom: spacing.md,
+  },
+  filterLabel: {
+    fontSize: 12,
+    fontWeight: '600',
+    textTransform: 'uppercase',
+    letterSpacing: 0.8,
+    marginBottom: spacing.sm,
+  },
+  chipsRow: {
+    flexDirection: 'row',
+    gap: spacing.sm,
+  },
+  chip: {
+    borderRadius: radius.full,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+    borderWidth: 1,
+  },
+  chipText: {
+    fontSize: 13,
+    fontWeight: '600',
+  },
 });
 
 export default function BillingScreen() {
@@ -66,34 +104,54 @@ export default function BillingScreen() {
   const router = useRouter();
   const isAdmin = user?.role === ROLES.ADMIN;
   const colorScheme = useColorScheme() ?? 'light';
+  const theme = Colors[colorScheme];
   const styles = useMemo(() => makeStyles(colorScheme), [colorScheme]);
 
   const [invoices, setInvoices] = useState<Invoice[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [activeFilter, setActiveFilter] = useState<FilterOption>('All');
 
-  const fetchInvoices = useCallback(async () => {
+  // Used to force StatsCard re-fetch on pull-to-refresh
+  const [refreshKey, setRefreshKey] = useState(0);
+
+  const fetchInvoices = useCallback(async (filter?: FilterOption) => {
     try {
       setError(null);
-      const data = isAdmin
-        ? await invoiceService.getAllInvoices()
-        : await invoiceService.getMyBills();
+      let data: Invoice[];
+      if (isAdmin) {
+        const filters = filter && filter !== 'All' ? { status: filter as PaymentStatus } : undefined;
+        data = await invoiceService.getAllInvoices(filters);
+      } else {
+        data = await invoiceService.getMyBills();
+      }
       setInvoices(data);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to load invoices.');
     }
   }, [isAdmin]);
 
-  useEffect(() => {
+  const loadInitial = useCallback(async () => {
     setLoading(true);
-    fetchInvoices().finally(() => setLoading(false));
-  }, [fetchInvoices]);
+    await fetchInvoices(activeFilter);
+    setLoading(false);
+  }, [fetchInvoices, activeFilter]);
+
+  useEffect(() => {
+    loadInitial();
+  }, [loadInitial]);
+
+  const handleFilterChange = (filter: FilterOption) => {
+    setActiveFilter(filter);
+    fetchInvoices(filter);
+  };
 
   const onRefresh = async () => {
     setRefreshing(true);
+    setRefreshKey((k) => k + 1);
     try {
-      await fetchInvoices();
+      await fetchInvoices(activeFilter);
     } finally {
       setRefreshing(false);
     }
@@ -108,13 +166,64 @@ export default function BillingScreen() {
   };
 
   const renderInvoice = ({ item }: { item: Invoice }) => (
-    <InvoiceCard invoice={item} isAdmin={isAdmin} onUpdate={handleInvoiceUpdate} />
+    <InvoiceCard invoice={item} isAdmin={isAdmin} userRole="admin" onUpdate={handleInvoiceUpdate} />
+  );
+
+  const renderListHeader = () => (
+    <View>
+      {/* Page title */}
+      <Text style={styles.header}>{isAdmin ? 'All Invoices' : 'My Bills'}</Text>
+
+      {/* Stats card - only for admin */}
+      {isAdmin && <StatsCard key={refreshKey} />}
+
+      {/* Filter chips - only for admin */}
+      {isAdmin && (
+        <View style={styles.filterContainer}>
+          <Text style={[styles.filterLabel, { color: theme.textSecondary }]}>
+            FILTER BY STATUS
+          </Text>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+            <View style={styles.chipsRow}>
+              {FILTER_OPTIONS.map((option) => {
+                const isActive = activeFilter === option;
+                const chipInfo = FILTER_COLORS[option];
+                const activeColor = theme[chipInfo.chip as keyof typeof theme] as string;
+                const activeBg = theme[chipInfo.bg as keyof typeof theme] as string;
+                return (
+                  <TouchableOpacity
+                    key={option}
+                    onPress={() => handleFilterChange(option)}
+                    activeOpacity={0.7}
+                    style={[
+                      styles.chip,
+                      isActive
+                        ? { backgroundColor: activeColor, borderColor: activeColor }
+                        : { backgroundColor: 'transparent', borderColor: theme.border },
+                    ]}
+                  >
+                    <Text
+                      style={[
+                        styles.chipText,
+                        { color: isActive ? '#fff' : theme.textSecondary },
+                      ]}
+                    >
+                      {option}
+                    </Text>
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
+          </ScrollView>
+        </View>
+      )}
+    </View>
   );
 
   if (loading && invoices.length === 0) {
     return (
       <View style={styles.center}>
-        <ActivityIndicator size="large" color={Colors[colorScheme].primary} />
+        <ActivityIndicator size="large" color={theme.primary} />
       </View>
     );
   }
@@ -122,19 +231,19 @@ export default function BillingScreen() {
   if (error && invoices.length === 0) {
     return (
       <View style={styles.center}>
-        <Text style={[styles.errorText, { color: Colors[colorScheme].error }]}>{error}</Text>
-        <TouchableOpacity onPress={fetchInvoices}>
-          <Text style={[styles.retryText, { color: Colors[colorScheme].primary }]}>Retry</Text>
+        <Text style={[styles.errorText, { color: theme.error }]}>{error}</Text>
+        <TouchableOpacity onPress={() => fetchInvoices(activeFilter)}>
+          <Text style={[styles.retryText, { color: theme.primary }]}>Retry</Text>
         </TouchableOpacity>
       </View>
     );
   }
 
   return (
-    <SafeAreaView edges={['top', 'bottom']} style={[styles.container, { backgroundColor: Colors[colorScheme].background }]}>
+    <SafeAreaView edges={['top', 'bottom']} style={[styles.container, { backgroundColor: theme.background }]}>
       {loading && invoices.length > 0 && (
         <View style={styles.loadingOverlay}>
-          <ActivityIndicator size="large" color={Colors[colorScheme].primary} />
+          <ActivityIndicator size="large" color={theme.primary} />
         </View>
       )}
       {isAdmin && (
@@ -147,13 +256,17 @@ export default function BillingScreen() {
         data={invoices}
         keyExtractor={(item) => item._id}
         renderItem={renderInvoice}
-        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={Colors[colorScheme].primary} />}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={onRefresh}
+            tintColor={theme.primary}
+          />
+        }
         contentContainerStyle={
           invoices.length === 0 ? styles.emptyContainer : styles.listContainer
         }
-        ListHeaderComponent={
-          <Text style={styles.header}>{isAdmin ? 'All Invoices' : 'My Bills'}</Text>
-        }
+        ListHeaderComponent={renderListHeader}
         ListEmptyComponent={
           <Text style={styles.emptyText}>No invoices found.</Text>
         }

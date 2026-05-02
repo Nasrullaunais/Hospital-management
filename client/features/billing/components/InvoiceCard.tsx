@@ -1,5 +1,6 @@
 import React, { useCallback } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, Alert } from 'react-native';
+import { useRouter } from 'expo-router';
 import { Feather } from '@expo/vector-icons';
 import * as DocumentPicker from 'expo-document-picker';
 import type { Invoice, PaymentStatus } from '@/shared/types';
@@ -14,14 +15,25 @@ const FORM_FIELD_RECEIPT = 'paymentReceipt' as const;
 interface InvoiceCardProps {
   invoice: Invoice;
   isAdmin: boolean;
+  canManage?: boolean;
+  userRole?: string;
   onUpdate: (updated: Invoice) => void;
 }
 
-export function InvoiceCard({ invoice, isAdmin, onUpdate }: InvoiceCardProps) {
+export function InvoiceCard({ invoice, isAdmin, canManage, userRole, onUpdate }: InvoiceCardProps) {
   const colorScheme = useColorScheme() ?? 'light';
   const theme = Colors[colorScheme];
+  const router = useRouter();
 
+  const isOverdue = invoice.paymentStatus === 'Overdue';
   const statusStyle = getPaymentStatusStyle(invoice.paymentStatus, theme);
+
+  const isPatient = userRole === 'patient';
+  const canVerify = isAdmin || canManage;
+
+  const handlePayNow = useCallback(() => {
+    router.push(`/(patient)/billing/pay/${invoice._id}`);
+  }, [invoice._id, router]);
 
   const handleUploadReceipt = useCallback(async () => {
     try {
@@ -107,13 +119,17 @@ export function InvoiceCard({ invoice, isAdmin, onUpdate }: InvoiceCardProps) {
   }, [invoice, onUpdate]);
 
   return (
-    <View style={[styles.card, { backgroundColor: theme.surface, borderColor: theme.border }]}>
+    <View style={[styles.card, { backgroundColor: theme.surface, borderColor: isOverdue ? theme.error : theme.border }]}>
+      {isOverdue && (
+        <View style={[styles.overdueAccent, { backgroundColor: theme.error }]} />
+      )}
       <View style={styles.cardHeader}>
         <View style={styles.amountContainer}>
           <Text style={[styles.currency, { color: theme.text }]}>$</Text>
           <Text style={[styles.amount, { color: theme.text }]}>{invoice.totalAmount.toFixed(2)}</Text>
         </View>
-        <View style={[styles.badge, { backgroundColor: statusStyle.bg }]}>
+        <View style={[styles.badge, { backgroundColor: statusStyle.bg, flexDirection: 'row', alignItems: 'center', gap: spacing.xs }]}>
+          {isOverdue && <Feather name="alert-triangle" size={12} color={statusStyle.text} />}
           <Text style={[styles.badgeText, { color: statusStyle.text }]}>{invoice.paymentStatus}</Text>
         </View>
       </View>
@@ -129,9 +145,20 @@ export function InvoiceCard({ invoice, isAdmin, onUpdate }: InvoiceCardProps) {
       )}
 
       <View style={styles.actions}>
-        {!isAdmin && invoice.paymentStatus === 'Unpaid' && (
+        {isPatient && (invoice.paymentStatus === 'Unpaid' || isOverdue) && (
           <TouchableOpacity
-            style={[styles.actionButton, { backgroundColor: theme.primary }]}
+            style={[styles.actionButton, { backgroundColor: isOverdue ? theme.error : theme.accent, flex: 1.5 }]}
+            onPress={handlePayNow}
+            activeOpacity={0.8}
+          >
+            <Feather name="credit-card" size={16} color="#fff" style={{ marginRight: spacing.xs }} />
+            <Text style={styles.actionButtonText}>Pay Now</Text>
+          </TouchableOpacity>
+        )}
+
+        {isPatient && invoice.paymentStatus === 'Unpaid' && (
+          <TouchableOpacity
+            style={[styles.actionButton, { backgroundColor: theme.primary, flex: 1 }]}
             onPress={handleUploadReceipt}
             activeOpacity={0.8}
           >
@@ -140,7 +167,7 @@ export function InvoiceCard({ invoice, isAdmin, onUpdate }: InvoiceCardProps) {
           </TouchableOpacity>
         )}
 
-        {isAdmin && invoice.paymentStatus === 'Pending Verification' && (
+        {canVerify && invoice.paymentStatus === 'Pending Verification' && (
           <TouchableOpacity
             style={[styles.actionButton, { backgroundColor: theme.success }]}
             onPress={handleVerify}
@@ -173,6 +200,17 @@ const styles = StyleSheet.create({
     marginBottom: spacing.md,
     borderWidth: 1,
     ...shadows.card,
+    position: 'relative',
+    overflow: 'hidden',
+  },
+  overdueAccent: {
+    position: 'absolute',
+    left: 0,
+    top: 0,
+    bottom: 0,
+    width: 4,
+    borderTopLeftRadius: radius.lg,
+    borderBottomLeftRadius: radius.lg,
   },
   cardHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: spacing.sm },
   amountContainer: { flexDirection: 'row', alignItems: 'flex-start' },
