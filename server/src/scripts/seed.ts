@@ -36,8 +36,7 @@ let mongoClient: MongoClient;
 
 async function connect() {
   const uri = process.env.MONGO_URI ?? 'mongodb://localhost:27017/hospital_management';
-  const dbName = 'hospital-management';
-  await mongoose.connect(uri, { dbName });
+  await mongoose.connect(uri);
   mongoClient = new MongoClient(uri);
   await mongoClient.connect();
   console.log('✅ Connected to MongoDB');
@@ -430,7 +429,7 @@ async function seed() {
     },
   ];
 
-  const db = mongoClient.db('hospital-management');
+  const db = mongoClient.db();
   await db.collection('appointments').insertMany(appointments);
   console.log(`📅 Created ${appointments.length} appointments`);
 

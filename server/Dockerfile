@@ -14,9 +14,15 @@ FROM oven/bun:1-alpine AS runtime
 
 WORKDIR /app
 
+# Install Chromium for Puppeteer PDF generation
+RUN apk add --no-cache chromium nss freetype harfbuzz ca-certificates ttf-freefont
+
+ENV PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium-browser
+
 # Install production dependencies only (no devDeps)
+# Skip puppeteer Chrome download — we use system chromium from apk
 COPY package.json bun.lock* ./
-RUN bun install --frozen-lockfile --production
+RUN PUPPETEER_SKIP_DOWNLOAD=true bun install --frozen-lockfile --production
 
 # Copy source from deps stage
 COPY --from=deps /app/src/ ./src/

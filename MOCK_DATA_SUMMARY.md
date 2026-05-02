@@ -2,16 +2,36 @@
 
 ## Goal
 
-Populate the MongoDB database connected via MCP with realistic mock data to demo the hospital management app, and fix any bugs discovered during the process.
+Populate the MongoDB database with realistic mock data to demo the hospital management app, and fix any bugs discovered during the process.
 
-## Instructions
+## Seed Scripts
 
-- Use the MongoDB MCP connection to analyze the database schema
-- Take things slow and fully understand before doing something
-- Use many agents as needed to get the work done well
-- Delete and re-insert mock data with proper bcrypt hashed passwords (not plain text)
-- Fix any bugs found (null reference errors, data not displaying)
-- Double-check all work
+Two seed scripts exist:
+
+| Script | Method | Use Case |
+|--------|--------|----------|
+| `server/src/scripts/seed.ts` | Direct Mongoose + raw MongoDB driver | Fast, reliable bulk seeding |
+| `server/src/scripts/reseed.ts` | REST API + direct MongoDB (role fix) | API-level seeding, role-correct tokens |
+
+Both use `Password123` for all user accounts. The `reseed.ts` script was fixed (2026-05-02) — it previously used `Admin123` for the admin user, causing a password mismatch.
+
+### Running seed.ts
+
+```bash
+cd server
+MONGO_URI="mongodb+srv://<user>:<pass>@<cluster>.mongodb.net/?appName=<app>" bun run src/scripts/seed.ts
+```
+
+**Important**: `seed.ts` no longer hardcodes a database name. It uses whatever database the URI resolves to (matching the deployed app behavior). Previously it hardcoded `dbName: 'hospital-management'` which caused data to go to a different database than the deployed app.
+
+### Running reseed.ts
+
+```bash
+cd server
+MONGO_URI="mongodb+srv://<user>:<pass>@<cluster>.mongodb.net/?appName=<app>" bun run src/scripts/reseed.ts
+```
+
+Requires the API to be running at `http://localhost:5000` (update `API` constant in script if deploying against a remote instance). Uses direct MongoDB access only for role corrections (register endpoint always assigns `patient` role by default).
 
 ## Discoveries
 
@@ -22,13 +42,15 @@ Populate the MongoDB database connected via MCP with realistic mock data to demo
 5. **bcrypt password hashing** - can't hash passwords via MCP directly; had to use Node.js with bcryptjs from the server's node_modules
 6. **Appointment schema validator is stale-dated** - the `appointmentDate` validator uses `Date.now()` captured at schema definition time. In Mongoose 9, `insertMany` still triggers validators, and past dates fail even for `Completed`/`Cancelled` appointments. Fix: use raw MongoDB driver for appointment inserts.
 7. **Pre-save hook `next()` signature changed in Mongoose 9** - the appointment conflict-check hook used `return next(new Error(...))` but Mongoose 9 passes a `SaveOptions` object instead of a callback. Fix: throw directly instead of calling `next()`.
+8. **Deploy database mismatch** (2026-05-02) - Render's `MONGO_URI` had no database name (`mongodb+srv://.../?appName=...`), causing Mongoose to default to `test` database. Seed data was written to a different database (`hospital_db`), so the deployed app showed no data. Fixed by seeding directly into the default database.
+9. **Duplicate mongoose indexes** - `Appointment` model had both a regular and unique index on `{ doctorId, appointmentDate }`. `Medicine` model had `unique: true` on the `name` field AND a separate `schema.index({ name: 1 }, { unique: true })`. Both duplicates removed.
 
 ## Accomplished
 
 ### Phase 1: Initial Mock Data Population
 
 - Analyzed database schema using analyzer agents
-- Generated realistic mock data for all 10 collections using multiple agents
+- Generated realistic mock data for all collections using multiple agents
 - Inserted all data via MCP `insertMany`
 - Discovered issues with string IDs and plain-text passwords
 
@@ -45,7 +67,7 @@ Populate the MongoDB database connected via MCP with realistic mock data to demo
 ### Phase 3: Proper Re-seeding with Bcrypt Passwords
 
 - Deleted all mock data (keeping original admin user)
-- Re-inserted departments, wards, medicines without specifying `_id` (MongoDB generates proper ObjectIds)
+- Re-inserted wards, medicines without specifying `_id` (MongoDB generates proper ObjectIds)
 - Generated bcrypt hashes via Node.js: `node -e "const bcrypt = require('bcryptjs'); console.log(bcrypt.hashSync('doctor123', 12));"`
 - Inserted users with proper bcrypt hashed passwords
 - Inserted doctors, medical records, appointments, prescriptions, dispenses, invoices with proper ObjectId references
@@ -96,11 +118,14 @@ Seeding is done via direct Mongoose access (not the API) for reliability. The sc
 3. Creates all cross-referenced data in dependency order
 4. Uses raw MongoDB insert for appointments to bypass stale validators
 
-Run with:
-```bash
-cd server
-MONGO_URI="mongodb://admin:leo12345@localhost:27017/hospital-management?authSource=admin" bun run src/scripts/seed.ts
-```
+### Phase 7: Deploy & Seed Fixes (2026-05-02)
+
+- **`seed.ts`**: Removed hardcoded `dbName: 'hospital-management'` — now uses database from URI
+- **`seed.ts`**: Fixed `mongoClient.db('hospital-management')` → `mongoClient.db()` — matches URI database
+- **`reseed.ts`**: Fixed admin password `Admin123` → `Password123` to match `seed.ts`
+- **`appointment.model.ts`**: Removed duplicate non-unique index on `{ doctorId, appointmentDate }` (unique partial index already covers this)
+- **`medicine.model.ts`**: Removed duplicate `unique: true` from `name` field (separate `schema.index` already handles uniqueness)
+- **Departments module**: Deleted entirely (replaced by wards module) — no more `/api/departments` endpoint
 
 ## Relevant Files
 
@@ -113,8 +138,10 @@ MONGO_URI="mongodb://admin:leo12345@localhost:27017/hospital-management?authSour
 - `client/features/dispensing/screens/PendingPrescriptionsScreen.tsx` — null check fix (lines 40-41)
 - `client/features/prescriptions/screens/PrescriptionDetailScreen.tsx` — null check fix (lines 24-25)
 - `client/features/billing/services/invoice.service.ts` — fixed `getMyBills()` and `getAllInvoices()` to return `res.data.data.invoices` instead of `res.data.data`
-- `server/src/modules/appointments/appointment.model.ts` — fixed pre-save hook `next()` → throw, and removed stale `next` parameter
-- `server/src/scripts/seed.ts` — created for direct-Mongoose seeding with raw MongoDB driver bypass for appointments
+- `server/src/modules/appointments/appointment.model.ts` — fixed pre-save hook `next()` → throw; removed duplicate index
+- `server/src/modules/pharmacy/medicine.model.ts` — removed duplicate `unique: true` on name field
+- `server/src/scripts/seed.ts` — removed hardcoded database name; uses URI default
+- `server/src/scripts/reseed.ts` — fixed admin password mismatch
 
 ### Reference Files:
 
@@ -123,7 +150,6 @@ MONGO_URI="mongodb://admin:leo12345@localhost:27017/hospital-management?authSour
 - `server/src/modules/billing/invoice.controller.ts` — invoice API response format
 - `server/src/modules/doctors/doctor.controller.ts` — doctor API with populate
 - `client/shared/types/index.ts` — TypeScript interfaces
-- `docker-compose.yml` — contains MongoDB credentials: `MONGO_ROOT_USER=admin`, `MONGO_ROOT_PASSWORD=leo12345`
 
 ## Demo Credentials (All with bcrypt hashed passwords — 12 salt rounds)
 
@@ -146,25 +172,24 @@ MONGO_URI="mongodb://admin:leo12345@localhost:27017/hospital-management?authSour
 | Patient | `marcus.j@example.com` | `Password123` |
 | Patient | `layla.ib@example.com` | `Password123` |
 
-**Original admin user** (`Nasrulla` with email `nasrullaunais@gmail.com`) was wiped during the clean seeding. Only users created by the seed script exist now.
-
 ## Database State (After seed.ts Run)
 
-All 12 collections populated with proper MongoDB ObjectIds and referential integrity:
+All 13 collections populated with proper MongoDB ObjectIds and referential integrity:
 
 | Collection | Count | Notes |
 |-----------|-------|-------|
 | users | 16 | 1 admin, 1 pharmacist, 1 receptionist, 5 doctors, 8 patients |
-| departments | 8 | Cardiology, Neurology, Orthopedics, Pediatrics, Emergency Medicine, Internal Medicine, General Surgery, Dermatology (inactive) |
-| doctors | 5 | Linked to user accounts; head doctors assigned to Cardiology, Orthopedics, Internal Medicine |
-| wards | 9 | ICU, private, general, emergency — distributed across 4 departments |
-| medicines | 25 | 11 categories: Antibiotic, Analgesic, Cardiovascular, Gastrointestinal, Respiratory, Neurological, Orthopedic, Mental Health, Controlled, Endocrine |
+| doctors | 5 | Linked to user accounts; specializations: Cardiology, Pediatrics, Orthopedic Surgery, Neurology, Internal Medicine |
+| wards | 9 | ICU, private, general, emergency types; independent (no department linking) |
+| medicines | 25 | 11 categories: Antibiotic, Analgesic, Cardiovascular, Gastrointestinal, Respiratory, Neurological, Orthopedic, Mental Health, Controlled, Endocrine, Supplements |
 | appointments | 12 | Mix of future (Pending/Confirmed), past (Completed), and Cancelled |
 | medicalrecords | 6 | Linked to appointments and doctors |
+| labreports | 8 | Hematology, radiology, biochemistry, microbiology, serology types; statuses: completed, reviewed |
 | prescriptions | 6 | Mix of active, fulfilled, and cancelled |
-| invoices | 7 | Paid, Pending Verification, Overdue, Unpaid |
+| invoices | 7 | Paid, Pending Verification, Overdue, Unpaid; includes itemized billing with items[], discount, invoiceNumber |
+| payments | 5 | Methods: bank_transfer, mock_card; statuses: completed, processing, pending |
 | wardassignments | 5 | 3 active admissions, 2 discharged |
-| wardmedications | 8 | Active, completed, and discontinued |
+| wardmedications | 8 | Active, completed, and discontinued; linked to ward assignments |
 | dispenses | 3 | Fulfilled prescriptions by pharmacist |
 
 ## Current Data Limitations
@@ -172,3 +197,4 @@ All 12 collections populated with proper MongoDB ObjectIds and referential integ
 - All `*Url` fields (`licenseDocumentUrl`, `packagingImageUrl`, `labReportUrl`, `paymentReceiptUrl`) use placeholder paths like `/uploads/dr_petrov_license.pdf` — no actual files
 - `idDocumentUrl` on patient profiles is null
 - Ward occupancy was manually synced in the seed script — the `PATCH /api/wards/:id/beds` endpoint would do this automatically in production use
+- **No departments collection** — the departments module was deleted (commit `3bd5478`). Wards are now independent entities with `location` and `phone` fields instead of a `departmentId` reference.

@@ -21,7 +21,6 @@ const medicineSchema = new Schema<IMedicine>(
       type: String,
       required: [true, 'Medicine name is required'],
       trim: true,
-      unique: true,
     },
     category: {
       type: String,

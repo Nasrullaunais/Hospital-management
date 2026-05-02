@@ -52,7 +52,6 @@ const appointmentSchema = new Schema<IAppointment>(
 
 // Indexes for common query patterns
 appointmentSchema.index({ patientId: 1, status: 1 });
-appointmentSchema.index({ doctorId: 1, appointmentDate: 1 });
 appointmentSchema.index({ doctorId: 1, status: 1 });
 appointmentSchema.index({ status: 1 });
 // Unique constraint prevents double-booking: same doctor can't have two appointments at the same time

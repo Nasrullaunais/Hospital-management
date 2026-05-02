@@ -26,7 +26,7 @@ const API = 'http://localhost:5000/api';
 const MONGO_URI = process.env.MONGO_URI;
 if (!MONGO_URI) throw new Error('MONGO_URI environment variable is required');
 const ADMIN_EMAIL = 'admin@hospital.com';
-const ADMIN_PASSWORD = 'Admin123';
+const ADMIN_PASSWORD = 'Password123';
 const ADMIN_NAME = 'System Administrator';
 
 interface TokenPair { token: string; userId: string; role: string; email: string }
@@ -624,7 +624,7 @@ async function main() {
     console.log(`  Assignments:   ${wardAssignments.length}`);
 
     console.log('\n── Demo Credentials ────────────────────────────────────────');
-    console.log('  Admin:        admin@hospital.com / admin123');
+    console.log('  Admin:        admin@hospital.com / Password123');
     console.log('  Doctor:       sarah.mitchell@hospital.com / doctor123');
     console.log('  Pharmacist:   pharmacist@hospital.com / pharmacy123');
     console.log('  Patient:      john.anderson@email.com / patient123');
