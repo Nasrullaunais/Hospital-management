@@ -65,11 +65,11 @@ export const invoiceService = {
    * Create a new invoice for a patient. Admin only.
    */
   createInvoice: async (payload: CreateInvoicePayload): Promise<Invoice> => {
-    const res = await apiClient.post<ApiSuccessResponse<Invoice>>(
+    const res = await apiClient.post<ApiSuccessResponse<{ invoice: Invoice }>>(
       ENDPOINTS.INVOICES.BASE,
       payload,
     );
-    return res.data.data;
+    return res.data.data.invoice;
   },
 
   /**
@@ -99,12 +99,13 @@ export const invoiceService = {
 
   /**
    * Fetch a single invoice by ID.
+   * Server wraps response as { data: { invoice } } — unwrap it.
    */
   getInvoiceById: async (id: string): Promise<Invoice> => {
-    const res = await apiClient.get<ApiSuccessResponse<Invoice>>(
+    const res = await apiClient.get<ApiSuccessResponse<{ invoice: Invoice }>>(
       ENDPOINTS.INVOICES.BY_ID(id),
     );
-    return res.data.data;
+    return res.data.data.invoice;
   },
 
   /**
@@ -115,23 +116,23 @@ export const invoiceService = {
    * @param formData - Must contain a file field named "file"
    */
   uploadPaymentReceipt: async (id: string, formData: FormData): Promise<Invoice> => {
-    const res = await apiClient.put<ApiSuccessResponse<Invoice>>(
+    const res = await apiClient.put<ApiSuccessResponse<{ invoice: Invoice }>>(
       ENDPOINTS.INVOICES.UPLOAD_RECEIPT(id),
       formData,
       { headers: { 'Content-Type': 'multipart/form-data' } },
     );
-    return res.data.data;
+    return res.data.data.invoice;
   },
 
   /**
    * Mark an invoice as fully paid after verifying the receipt. Admin only.
    */
   verifyPayment: async (id: string): Promise<Invoice> => {
-    const res = await apiClient.put<ApiSuccessResponse<Invoice>>(
+    const res = await apiClient.put<ApiSuccessResponse<{ invoice: Invoice }>>(
       ENDPOINTS.INVOICES.VERIFY(id),
       { paymentStatus: 'Paid' },
     );
-    return res.data.data;
+    return res.data.data.invoice;
   },
 
   /**

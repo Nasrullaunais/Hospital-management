@@ -2,7 +2,8 @@ import type { Theme } from '@/constants/Colors';
 
 type ThemeColors = Theme;
 
-export function getPaymentStatusStyle(status: string, theme: ThemeColors) {
+export function getPaymentStatusStyle(status: string | undefined | null, theme: ThemeColors) {
+  if (!status) return { bg: theme.surfaceTertiary, text: theme.textSecondary };
   const key = status.toLowerCase();
   switch (key) {
     case 'unpaid':
