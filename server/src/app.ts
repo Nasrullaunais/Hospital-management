@@ -1,4 +1,4 @@
-import express, { Router } from 'express';
+import express from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
 import compression from 'compression';
@@ -10,7 +10,6 @@ import router from './routes/index.js';
 import { errorHandler } from './shared/middlewares/errorHandler.js';
 import { logger } from './shared/utils/logger.js';
 import { generalLimiter } from './shared/middlewares/rateLimiter.js';
-import { authMiddleware } from './shared/middlewares/authMiddleware.js';
 
 // ESM __dirname equivalent
 const __filename = fileURLToPath(import.meta.url);
@@ -87,10 +86,19 @@ app.use((req, res, next) => {
   next();
 });
 
-// Protected static files (behind auth)
-const uploadsRouter = Router();
-uploadsRouter.use('/uploads', authMiddleware, express.static(path.join(__dirname, '../uploads')));
-app.use(uploadsRouter);
+// Static file serving for uploads (public - images need to be accessible without auth)
+app.get('/uploads/:filename', (req, res) => {
+  // Prevent directory traversal
+  if (req.params.filename.includes('..')) {
+    return res.status(403).json({ success: false, message: 'Forbidden' });
+  }
+  const filePath = path.join(__dirname, '../../uploads', req.params.filename);
+  res.sendFile(filePath, (err) => {
+    if (err) {
+      res.status(404).json({ success: false, message: 'File not found' });
+    }
+  });
+});
 
 // Routes + error handler
 app.use(router);
