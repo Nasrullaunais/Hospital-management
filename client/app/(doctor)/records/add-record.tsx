@@ -9,7 +9,6 @@ import {
   ScrollView,
   Alert,
   Modal,
-  FlatList,
   KeyboardAvoidingView,
   Platform,
 } from 'react-native';
@@ -105,7 +104,7 @@ export default function AddRecordScreen() {
     setLoadingMedicines(true);
     setMedicineSearchQuery('');
     try {
-      const data = await medicineService.getMedicines();
+      const data = await medicineService.getMedicines() ?? [];
       setAllMedicines(data);
       setMedicines(data);
       setMedicineModalOpen(true);
@@ -372,37 +371,83 @@ export default function AddRecordScreen() {
         </ScrollView>
 
         {/* Medicine Picker Modal */}
-        <Modal visible={medicineModalOpen} animationType="slide" transparent>
-          <View style={styles.modalOverlay}>
-            <KeyboardAvoidingView
-              behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-              style={styles.modalKeyboardAvoiding}
-            >
-              <View style={[styles.modalContent, { backgroundColor: colors.surface, shadowColor: '#1B2A4A' }]}>
-                <ScrollView keyboardShouldPersistTaps="handled" style={styles.modalScrollView}>
+        <Modal
+          visible={medicineModalOpen}
+          animationType="slide"
+          transparent
+          statusBarTranslucent
+          onRequestClose={() => { setMedicineModalOpen(false); setNewItem({}); }}
+        >
+          <KeyboardAvoidingView
+            behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+            style={styles.modalOverlay}
+            keyboardVerticalOffset={0}
+          >
+            <View style={styles.modalOverlayInner}>
+              <View style={[styles.modalContent, { backgroundColor: colors.surface }]}>
+                {/* Fixed header */}
+                <View style={styles.modalHeaderBar}>
                   <View style={styles.modalDragHandle} />
-                  <Text style={[styles.modalTitle, { color: colors.text }]}>Select Medicine</Text>
-                  <TextInput
-                    style={[styles.inputField, { backgroundColor: colors.inputBackground, borderColor: colors.inputBorder, color: colors.inputText }]}
-                    placeholder="Search medicines..."
-                    placeholderTextColor={colors.inputPlaceholder}
-                    value={medicineSearchQuery}
-                    onChangeText={(v) => {
-                      setMedicineSearchQuery(v);
-                      const q = v.toLowerCase();
-                      const filtered = allMedicines.filter((m) => m.name.toLowerCase().includes(q));
-                      setMedicines(filtered);
-                    }}
-                  />
-                  {loadingMedicines ? (
+                  <View style={styles.modalHeaderRow}>
+                    <Text style={[styles.modalTitle, { color: colors.text }]}>Select Medicine</Text>
+                    <TouchableOpacity
+                      onPress={() => { setMedicineModalOpen(false); setNewItem({}); }}
+                      hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                    >
+                      <Feather name="x" size={22} color={colors.textSecondary} />
+                    </TouchableOpacity>
+                  </View>
+                </View>
+
+                {/* Fixed search */}
+                <View style={styles.modalSearchBar}>
+                  <View style={[styles.searchWrapper, { backgroundColor: colors.inputBackground, borderColor: colors.inputBorder }]}>
+                    <Feather name="search" size={16} color={colors.textTertiary} />
+                    <TextInput
+                      style={[styles.searchInput, { color: colors.inputText }]}
+                      placeholder="Search medicines..."
+                      placeholderTextColor={colors.inputPlaceholder}
+                      value={medicineSearchQuery}
+                      onChangeText={(v) => {
+                        setMedicineSearchQuery(v);
+                        const q = v.toLowerCase();
+                        setMedicines(allMedicines.filter((m) => m.name.toLowerCase().includes(q)));
+                      }}
+                      autoFocus={false}
+                    />
+                    {medicineSearchQuery.length > 0 && (
+                      <TouchableOpacity onPress={() => {
+                        setMedicineSearchQuery('');
+                        setMedicines(allMedicines);
+                      }}>
+                        <Feather name="x-circle" size={16} color={colors.textTertiary} />
+                      </TouchableOpacity>
+                    )}
+                  </View>
+                </View>
+
+                {/* Scrollable list */}
+                {loadingMedicines ? (
+                  <View style={styles.modalListPlaceholder}>
                     <ActivityIndicator size="large" color={colors.primary} />
-                  ) : (
-                    <FlatList
-                      data={medicines}
-                      keyExtractor={(m) => m._id}
-                      style={styles.medicineList}
-                      renderItem={({ item }) => (
+                  </View>
+                ) : (
+                  <ScrollView
+                    keyboardShouldPersistTaps="handled"
+                    style={styles.modalList}
+                    contentContainerStyle={styles.modalListContent}
+                  >
+                    {(medicines ?? []).length === 0 ? (
+                      <View style={styles.emptyMedicines}>
+                        <Feather name="search" size={32} color={colors.textTertiary} />
+                        <Text style={[styles.emptyMedicinesText, { color: colors.textSecondary }]}>
+                          {medicineSearchQuery.length > 0 ? 'No medicines match your search.' : 'No medicines available.'}
+                        </Text>
+                      </View>
+                    ) : (
+                      (medicines ?? []).map((item) => (
                         <TouchableOpacity
+                          key={item._id}
                           style={[
                             styles.medicineRow,
                             { borderBottomColor: colors.divider },
@@ -418,7 +463,7 @@ export default function AddRecordScreen() {
                           }}
                           disabled={item.stockQuantity === 0}
                         >
-                          <View>
+                          <View style={styles.medicineRowLeft}>
                             <Text style={[styles.medicineName, { color: colors.text }]}>{item.name}</Text>
                             <Text style={[styles.medicineDosage, { color: colors.textSecondary }]}>{item.category}</Text>
                           </View>
@@ -431,38 +476,49 @@ export default function AddRecordScreen() {
                             {item.stockQuantity === 0 ? 'Out of stock' : `Stock: ${item.stockQuantity}`}
                           </Text>
                         </TouchableOpacity>
-                      )}
-                    />
-                  )}
+                      ))
+                    )}
+                  </ScrollView>
+                )}
 
+                {/* Fixed footer */}
+                <View style={styles.modalFooter}>
                   {newItem.medicineId && (
                     <View style={[styles.itemForm, { backgroundColor: colors.surfaceTertiary }]}>
+                      <Text style={[styles.itemFormTitle, { color: colors.text }]}>
+                        Selected: {newItem.medicineName}
+                      </Text>
+                      <View style={styles.itemFormRow}>
+                        <TextInput
+                          style={[styles.itemFormInput, { backgroundColor: colors.inputBackground, borderColor: colors.inputBorder, color: colors.inputText }]}
+                          placeholder="Dosage"
+                          placeholderTextColor={colors.inputPlaceholder}
+                          value={newItem.dosage}
+                          onChangeText={(v) => setNewItem(prev => ({ ...prev, dosage: v }))}
+                        />
+                        <TextInput
+                          style={[styles.itemFormInput, { backgroundColor: colors.inputBackground, borderColor: colors.inputBorder, color: colors.inputText }]}
+                          placeholder="Qty"
+                          keyboardType="number-pad"
+                          placeholderTextColor={colors.inputPlaceholder}
+                          value={newItem.quantity ? String(newItem.quantity) : ''}
+                          onChangeText={(v) => {
+                            const parsed = parseInt(v, 10);
+                            setNewItem(prev => ({ ...prev, quantity: Number.isInteger(parsed) && parsed > 0 ? parsed : prev.quantity }));
+                          }}
+                        />
+                      </View>
                       <TextInput
-                        style={[styles.inputField, { backgroundColor: colors.inputBackground, borderColor: colors.inputBorder, color: colors.inputText }]}
-                        placeholder="Dosage (e.g., 500mg)"
-                        placeholderTextColor={colors.inputPlaceholder}
-                        value={newItem.dosage}
-                        onChangeText={(v) => setNewItem(prev => ({ ...prev, dosage: v }))}
-                      />
-                      <TextInput
-                        style={[styles.inputField, { backgroundColor: colors.inputBackground, borderColor: colors.inputBorder, color: colors.inputText, marginTop: 8 }]}
-                        placeholder="Quantity"
-                        keyboardType="number-pad"
-                        placeholderTextColor={colors.inputPlaceholder}
-                        value={newItem.quantity ? String(newItem.quantity) : ''}
-                        onChangeText={(v) => {
-                          const parsed = parseInt(v, 10);
-                          setNewItem(prev => ({ ...prev, quantity: Number.isInteger(parsed) && parsed > 0 ? parsed : prev.quantity }));
-                        }}
-                      />
-                      <TextInput
-                        style={[styles.inputField, { backgroundColor: colors.inputBackground, borderColor: colors.inputBorder, color: colors.inputText, marginTop: 8 }]}
+                        style={[styles.itemFormInputFull, { backgroundColor: colors.inputBackground, borderColor: colors.inputBorder, color: colors.inputText, marginTop: 8 }]}
                         placeholder="Instructions (optional)"
                         placeholderTextColor={colors.inputPlaceholder}
                         value={newItem.instructions}
                         onChangeText={(v) => setNewItem(prev => ({ ...prev, instructions: v }))}
                       />
-                      <TouchableOpacity style={[styles.confirmAddButton, { backgroundColor: colors.accent }]} onPress={() => void addRxItem()}>
+                      <TouchableOpacity
+                        style={[styles.confirmAddButton, { backgroundColor: colors.accent }]}
+                        onPress={() => void addRxItem()}
+                      >
                         <Text style={styles.confirmAddButtonText}>Add to Prescription</Text>
                       </TouchableOpacity>
                     </View>
@@ -474,10 +530,10 @@ export default function AddRecordScreen() {
                   >
                     <Text style={[styles.closeModalButtonText, { color: colors.textSecondary }]}>Cancel</Text>
                   </TouchableOpacity>
-                </ScrollView>
+                </View>
               </View>
-            </KeyboardAvoidingView>
-          </View>
+            </View>
+          </KeyboardAvoidingView>
         </Modal>
       </KeyboardAvoidingView>
     </SafeAreaView>
@@ -593,17 +649,28 @@ const styles = StyleSheet.create({
   modalOverlay: {
     flex: 1,
     backgroundColor: 'rgba(0,0,0,0.5)',
-    justifyContent: 'flex-end',
   },
-  modalKeyboardAvoiding: {
+  modalOverlayInner: {
+    flex: 1,
     justifyContent: 'flex-end',
   },
   modalContent: {
     borderTopLeftRadius: radius.xl,
     borderTopRightRadius: radius.xl,
-    padding: spacing.lg,
+    maxHeight: '90%',
+    overflow: 'hidden',
+  },
+  modalHeaderBar: {
+    paddingHorizontal: spacing.lg,
     paddingTop: 12,
-    maxHeight: '80%',
+    borderBottomWidth: 1,
+    borderBottomColor: 'transparent',
+  },
+  modalHeaderRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingBottom: 12,
   },
   modalDragHandle: {
     width: 40,
@@ -611,17 +678,48 @@ const styles = StyleSheet.create({
     borderRadius: 2,
     backgroundColor: '#D1D5DB',
     alignSelf: 'center',
-    marginBottom: 8,
+    marginBottom: 12,
   },
-  modalTitle: { fontSize: 18, fontWeight: '700', marginBottom: 16 },
-  inputField: {
+  modalTitle: { fontSize: 18, fontWeight: '700' },
+  modalSearchBar: {
+    paddingHorizontal: spacing.lg,
+    paddingBottom: spacing.sm,
+  },
+  searchWrapper: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
     borderWidth: 1.5,
     borderRadius: radius.md,
-    paddingHorizontal: 14,
-    paddingVertical: 12,
-    fontSize: 16,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
   },
-  medicineList: { maxHeight: 300 },
+  searchInput: {
+    flex: 1,
+    fontSize: 16,
+    paddingVertical: 0,
+  },
+  modalList: {
+    flex: 1,
+  },
+  modalListContent: {
+    paddingHorizontal: spacing.lg,
+    paddingBottom: spacing.sm,
+  },
+  modalListPlaceholder: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  emptyMedicines: {
+    alignItems: 'center',
+    paddingVertical: 40,
+    gap: 8,
+  },
+  emptyMedicinesText: {
+    fontSize: 14,
+    textAlign: 'center',
+  },
   medicineRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -629,17 +727,45 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     borderBottomWidth: 1,
   },
+  medicineRowLeft: { flex: 1, marginRight: 8 },
   medicineName: { fontSize: 15, fontWeight: '600' },
   medicineDosage: { fontSize: 12, marginTop: 1 },
   medicineStock: { fontSize: 13 },
-  itemForm: { marginTop: 16, borderRadius: radius.md, padding: 14 },
+  modalFooter: {
+    paddingHorizontal: spacing.lg,
+    paddingBottom: spacing.lg,
+    borderTopWidth: 1,
+    borderTopColor: 'transparent',
+  },
+  itemForm: { borderRadius: radius.md, padding: 14 },
+  itemFormTitle: { fontSize: 14, fontWeight: '600' },
+  itemFormRow: {
+    flexDirection: 'row',
+    gap: 8,
+    marginTop: 8,
+  },
+  itemFormInput: {
+    flex: 1,
+    borderWidth: 1.5,
+    borderRadius: radius.md,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    fontSize: 15,
+  },
+  itemFormInputFull: {
+    borderWidth: 1.5,
+    borderRadius: radius.md,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    fontSize: 15,
+  },
   confirmAddButton: {
     marginTop: 12,
     borderRadius: radius.md,
-    paddingVertical: 14,
+    paddingVertical: 12,
     alignItems: 'center',
   },
   confirmAddButtonText: { color: '#fff', fontSize: 15, fontWeight: '700' },
-  closeModalButton: { marginTop: 12, alignItems: 'center', paddingVertical: 12 },
+  closeModalButton: { marginTop: 10, alignItems: 'center', paddingVertical: 10 },
   closeModalButtonText: { fontSize: 15 },
 });

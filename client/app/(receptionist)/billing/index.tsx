@@ -88,7 +88,7 @@ export default function BillingScreen() {
       } else {
         data = await invoiceService.getMyBills();
       }
-      setInvoices(data);
+      setInvoices(data ?? []);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to load invoices.');
     }
@@ -115,9 +115,9 @@ export default function BillingScreen() {
 
   const handleInvoiceUpdate = (updated: Invoice & { _deleted?: boolean }) => {
     if (updated._deleted) {
-      setInvoices((prev) => prev.filter((i) => i._id !== updated._id));
+      setInvoices((prev) => (prev ?? []).filter((i) => i._id !== updated._id));
     } else {
-      setInvoices((prev) => prev.map((i) => (i._id === updated._id ? updated : i)));
+      setInvoices((prev) => (prev ?? []).map((i) => (i._id === updated._id ? updated : i)));
     }
   };
 

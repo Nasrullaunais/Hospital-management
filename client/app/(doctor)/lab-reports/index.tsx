@@ -319,7 +319,7 @@ export default function LabReportsIndexScreen() {
         ListHeaderComponent={ListHeaderComponent}
         ListEmptyComponent={ListEmptyComponent}
         contentContainerStyle={
-          selectedPatientId && labReports.length === 0
+          selectedPatientId && (labReports ?? []).length === 0
             ? styles.emptyContainer
             : styles.listContainer
         }

@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useCallback } from 'react';
-import { ActivityIndicator, ScrollView, StyleSheet, Text, View, RefreshControl } from 'react-native';
+import { ActivityIndicator, ScrollView, StyleSheet, Text, View, RefreshControl, TouchableOpacity } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { Feather } from '@expo/vector-icons';
@@ -13,12 +13,19 @@ import { dispensingService } from '@/features/dispensing/services/dispensing.ser
 import type { Medicine } from '@/shared/types';
 
 const TAB_BAR_HEIGHT = 70;
+const FETCH_RETRIES = 1; // 1 retry = 2 total attempts
+const RETRY_DELAY_MS = 1500;
 
 interface DashboardStats {
   totalMedicines: number;
   lowStockCount: number;
   expiringSoonCount: number;
   pendingPrescriptions: number;
+}
+
+interface DataErrors {
+  medicines: string | null;
+  prescriptions: string | null;
 }
 
 export default function PharmacistDashboard() {
@@ -30,6 +37,10 @@ export default function PharmacistDashboard() {
     lowStockCount: 0,
     expiringSoonCount: 0,
     pendingPrescriptions: 0,
+  });
+  const [dataErrors, setDataErrors] = useState<DataErrors>({
+    medicines: null,
+    prescriptions: null,
   });
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -47,30 +58,51 @@ export default function PharmacistDashboard() {
     return { lowStock, expiringSoon };
   }, []);
 
-  const fetchDashboardData = useCallback(async () => {
-    try {
-      const [medicines, pending] = await Promise.all([
-        medicineService.getMedicines().catch(() => [] as Medicine[]),
-        dispensingService.getPendingPrescriptions().catch(() => []),
-      ]);
-
-      const { lowStock, expiringSoon } = calculateStats(medicines);
-
-      setStats({
-        totalMedicines: medicines.length,
-        lowStockCount: lowStock,
-        expiringSoonCount: expiringSoon,
-        pendingPrescriptions: Array.isArray(pending) ? pending.length : 0,
-      });
-    } catch (err) {
-      if (__DEV__) {
-        console.warn('[PharmacistDashboard] Failed to load dashboard data', err);
+  const fetchWithRetry = useCallback(async <T,>(
+    label: string,
+    fn: () => Promise<T>,
+  ): Promise<{ data: T | null; error: string | null }> => {
+    let lastError: string | null = null;
+    for (let attempt = 0; attempt <= FETCH_RETRIES; attempt++) {
+      try {
+        const data = await fn();
+        return { data, error: null };
+      } catch (err) {
+        const msg = err instanceof Error ? err.message : `Failed to load ${label}`;
+        lastError = msg;
+        if (attempt < FETCH_RETRIES) {
+          await new Promise((r) => setTimeout(r, RETRY_DELAY_MS));
+        }
       }
-    } finally {
-      setLoading(false);
-      setRefreshing(false);
     }
-  }, [calculateStats]);
+    return { data: null, error: lastError };
+  }, []);
+
+  const fetchDashboardData = useCallback(async () => {
+    const [medicinesResult, prescriptionsResult] = await Promise.all([
+      fetchWithRetry('medicines', () => medicineService.getMedicines()),
+      fetchWithRetry('prescriptions', () => dispensingService.getPendingPrescriptions()),
+    ]);
+
+    const medicines = medicinesResult.data ?? [];
+    const pending = prescriptionsResult.data;
+
+    const { lowStock, expiringSoon } = calculateStats(medicines);
+
+    setStats({
+      totalMedicines: medicines.length,
+      lowStockCount: lowStock,
+      expiringSoonCount: expiringSoon,
+      pendingPrescriptions: Array.isArray(pending) ? pending.length : 0,
+    });
+    setDataErrors({
+      medicines: medicinesResult.error,
+      prescriptions: prescriptionsResult.error,
+    });
+
+    setLoading(false);
+    setRefreshing(false);
+  }, [calculateStats, fetchWithRetry]);
 
   useEffect(() => {
     fetchDashboardData();
@@ -93,6 +125,8 @@ export default function PharmacistDashboard() {
   }
 
   const hasAlerts = stats.lowStockCount > 0 || stats.expiringSoonCount > 0;
+  const hasErrors = dataErrors.medicines !== null || dataErrors.prescriptions !== null;
+  const bothFailed = dataErrors.medicines !== null && dataErrors.prescriptions !== null;
 
   return (
     <SafeAreaView style={[styles.safeArea, { backgroundColor: theme.background }]}>
@@ -107,6 +141,27 @@ export default function PharmacistDashboard() {
         <Text style={[styles.subtitle, { color: theme.textSecondary }]}>
           Monitor stock health and manage inventory records.
         </Text>
+
+        {hasErrors && (
+          <View style={[styles.errorBanner, { backgroundColor: bothFailed ? theme.errorBg : theme.warningBg, borderColor: bothFailed ? theme.error : theme.warning }]}>
+            <Feather name={bothFailed ? 'alert-triangle' : 'info'} size={18} color={bothFailed ? theme.error : theme.warning} />
+            <View style={styles.errorTextContainer}>
+              {dataErrors.medicines && (
+                <Text style={[styles.errorText, { color: bothFailed ? theme.error : theme.warning }]}>
+                  Medicines: {dataErrors.medicines}
+                </Text>
+              )}
+              {dataErrors.prescriptions && (
+                <Text style={[styles.errorText, { color: bothFailed ? theme.error : theme.warning }]}>
+                  Prescriptions: {dataErrors.prescriptions}
+                </Text>
+              )}
+            </View>
+            <TouchableOpacity onPress={onRefresh} style={[styles.retryBtn, { borderColor: bothFailed ? theme.error : theme.warning }]}>
+              <Feather name="refresh-cw" size={14} color={bothFailed ? theme.error : theme.warning} />
+            </TouchableOpacity>
+          </View>
+        )}
 
         <View style={styles.statsRow}>
           <View style={[styles.statCard, { backgroundColor: theme.surface, ...shadows.card }]}>
@@ -233,4 +288,19 @@ const styles = StyleSheet.create({
   alertBannerText: { fontSize: 13, fontWeight: '500', flex: 1 },
   primaryAction: { marginBottom: spacing.sm },
   noteText: { fontSize: 13, marginTop: spacing.sm },
+  errorBanner: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: spacing.sm,
+    padding: spacing.md,
+    borderWidth: 1,
+    borderRadius: radius.sm,
+  },
+  errorTextContainer: { flex: 1 },
+  errorText: { fontSize: 13, fontWeight: '500', marginBottom: 2 },
+  retryBtn: {
+    padding: spacing.xs,
+    borderWidth: 1,
+    borderRadius: radius.xs,
+  },
 });

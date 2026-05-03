@@ -17,6 +17,18 @@ export interface ApiErrorResponse {
   errors?: { field: string; message: string }[];
 }
 
+export interface PaginationMeta {
+  total: number;
+  page: number;
+  limit: number;
+  pages: number;
+}
+
+export interface PaginatedResponse<T> {
+  items: T[];
+  pagination: PaginationMeta;
+}
+
 // ── User / Auth ────────────────────────────────────────────────────────────────
 
 export type UserRole = 'patient' | 'doctor' | 'admin' | 'pharmacist' | 'receptionist';

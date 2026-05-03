@@ -193,7 +193,7 @@ export default function PharmacyInventoryScreen() {
     try {
       setError(null);
       const data = await medicineService.getMedicines();
-      setMedicines(data);
+      setMedicines(data ?? []);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to load medicine inventory.');
     }
@@ -228,7 +228,7 @@ export default function PharmacyInventoryScreen() {
           onPress: async () => {
             try {
               await medicineService.deleteMedicine(medicine._id);
-              setMedicines((prev) => prev.filter((m) => m._id !== medicine._id));
+              setMedicines((prev) => (prev ?? []).filter((m) => m._id !== medicine._id));
             } catch (err) {
               Alert.alert('Error', err instanceof Error ? err.message : 'Failed to delete medication.');
             }

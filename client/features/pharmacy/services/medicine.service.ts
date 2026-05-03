@@ -4,7 +4,7 @@
  */
 import { apiClient } from '@/shared/api/client';
 import { ENDPOINTS } from '@/shared/api/endpoints';
-import type { Medicine, ApiSuccessResponse } from '@/shared/types';
+import type { Medicine, ApiSuccessResponse, PaginatedResponse } from '@/shared/types';
 
 export interface MedicineFilters {
   category?: string;
@@ -46,11 +46,11 @@ export const medicineService = {
     if (filters?.maxStock !== undefined) params.maxStock = filters.maxStock;
     if (filters?.expiringWithinDays !== undefined) params.expiringWithinDays = filters.expiringWithinDays;
 
-    const res = await apiClient.get<ApiSuccessResponse<{ medicines: Medicine[]; count: number; total: number }>>(
+    const res = await apiClient.get<ApiSuccessResponse<PaginatedResponse<Medicine>>>(
       ENDPOINTS.MEDICINES.BASE,
       { params },
     );
-    return res.data.data.medicines;
+    return res.data.data.items;
   },
 
   /**

@@ -62,6 +62,13 @@ export default function EditMedicineScreen() {
   useEffect(() => {
     if (!id) {
       Alert.alert('Error', 'Medicine ID is required.');
+      setLoading(false);
+      return;
+    }
+
+    if (!/^[0-9a-fA-F]{24}$/.test(id)) {
+      Alert.alert('Error', 'Invalid medicine ID format.');
+      setLoading(false);
       return;
     }
 

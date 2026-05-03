@@ -8,7 +8,6 @@ import {
   ActivityIndicator,
   StyleSheet,
   RefreshControl,
-  ScrollView,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Feather } from '@expo/vector-icons';
@@ -85,6 +84,7 @@ const makeStyles = (colorScheme: 'light' | 'dark') => StyleSheet.create({
   },
   chipsRow: {
     flexDirection: 'row',
+    flexWrap: 'wrap',
     gap: spacing.sm,
   },
   chip: {
@@ -126,7 +126,7 @@ export default function BillingScreen() {
       } else {
         data = await invoiceService.getMyBills();
       }
-      setInvoices(data);
+      setInvoices(data ?? []);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to load invoices.');
     }
@@ -159,9 +159,9 @@ export default function BillingScreen() {
 
   const handleInvoiceUpdate = (updated: Invoice & { _deleted?: boolean }) => {
     if (updated._deleted) {
-      setInvoices((prev) => prev.filter((i) => i._id !== updated._id));
+      setInvoices((prev) => (prev ?? []).filter((i) => i._id !== updated._id));
     } else {
-      setInvoices((prev) => prev.map((i) => (i._id === updated._id ? updated : i)));
+      setInvoices((prev) => (prev ?? []).map((i) => (i._id === updated._id ? updated : i)));
     }
   };
 
@@ -183,38 +183,36 @@ export default function BillingScreen() {
           <Text style={[styles.filterLabel, { color: theme.textSecondary }]}>
             FILTER BY STATUS
           </Text>
-          <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-            <View style={styles.chipsRow}>
-              {FILTER_OPTIONS.map((option) => {
-                const isActive = activeFilter === option;
-                const chipInfo = FILTER_COLORS[option];
-                const activeColor = theme[chipInfo.chip as keyof typeof theme] as string;
-                const activeBg = theme[chipInfo.bg as keyof typeof theme] as string;
-                return (
-                  <TouchableOpacity
-                    key={option}
-                    onPress={() => handleFilterChange(option)}
-                    activeOpacity={0.7}
+          <View style={styles.chipsRow}>
+            {FILTER_OPTIONS.map((option) => {
+              const isActive = activeFilter === option;
+              const chipInfo = FILTER_COLORS[option];
+              const activeColor = theme[chipInfo.chip as keyof typeof theme] as string;
+              const activeBg = theme[chipInfo.bg as keyof typeof theme] as string;
+              return (
+                <TouchableOpacity
+                  key={option}
+                  onPress={() => handleFilterChange(option)}
+                  activeOpacity={0.7}
+                  style={[
+                    styles.chip,
+                    isActive
+                      ? { backgroundColor: activeColor, borderColor: activeColor }
+                      : { backgroundColor: 'transparent', borderColor: theme.border },
+                  ]}
+                >
+                  <Text
                     style={[
-                      styles.chip,
-                      isActive
-                        ? { backgroundColor: activeColor, borderColor: activeColor }
-                        : { backgroundColor: 'transparent', borderColor: theme.border },
+                      styles.chipText,
+                      { color: isActive ? '#fff' : theme.textSecondary },
                     ]}
                   >
-                    <Text
-                      style={[
-                        styles.chipText,
-                        { color: isActive ? '#fff' : theme.textSecondary },
-                      ]}
-                    >
-                      {option}
-                    </Text>
-                  </TouchableOpacity>
-                );
-              })}
-            </View>
-          </ScrollView>
+                    {option}
+                  </Text>
+                </TouchableOpacity>
+              );
+            })}
+          </View>
         </View>
       )}
     </View>

@@ -121,6 +121,7 @@ export function StatsCard({ onRefresh }: StatsCardProps) {
       <ScrollView
         horizontal
         showsHorizontalScrollIndicator={false}
+        nestedScrollEnabled={true}
         contentContainerStyle={styles.chipsContainer}
       >
         {statChips.map((chip) => (

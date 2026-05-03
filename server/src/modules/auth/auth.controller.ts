@@ -23,7 +23,7 @@ function signToken(userId: string, email: string, role: string): { token: string
 
 /** Parse a vercel/ms-style duration string to milliseconds. Supports "7d", "24h", "30m", etc. */
 function parseDuration(input: string): number {
-  const match = input.match(/^(\d+)\s*(s|m|h|d)$/);
+  const match = input.match(/^(\d+)\s*(s|m|h|d)$/i);
   if (!match) return 7 * 24 * 60 * 60 * 1000; // default 7 days
   const value = parseInt(match[1], 10);
   const unit = match[2];

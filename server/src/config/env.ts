@@ -94,7 +94,7 @@ function validateEnv(): EnvConfig {
   if (jwtSecret.length < 32) {
     logger.warn({ event: 'jwt_secret_weak' }, 'JWT_SECRET is short (< 32 chars). Use a stronger secret in production.');
   }
-  const expiresInPattern = /^\d+[smhd](\s+\d+[smhd])*$/;
+  const expiresInPattern = /^\d+[smhd](\s+\d+[smhd])*$/i;
   if (!expiresInPattern.test(jwtExpiresIn)) {
     logger.warn({ event: 'jwt_expires_in_unknown_format', value: jwtExpiresIn }, 'JWT_EXPIRES_IN format not recognized. Use values like "7d", "24h", "30m".');
   }

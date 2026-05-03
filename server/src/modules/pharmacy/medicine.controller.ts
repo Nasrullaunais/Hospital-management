@@ -1,5 +1,6 @@
 import type { Request, Response, NextFunction } from 'express';
 import { validationResult } from 'express-validator';
+import mongoose from 'mongoose';
 import { Medicine } from './medicine.model.js';
 import { ApiError } from '../../shared/utils/ApiError.js';
 import { s3Service } from '../../shared/services/s3.service.js';
@@ -87,6 +88,9 @@ export const getAllMedicines = async (
 /** GET /api/medicines/:id */
 export const getMedicineById = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   try {
+    if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
+      return next(ApiError.badRequest('Invalid medicine ID'));
+    }
     const medicine = await Medicine.findById(req.params.id);
     if (!medicine) return next(ApiError.notFound('Medicine not found'));
     res.json({ success: true, data: { medicine } });
@@ -223,6 +227,11 @@ export const getMedicinesByIds = async (req: Request, res: Response, next: NextF
 
     if (ids.length > 100) {
       return next(ApiError.badRequest('Maximum 100 IDs per batch request'));
+    }
+
+    const invalidIds = ids.filter(id => !mongoose.Types.ObjectId.isValid(id));
+    if (invalidIds.length > 0) {
+      return next(ApiError.badRequest(`Invalid medicine IDs: ${invalidIds.join(', ')}`));
     }
 
     const medicines = await Medicine.find({ _id: { $in: ids } });

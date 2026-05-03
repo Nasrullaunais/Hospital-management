@@ -10,6 +10,7 @@ import type {
   InvoiceStats,
   PaymentStatus,
   ApiSuccessResponse,
+  PaginatedResponse,
   BillingSuggestion,
   BillingSuggestionsResponse,
   PendingBillingPatient,
@@ -75,10 +76,10 @@ export const invoiceService = {
    * Fetch all invoices for the authenticated patient.
    */
   getMyBills: async (): Promise<Invoice[]> => {
-    const res = await apiClient.get<ApiSuccessResponse<{ invoices: Invoice[]; count: number }>>(
+    const res = await apiClient.get<ApiSuccessResponse<PaginatedResponse<Invoice>>>(
       ENDPOINTS.INVOICES.MY_BILLS,
     );
-    return res.data.data.invoices;
+    return res.data.data.items;
   },
 
   /**
@@ -89,11 +90,11 @@ export const invoiceService = {
     if (filters?.status) params.status = filters.status;
     if (filters?.patientId) params.patientId = filters.patientId;
 
-    const res = await apiClient.get<ApiSuccessResponse<{ invoices: Invoice[]; count: number }>>(
+    const res = await apiClient.get<ApiSuccessResponse<PaginatedResponse<Invoice>>>(
       ENDPOINTS.INVOICES.BASE,
       { params },
     );
-    return res.data.data.invoices;
+    return res.data.data.items;
   },
 
   /**
