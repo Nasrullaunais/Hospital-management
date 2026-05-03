@@ -4,6 +4,7 @@ import { Payment } from './payment.model.js';
 import { Invoice } from './invoice.model.js';
 import { ApiError } from '../../shared/utils/ApiError.js';
 import { getRequestContext, logger } from '../../shared/utils/logger.js';
+import { ROLES } from '../../shared/constants/roles.js';
 
 /**
  * POST /api/payments — Create a payment for an invoice
@@ -77,7 +78,7 @@ export const getPaymentsByInvoice = async (req: Request, res: Response, next: Ne
     if (!invoice) return next(ApiError.notFound('Invoice not found'));
 
     const userRole = req.user?.role;
-    if (userRole !== 'admin' && invoice.patientId.toString() !== userId) {
+    if (userRole !== ROLES.ADMIN && invoice.patientId.toString() !== userId) {
       return next(ApiError.forbidden('You can only view payments for your own invoices'));
     }
 
@@ -102,7 +103,7 @@ export const processPayment = async (req: Request, res: Response, next: NextFunc
     if (!payment) return next(ApiError.notFound('Payment not found'));
 
     const userRole = req.user?.role;
-    if (userRole !== 'admin' && payment.patientId.toString() !== userId) {
+    if (userRole !== ROLES.ADMIN && payment.patientId.toString() !== userId) {
       return next(ApiError.forbidden('You can only process your own payments'));
     }
 
@@ -152,7 +153,7 @@ export const getPaymentById = async (req: Request, res: Response, next: NextFunc
     if (!payment) return next(ApiError.notFound('Payment not found'));
 
     const userRole = req.user?.role;
-    if (userRole !== 'admin' && payment.patientId._id.toString() !== userId) {
+    if (userRole !== ROLES.ADMIN && payment.patientId._id.toString() !== userId) {
       return next(ApiError.forbidden('You can only view your own payments'));
     }
 

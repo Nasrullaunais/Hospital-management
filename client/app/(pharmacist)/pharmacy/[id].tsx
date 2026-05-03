@@ -29,6 +29,7 @@ export default function MedicineDetailScreen() {
   const [medicine, setMedicine] = useState<Medicine | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [deleting, setDeleting] = useState(false);
 
   useEffect(() => {
     if (!id) return;
@@ -56,13 +57,22 @@ export default function MedicineDetailScreen() {
         {
           text: 'Delete',
           style: 'destructive',
-          onPress: () => {
-            router.back();
+          onPress: async () => {
+            setDeleting(true);
+            try {
+              await medicineService.deleteMedicine(id);
+              router.back();
+            } catch (err) {
+              console.error('[MedicineDetail] delete error:', err);
+              Alert.alert('Error', err instanceof Error ? err.message : 'Failed to delete medicine. Please try again.');
+            } finally {
+              setDeleting(false);
+            }
           },
         },
       ],
     );
-  }, [medicine, router]);
+  }, [medicine, router, id]);
 
   if (loading) {
     return (
@@ -187,12 +197,17 @@ export default function MedicineDetailScreen() {
             <Text style={styles.actionBtnText}>Edit</Text>
           </TouchableOpacity>
           <TouchableOpacity
-            style={[styles.actionBtn, styles.deleteBtn, { backgroundColor: theme.error }]}
+            style={[styles.actionBtn, styles.deleteBtn, { backgroundColor: theme.error }, deleting && { opacity: 0.6 }]}
             onPress={handleDelete}
             activeOpacity={0.7}
+            disabled={deleting}
           >
-            <Feather name="trash-2" size={18} color="#FFFFFF" />
-            <Text style={styles.actionBtnText}>Delete</Text>
+            {deleting ? (
+              <ActivityIndicator size="small" color="#FFFFFF" />
+            ) : (
+              <Feather name="trash-2" size={18} color="#FFFFFF" />
+            )}
+            <Text style={styles.actionBtnText}>{deleting ? 'Deleting...' : 'Delete'}</Text>
           </TouchableOpacity>
         </View>
       </ScrollView>

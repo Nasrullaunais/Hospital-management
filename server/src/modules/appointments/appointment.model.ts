@@ -47,7 +47,7 @@ const appointmentSchema = new Schema<IAppointment>(
       type: String,
     },
   },
-  { timestamps: true },
+  { timestamps: true, versionKey: false },
 );
 
 // Indexes for common query patterns

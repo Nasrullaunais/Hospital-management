@@ -18,6 +18,7 @@ interface EnvConfig {
   MONGO_URI: string;
   JWT_SECRET: string;
   JWT_EXPIRES_IN: string;
+  CORS_ORIGINS: string;
   // Phase 6: AWS (optional in dev, required in production)
   AWS_ACCESS_KEY_ID?: string;
   AWS_SECRET_ACCESS_KEY?: string;
@@ -62,6 +63,7 @@ function validateEnv(): EnvConfig {
     MONGO_URI: mongoUri,
     JWT_SECRET: jwtSecret,
     JWT_EXPIRES_IN: jwtExpiresIn,
+    CORS_ORIGINS: process.env['CORS_ORIGINS'] ?? 'http://localhost:8082,http://localhost:8081',
     AWS_ACCESS_KEY_ID: process.env['AWS_ACCESS_KEY_ID'],
     AWS_SECRET_ACCESS_KEY: process.env['AWS_SECRET_ACCESS_KEY'],
     AWS_REGION: process.env['AWS_REGION'],
@@ -83,6 +85,14 @@ function validateEnv(): EnvConfig {
       );
       process.exit(1);
     }
+  }
+
+  if (jwtSecret.length < 32) {
+    logger.warn({ event: 'jwt_secret_weak' }, 'JWT_SECRET is short (< 32 chars). Use a stronger secret in production.');
+  }
+  const expiresInPattern = /^\d+[smhd](\s+\d+[smhd])*$/;
+  if (!expiresInPattern.test(jwtExpiresIn)) {
+    logger.warn({ event: 'jwt_expires_in_unknown_format', value: jwtExpiresIn }, 'JWT_EXPIRES_IN format not recognized. Use values like "7d", "24h", "30m".');
   }
 
   return config;

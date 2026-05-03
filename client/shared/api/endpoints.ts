@@ -75,7 +75,7 @@ export const ENDPOINTS = {
     STATS: '/invoices/stats',
     MY_BILLS: '/invoices/my-bills',
     BY_ID: (id: string) => `/invoices/${id}`,
-    UPLOAD_RECEIPT: (id: string) => `/invoices/${id}/upload-receipt`,
+    UPLOAD_RECEIPT: (id: string) => `/invoices/${id}/pay`,
     VERIFY: (id: string) => `/invoices/${id}/verify`,
     PENDING_PATIENTS: '/invoices/pending-patients',
     SUGGESTIONS: (patientId: string, appointmentId?: string) => {
@@ -97,6 +97,7 @@ export const ENDPOINTS = {
     BY_PATIENT: (patientId: string) => `/prescriptions/patient/${patientId}`,
     BY_ID: (id: string) => `/prescriptions/${id}`,
     BY_RECORD: (recordId: string) => `/prescriptions/record/${recordId}`,
+    CANCEL: (id: string) => `/prescriptions/${id}/cancel`,
   },
 
   // Admin — Staff Management
@@ -109,6 +110,7 @@ export const ENDPOINTS = {
   DISPENSE: {
     BASE: '/dispense',
     BY_PATIENT: (patientId: string) => `/dispense/patient/${patientId}`,
+    PATIENT_HISTORY: (patientId: string) => `/dispense/patient/${patientId}`,
   },
 
   // Wards

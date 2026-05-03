@@ -128,7 +128,7 @@ export const invoiceService = {
   verifyPayment: async (id: string): Promise<Invoice> => {
     const res = await apiClient.put<ApiSuccessResponse<Invoice>>(
       ENDPOINTS.INVOICES.VERIFY(id),
-      {},
+      { paymentStatus: 'Paid' },
     );
     return res.data.data;
   },

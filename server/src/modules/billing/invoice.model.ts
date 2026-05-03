@@ -119,6 +119,7 @@ const invoiceSchema = new Schema<IInvoice>(
   },
   {
     timestamps: true,
+    versionKey: false,
     toJSON: { virtuals: true },
     toObject: { virtuals: true },
   },

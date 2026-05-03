@@ -7,6 +7,6 @@ const router = Router();
 router.post('/upload-url', authMiddleware, getUploadUrl);
 router.post('/download-url', authMiddleware, getDownloadUrl);
 router.post('/download-urls', authMiddleware, getDownloadUrls);
-router.get('/image/:encodedKey', serveImage);
+router.get('/image/:encodedKey', authMiddleware, serveImage);
 
 export default router;

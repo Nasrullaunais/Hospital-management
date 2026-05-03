@@ -5,6 +5,7 @@ import Colors from '@/constants/Colors';
 import { useColorScheme } from '@/components/useColorScheme';
 import { useAuth } from '@/shared/context/AuthContext';
 import { getRoleHomeRoute } from '@/shared/constants/roleRoutes';
+import { ROLES } from '@/shared/constants/roles';
 import { CustomTabBar, TabItem } from '@/components/ui/CustomTabBar';
 import { spacing, radius, shadows } from '@/constants/ThemeTokens';
 
@@ -54,7 +55,7 @@ export default function DoctorLayout() {
     return <Redirect href="/login" />;
   }
 
-  if (user.role !== 'doctor') {
+  if (user.role !== ROLES.DOCTOR) {
     return <Redirect href={getRoleHomeRoute(user.role) ?? '/login'} />;
   }
 

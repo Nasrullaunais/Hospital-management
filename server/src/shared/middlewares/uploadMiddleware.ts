@@ -34,17 +34,21 @@ const storage = multer.diskStorage({
   },
 });
 
+// ── Allowed file extensions (enforced server-side, in addition to MIME check) ─────
+const ALLOWED_EXTENSIONS = ['.jpg', '.jpeg', '.png', '.gif', '.webp', '.pdf'];
+
 // ── File Filter ────────────────────────────────────────────────────────────────
 const fileFilter = (_req: Request, file: Express.Multer.File, cb: multer.FileFilterCallback) => {
-  if (ALLOWED_MIME_TYPES.includes(file.mimetype)) {
-    cb(null, true);
-  } else {
+  const ext = path.extname(file.originalname).toLowerCase();
+  if (!ALLOWED_MIME_TYPES.includes(file.mimetype) || !ALLOWED_EXTENSIONS.includes(ext)) {
     cb(
       new ApiError(
         400,
-        `File type '${file.mimetype}' is not allowed. Accepted types: JPEG, PNG, GIF, WebP, PDF.`,
+        `File type '${file.mimetype}' (ext: ${ext}) is not allowed. Accepted types: JPEG, PNG, GIF, WebP, PDF.`,
       ),
     );
+  } else {
+    cb(null, true);
   }
 };
 

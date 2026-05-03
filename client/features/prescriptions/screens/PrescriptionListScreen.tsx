@@ -36,11 +36,9 @@ export default function PrescriptionListScreen() {
     }
   }, [user?._id]);
 
-  useEffect(() => { loadPrescriptions(); }, [loadPrescriptions]);
-
   const onRefresh = useCallback(() => {
     setRefreshing(true);
-    loadPrescriptions();
+    void loadPrescriptions();
   }, [loadPrescriptions]);
 
   const renderPrescription = useCallback(({ item }: { item: Prescription }) => {
@@ -93,6 +91,12 @@ export default function PrescriptionListScreen() {
       <View style={styles.center}>
         <Feather name="alert-circle" size={48} color={theme.error} />
         <Text style={[styles.error, { color: theme.error }]}>{error}</Text>
+        <TouchableOpacity
+          style={[styles.retryButton, { backgroundColor: theme.primary }]}
+          onPress={() => loadPrescriptions()}
+        >
+          <Text style={styles.retryButtonText}>Retry</Text>
+        </TouchableOpacity>
       </View>
     </SafeAreaView>
   );
@@ -114,7 +118,7 @@ export default function PrescriptionListScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
-  center: { flex: 1, justifyContent: 'center', alignItems: 'center' },
+  center: { flex: 1, justifyContent: 'center', alignItems: 'center', gap: 12 },
   list: { padding: spacing.md, paddingBottom: TAB_BAR_HEIGHT + spacing.md },
   emptyListContainer: { flexGrow: 1 },
   emptyContainer: { flexGrow: 1, justifyContent: 'center', alignItems: 'center' },
@@ -133,6 +137,13 @@ const styles = StyleSheet.create({
   items: { fontSize: 14 },
   empty: { textAlign: 'center', marginTop: spacing.md, fontSize: 16 },
   error: { fontSize: 15, marginTop: spacing.sm, textAlign: 'center', paddingHorizontal: spacing.lg },
+  retryButton: {
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.sm,
+    borderRadius: radius.md,
+    marginTop: spacing.sm,
+  },
+  retryButtonText: { color: '#fff', fontWeight: '600', fontSize: 15 },
   statusBadge: { paddingHorizontal: spacing.sm, paddingVertical: spacing.xs, borderRadius: radius.full },
   statusText: { fontSize: 12, fontWeight: '600' },
 });

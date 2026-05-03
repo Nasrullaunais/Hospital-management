@@ -66,15 +66,24 @@ export const getPatientLabReports = async (req: Request, res: Response, next: Ne
       return next(ApiError.forbidden('You can only view your own lab reports'));
     }
 
-    const labReports = await LabReport.find({ patientId: targetId })
-      .populate({
-        path: 'doctorId',
-        select: 'specialization userId',
-        populate: { path: 'userId', select: 'name' },
-      })
-      .sort({ testDate: -1 });
+    const page = Math.max(1, parseInt(req.query.page as string) || 1);
+    const limit = Math.min(100, Math.max(1, parseInt(req.query.limit as string) || 20));
+    const skip = (page - 1) * limit;
 
-    res.json({ success: true, data: { labReports, count: labReports.length } });
+    const [labReports, total] = await Promise.all([
+      LabReport.find({ patientId: targetId })
+        .populate({
+          path: 'doctorId',
+          select: 'specialization userId',
+          populate: { path: 'userId', select: 'name' },
+        })
+        .sort({ testDate: -1 })
+        .skip(skip)
+        .limit(limit),
+      LabReport.countDocuments({ patientId: targetId }),
+    ]);
+
+    res.json({ success: true, data: { labReports, total, page, limit, pages: Math.ceil(total / limit) } });
   } catch (err) {
     next(err);
   }

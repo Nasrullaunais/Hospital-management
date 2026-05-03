@@ -4,6 +4,7 @@ import { Dispense } from './dispense.model.js';
 import { Medicine } from '../pharmacy/medicine.model.js';
 import { Prescription } from '../prescriptions/prescription.model.js';
 import { ApiError } from '../../shared/utils/ApiError.js';
+import { logger } from '../../shared/utils/logger.js';
 import { ROLES } from '../../shared/constants/roles.js';
 import { PRESCRIPTION_STATUS } from '../../shared/constants/prescriptionStatus.js';
 
@@ -118,7 +119,7 @@ export const dispensePrescription = async (req: Request, res: Response) => {
       try {
         await session.abortTransaction();
       } catch (abortErr) {
-        console.error('[dispense] abortTransaction failed:', abortErr);
+        logger.error({ event: 'abort_transaction_failed', err: abortErr }, '[dispense] abortTransaction failed');
       }
     }
     throw err;

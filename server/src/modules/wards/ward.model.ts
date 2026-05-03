@@ -66,7 +66,7 @@ const wardSchema = new Schema<IWard>(
       },
     },
   },
-  { timestamps: true },
+  { timestamps: true, versionKey: false },
 );
 
 // ── Indexes ────────────────────────────────────────────────────────────────────

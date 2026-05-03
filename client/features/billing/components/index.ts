@@ -4,3 +4,4 @@
 
 export { InvoiceCard } from './InvoiceCard';
 export { StatsCard } from './StatsCard';
+export { BillingCreateForm } from './BillingCreateForm';

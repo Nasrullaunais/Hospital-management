@@ -6,6 +6,7 @@ import Colors from '@/constants/Colors';
 import { useColorScheme } from '@/components/useColorScheme';
 import { useAuth } from '@/shared/context/AuthContext';
 import { getRoleHomeRoute } from '@/shared/constants/roleRoutes';
+import { ROLES } from '@/shared/constants/roles';
 import { CustomTabBar, TabItem } from '@/components/ui/CustomTabBar';
 import { ErrorBoundary } from '@/components/ui/ErrorBoundary';
 import { spacing, typography } from '@/constants/ThemeTokens';
@@ -63,7 +64,7 @@ export default function PharmacistLayout() {
     return <Redirect href="/login" />;
   }
 
-  if (user.role !== 'pharmacist') {
+  if (user.role !== ROLES.PHARMACIST) {
     return <Redirect href={getRoleHomeRoute(user.role) ?? '/login'} />;
   }
 

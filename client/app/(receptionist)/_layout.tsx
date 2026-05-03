@@ -5,6 +5,7 @@ import Colors from '@/constants/Colors';
 import { useColorScheme } from '@/components/useColorScheme';
 import { useAuth } from '@/shared/context/AuthContext';
 import { getRoleHomeRoute } from '@/shared/constants/roleRoutes';
+import { ROLES } from '@/shared/constants/roles';
 import { CustomTabBar, TabItem } from '@/components/ui/CustomTabBar';
 
 const TAB_SCREENS = ['index', 'beds', 'patients', 'billing', 'medications', 'profile'];
@@ -54,7 +55,7 @@ export default function ReceptionistLayout() {
     return <Redirect href="/login" />;
   }
 
-  if (user.role !== 'receptionist') {
+  if (user.role !== ROLES.RECEPTIONIST) {
     return <Redirect href={getRoleHomeRoute(user.role) ?? '/login'} />;
   }
 

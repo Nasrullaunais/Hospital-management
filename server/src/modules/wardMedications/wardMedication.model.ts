@@ -60,7 +60,7 @@ const wardMedicationSchema = new Schema<IWardMedication>(
       trim: true,
     },
   },
-  { timestamps: true },
+  { timestamps: true, versionKey: false },
 );
 
 export const WardMedication = mongoose.model<IWardMedication>('WardMedication', wardMedicationSchema);

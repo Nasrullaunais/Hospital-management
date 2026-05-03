@@ -66,7 +66,7 @@ const wardAssignmentSchema = new Schema<IWardAssignment>(
       default: 'active',
     },
   },
-  { timestamps: true },
+  { timestamps: true, versionKey: false },
 );
 
 // ── Indexes ────────────────────────────────────────────────────────────────────

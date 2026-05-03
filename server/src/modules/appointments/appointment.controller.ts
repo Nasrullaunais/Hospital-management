@@ -140,15 +140,24 @@ export const getMyAppointments = async (req: Request, res: Response, next: NextF
     const userId = req.user?.id;
     if (!userId) return next(ApiError.unauthorized());
 
-    const appointments = await Appointment.find({ patientId: userId })
-      .populate({
-        path: 'doctorId',
-        select: 'specialization consultationFee availability userId',
-        populate: { path: 'userId', select: 'name email phone' },
-      })
-      .sort({ appointmentDate: -1 });
+    const page = Math.max(1, parseInt(req.query.page as string) || 1);
+    const limit = Math.min(100, Math.max(1, parseInt(req.query.limit as string) || 20));
+    const skip = (page - 1) * limit;
 
-    res.json({ success: true, data: { appointments, count: appointments.length } });
+    const [appointments, total] = await Promise.all([
+      Appointment.find({ patientId: userId })
+        .populate({
+          path: 'doctorId',
+          select: 'specialization consultationFee availability userId',
+          populate: { path: 'userId', select: 'name email phone' },
+        })
+        .sort({ appointmentDate: -1 })
+        .skip(skip)
+        .limit(limit),
+      Appointment.countDocuments({ patientId: userId }),
+    ]);
+
+    res.json({ success: true, data: { appointments, total, page, limit, pages: Math.ceil(total / limit) } });
   } catch (err) {
     next(err);
   }

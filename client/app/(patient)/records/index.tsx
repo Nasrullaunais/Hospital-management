@@ -31,6 +31,7 @@ export default function RecordsScreen() {
 
   const fetchRecords = useCallback(async () => {
     if (!user) return;
+    setError(null);
     try {
       if (user.role === 'patient') {
         const data = await recordService.getPatientHistory(user._id);
@@ -145,6 +146,23 @@ export default function RecordsScreen() {
     );
   }
 
+  if (error) {
+    return (
+      <SafeAreaView edges={['top', 'bottom']} style={[styles.container, { backgroundColor: theme.background }]}>
+        <View style={styles.centered}>
+          <Feather name="alert-circle" size={48} color={theme.error} />
+          <Text style={[styles.errorText, { color: theme.error }]}>{error}</Text>
+          <TouchableOpacity
+            style={[styles.retryButton, { backgroundColor: theme.primary }]}
+            onPress={() => void fetchRecords()}
+          >
+            <Text style={styles.retryButtonText}>Retry</Text>
+          </TouchableOpacity>
+        </View>
+      </SafeAreaView>
+    );
+  }
+
   return (
     <SafeAreaView
       edges={['top', 'bottom']}
@@ -177,7 +195,7 @@ export default function RecordsScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
-  centered: { flex: 1, justifyContent: 'center', alignItems: 'center' },
+  centered: { flex: 1, justifyContent: 'center', alignItems: 'center', gap: 12 },
   list: {
     padding: spacing.md,
     paddingBottom: TAB_BAR_HEIGHT + spacing.md,
@@ -263,8 +281,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.sm,
     paddingVertical: spacing.xs,
   },
-  attachmentText: {
-    fontSize: 11,
-    fontWeight: '600',
-  },
+  attachmentText: { fontSize: 11, fontWeight: '600' },
+  errorText: { fontSize: 15, textAlign: 'center', paddingHorizontal: spacing.lg },
+  retryButton: { paddingHorizontal: spacing.lg, paddingVertical: spacing.sm, borderRadius: radius.md },
+  retryButtonText: { color: '#fff', fontWeight: '600', fontSize: 15 },
 });

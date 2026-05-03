@@ -8,6 +8,7 @@ import {
   updateBeds,
 } from './ward.controller.js';
 import { authMiddleware, requireRole } from '../../shared/middlewares/authMiddleware.js';
+import { ROLES } from '../../shared/constants/roles.js';
 import {
   createWardValidation,
   updateWardValidation,
@@ -22,7 +23,7 @@ const router = Router();
 router.post(
   '/',
   authMiddleware,
-  requireRole('admin'),
+  requireRole(ROLES.ADMIN),
   createWardValidation,
   createWard,
 );
@@ -34,12 +35,12 @@ router.get('/', authMiddleware, listWardsValidation, getWards);
 router.get('/:id', authMiddleware, wardIdValidation, getWardById);
 
 /** PUT /api/wards/:id — Admin only */
-router.put('/:id', authMiddleware, requireRole('admin'), updateWardValidation, updateWard);
+router.put('/:id', authMiddleware, requireRole(ROLES.ADMIN), updateWardValidation, updateWard);
 
 /** DELETE /api/wards/:id — Admin only */
-router.delete('/:id', authMiddleware, requireRole('admin'), wardIdValidation, deleteWard);
+router.delete('/:id', authMiddleware, requireRole(ROLES.ADMIN), wardIdValidation, deleteWard);
 
 /** PATCH /api/wards/:id/beds — Admin only, update bed occupancy */
-router.patch('/:id/beds', authMiddleware, requireRole('admin'), updateBedsValidation, updateBeds);
+router.patch('/:id/beds', authMiddleware, requireRole(ROLES.ADMIN), updateBedsValidation, updateBeds);
 
 export default router;

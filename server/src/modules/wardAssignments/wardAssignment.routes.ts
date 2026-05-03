@@ -12,6 +12,7 @@ import {
   getAllPatients,
 } from './wardAssignment.controller.js';
 import { authMiddleware, requireRole } from '../../shared/middlewares/authMiddleware.js';
+import { ROLES } from '../../shared/constants/roles.js';
 import {
   assignPatientValidation,
   assignmentIdValidation,
@@ -27,7 +28,7 @@ const router = Router();
 router.post(
   '/',
   authMiddleware,
-  requireRole('receptionist'),
+  requireRole(ROLES.RECEPTIONIST),
   assignPatientValidation,
   assignPatient,
 );
@@ -36,7 +37,7 @@ router.post(
 router.get(
   '/ward/:wardId',
   authMiddleware,
-  requireRole('receptionist'),
+  requireRole(ROLES.RECEPTIONIST),
   wardIdParamValidation,
   getWardAssignments,
 );
@@ -45,7 +46,7 @@ router.get(
 router.get(
   '/stats',
   authMiddleware,
-  requireRole('receptionist'),
+  requireRole(ROLES.RECEPTIONIST),
   wardIdQueryValidation,
   getWardStats,
 );
@@ -54,7 +55,7 @@ router.get(
 router.get(
   '/bed-statuses',
   authMiddleware,
-  requireRole('receptionist'),
+  requireRole(ROLES.RECEPTIONIST),
   wardIdQueryValidation,
   getBedStatuses,
 );
@@ -63,7 +64,7 @@ router.get(
 router.get(
   '/:id',
   authMiddleware,
-  requireRole('receptionist'),
+  requireRole(ROLES.RECEPTIONIST),
   assignmentIdValidation,
   getAssignmentById,
 );
@@ -72,7 +73,7 @@ router.get(
 router.patch(
   '/:id',
   authMiddleware,
-  requireRole('receptionist'),
+  requireRole(ROLES.RECEPTIONIST),
   updateAssignmentValidation,
   updateAssignment,
 );
@@ -81,7 +82,7 @@ router.patch(
 router.delete(
   '/:id',
   authMiddleware,
-  requireRole('receptionist'),
+  requireRole(ROLES.RECEPTIONIST),
   assignmentIdValidation,
   dischargePatient,
 );
@@ -90,7 +91,7 @@ router.delete(
 router.get(
   '/ward/:wardId/patients',
   authMiddleware,
-  requireRole('receptionist'),
+  requireRole(ROLES.RECEPTIONIST),
   wardIdParamValidation,
   getWardPatients,
 );
@@ -99,7 +100,7 @@ router.get(
 router.get(
   '/patient/:patientId',
   authMiddleware,
-  requireRole('receptionist'),
+  requireRole(ROLES.RECEPTIONIST),
   patientIdParamValidation,
   getPatientById,
 );
@@ -108,7 +109,7 @@ router.get(
 router.get(
   '/patients',
   authMiddleware,
-  requireRole('receptionist'),
+  requireRole(ROLES.RECEPTIONIST),
   wardIdQueryValidation,
   getAllPatients,
 );

@@ -54,7 +54,7 @@ const medicineSchema = new Schema<IMedicine>(
       required: [true, 'Packaging image is required'],
     },
   },
-  { timestamps: true },
+  { timestamps: true, versionKey: false },
 );
 
 medicineSchema.index({ name: 1 }, { unique: true });

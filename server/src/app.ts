@@ -1,4 +1,4 @@
-import express from 'express';
+import express, { Router } from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
 import { randomUUID } from 'crypto';
@@ -8,6 +8,8 @@ import { env } from './config/env.js';
 import router from './routes/index.js';
 import { errorHandler } from './shared/middlewares/errorHandler.js';
 import { logger } from './shared/utils/logger.js';
+import { generalLimiter } from './shared/middlewares/rateLimiter.js';
+import { authMiddleware } from './shared/middlewares/authMiddleware.js';
 
 // ESM __dirname equivalent
 const __filename = fileURLToPath(import.meta.url);
@@ -24,12 +26,18 @@ app.use(
 
 app.use(
   cors({
-    origin: (process.env['CORS_ORIGINS'] ?? 'http://localhost:8082,http://localhost:8081').split(',').filter(Boolean),
+    origin: env.CORS_ORIGINS.split(',').filter(Boolean),
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization'],
   }),
 );
+
+// Trust proxy (for correct IP behind reverse proxy / load balancer)
+app.set('trust proxy', 1);
+
+// Global rate limiting — applies to all routes
+app.use(generalLimiter);
 
 // Request parsing
 app.use(express.json({ limit: '10mb' }));
@@ -75,8 +83,10 @@ app.use((req, res, next) => {
   next();
 });
 
-// Static files
-app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
+// Protected static files (behind auth)
+const uploadsRouter = Router();
+uploadsRouter.use('/uploads', authMiddleware, express.static(path.join(__dirname, '../uploads')));
+app.use(uploadsRouter);
 
 // Routes + error handler
 app.use(router);

@@ -1,5 +1,6 @@
 import { Router } from 'express';
 import { authMiddleware, requireRole } from '../../shared/middlewares/authMiddleware.js';
+import { ROLES } from '../../shared/constants/roles.js';
 import {
   getPatientMedications,
   getMedicationById,
@@ -20,7 +21,7 @@ const router = Router();
 router.get(
   '/patient/:patientId',
   authMiddleware,
-  requireRole('receptionist'),
+  requireRole(ROLES.RECEPTIONIST),
   getPatientMedicationsValidation,
   getPatientMedications,
 );
@@ -28,7 +29,7 @@ router.get(
 router.get(
   '/:id',
   authMiddleware,
-  requireRole('receptionist'),
+  requireRole(ROLES.RECEPTIONIST),
   getMedicationByIdValidation,
   getMedicationById,
 );
@@ -36,7 +37,7 @@ router.get(
 router.post(
   '/',
   authMiddleware,
-  requireRole('receptionist'),
+  requireRole(ROLES.RECEPTIONIST),
   addWardMedicationValidation,
   addWardMedication,
 );
@@ -44,7 +45,7 @@ router.post(
 router.patch(
   '/:id',
   authMiddleware,
-  requireRole('receptionist'),
+  requireRole(ROLES.RECEPTIONIST),
   updateWardMedicationValidation,
   updateWardMedication,
 );
@@ -52,7 +53,7 @@ router.patch(
 router.delete(
   '/:id',
   authMiddleware,
-  requireRole('receptionist'),
+  requireRole(ROLES.RECEPTIONIST),
   discontinueMedicationValidation,
   discontinueMedication,
 );

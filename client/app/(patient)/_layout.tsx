@@ -5,6 +5,7 @@ import { Colors } from '@/constants/Colors';
 import { useColorScheme } from '@/components/useColorScheme';
 import { useAuth } from '@/shared/context/AuthContext';
 import { getRoleHomeRoute } from '@/shared/constants/roleRoutes';
+import { ROLES } from '@/shared/constants/roles';
 import { CustomTabBar, TabItem } from '@/components/ui/CustomTabBar';
 import { spacing } from '@/constants/ThemeTokens';
 
@@ -59,7 +60,7 @@ export default function PatientLayout() {
     return <Redirect href="/login" />;
   }
 
-  if (user.role !== 'patient') {
+  if (user.role !== ROLES.PATIENT) {
     return <Redirect href={getRoleHomeRoute(user.role) ?? '/login'} />;
   }
 

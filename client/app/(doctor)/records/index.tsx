@@ -49,9 +49,11 @@ export default function RecordsScreen() {
   const [records, setRecords] = useState<PopulatedMedicalRecord[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const fetchRecords = useCallback(async () => {
     if (!user) return;
+    setError(null);
     try {
       if (user.role === 'patient') {
         const data = await recordService.getPatientHistory(user._id);
@@ -62,7 +64,7 @@ export default function RecordsScreen() {
       }
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Failed to load records.';
-      Alert.alert('Error', message);
+      setError(message);
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -149,6 +151,23 @@ export default function RecordsScreen() {
     );
   }
 
+  if (error) {
+    return (
+      <SafeAreaView edges={['top', 'bottom']} style={[styles.container, { backgroundColor: colors.background }]}>
+        <View style={styles.centered}>
+          <Feather name="alert-circle" size={48} color={colors.error} />
+          <Text style={[styles.errorText, { color: colors.error }]}>{error}</Text>
+          <TouchableOpacity
+            style={[styles.retryButton, { backgroundColor: colors.primary }]}
+            onPress={() => void fetchRecords()}
+          >
+            <Text style={styles.retryButtonText}>Retry</Text>
+          </TouchableOpacity>
+        </View>
+      </SafeAreaView>
+    );
+  }
+
   return (
     <SafeAreaView edges={['top', 'bottom']} style={[styles.container, { backgroundColor: colors.background }]}>
       <View style={[styles.header, { backgroundColor: colors.surface, borderBottomColor: colors.border }]}>
@@ -203,6 +222,7 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
+    gap: 12,
   },
   header: {
     flexDirection: 'row',
@@ -337,5 +357,20 @@ const styles = StyleSheet.create({
   reportButtonText: {
     fontWeight: '600',
     fontSize: 14,
+  },
+  errorText: {
+    fontSize: 15,
+    textAlign: 'center',
+    paddingHorizontal: spacing.lg,
+  },
+  retryButton: {
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.sm,
+    borderRadius: radius.md,
+  },
+  retryButtonText: {
+    color: '#fff',
+    fontWeight: '600',
+    fontSize: 15,
   },
 });

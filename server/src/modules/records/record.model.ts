@@ -47,7 +47,7 @@ const medicalRecordSchema = new Schema<IMedicalRecord>(
       type: String,
     },
   },
-  { timestamps: true },
+  { timestamps: true, versionKey: false },
 );
 
 medicalRecordSchema.index({ patientId: 1, dateRecorded: -1 });

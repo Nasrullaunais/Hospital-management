@@ -20,7 +20,7 @@ const prescriptionSchema = new mongoose.Schema(
     notes: { type: String },
     status: { type: String, enum: ['active', 'fulfilled', 'cancelled'], default: 'active' },
   },
-  { timestamps: true },
+  { timestamps: true, versionKey: false },
 );
 
 prescriptionSchema.index({ patientId: 1, createdAt: -1 });

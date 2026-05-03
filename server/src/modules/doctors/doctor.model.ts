@@ -49,7 +49,7 @@ const doctorSchema = new Schema<IDoctor>(
       required: [true, 'License document is required'],
     },
   },
-  { timestamps: true },
+  { timestamps: true, versionKey: false },
 );
 
 // ── Indexes ────────────────────────────────────────────────────────────────────

@@ -36,7 +36,7 @@ const pendingUploadSchema = new Schema<IPendingUpload>(
       required: [true, 'expiresAt is required'],
     },
   },
-  { timestamps: true },
+  { timestamps: true, versionKey: false },
 );
 
 // Compound index for fast lookups by fileKey + userId

@@ -18,13 +18,7 @@ import { DoctorScheduleCalendar } from '../components/DoctorScheduleCalendar';
 import type { Doctor } from '@/shared/types';
 import { useAuth } from '@/shared/context/AuthContext';
 
-/**
- * DoctorDetailScreen — Member 2
- * Full profile view for a single doctor.
- * TODO: Accept `doctorId` from navigation params (Expo Router: useLocalSearchParams).
- * TODO: Add "Book Appointment" button that navigates to BookAppointmentScreen with doctorId pre-filled.
- * TODO: Admin: add Edit/Delete actions via admin role check.
- */
+/** DoctorDetailScreen — Full profile view for a single doctor. */
 export default function DoctorDetailScreen() {
   const { id: doctorId } = useLocalSearchParams<{ id: string }>();
   const { user } = useAuth();

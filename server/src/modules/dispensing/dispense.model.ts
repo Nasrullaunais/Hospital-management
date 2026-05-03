@@ -42,7 +42,7 @@ const dispenseSchema = new mongoose.Schema(
     fulfilledAt: { type: Date, default: Date.now },
     invoiceId: { type: Schema.Types.ObjectId, ref: 'Invoice', default: null },
   },
-  { timestamps: true },
+  { timestamps: true, versionKey: false },
 );
 
 // Indexes for common query patterns

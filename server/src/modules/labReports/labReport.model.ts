@@ -93,7 +93,7 @@ const labReportSchema = new Schema<ILabReport>(
     interpretation: { type: String },
     notes: { type: String },
   },
-  { timestamps: true },
+  { timestamps: true, versionKey: false },
 );
 
 labReportSchema.index({ patientId: 1, testDate: -1 });

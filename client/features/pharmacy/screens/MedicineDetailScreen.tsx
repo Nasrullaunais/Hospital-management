@@ -20,13 +20,7 @@ interface Props {
   onDeleted?: () => void;
 }
 
-/**
- * MedicineDetailScreen — Member 5
- * Full view of a single medicine item.
- * TODO: Accept `medicineId` from Expo Router navigation params.
- * TODO: Admin: add inline edit form.
- * TODO: Show expiry warning banner if within 30 days.
- */
+/** MedicineDetailScreen — Full view of a single medicine item. */
 export default function MedicineDetailScreen({ medicineId, onDeleted }: Props) {
   const { user } = useAuth();
   const [medicine, setMedicine] = useState<Medicine | null>(null);

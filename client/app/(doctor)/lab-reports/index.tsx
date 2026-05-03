@@ -74,6 +74,7 @@ export default function LabReportsIndexScreen() {
   const [loadingPatients, setLoadingPatients] = useState(true);
   const [loadingReports, setLoadingReports] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     const loadPatients = async () => {
@@ -106,10 +107,12 @@ export default function LabReportsIndexScreen() {
 
   const fetchLabReports = useCallback(async (patientId: string) => {
     setLoadingReports(true);
+    setError(null);
     try {
       const data = await labReportService.getPatientLabReports(patientId);
       setLabReports(data);
-    } catch {
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to load lab reports.');
       setLabReports([]);
     } finally {
       setLoadingReports(false);
@@ -290,6 +293,23 @@ export default function LabReportsIndexScreen() {
     );
   }
 
+  if (error) {
+    return (
+      <SafeAreaView edges={['top']} style={[styles.container, { backgroundColor: colors.background }]}>
+        <View style={styles.centered}>
+          <Feather name="alert-circle" size={48} color={colors.error} />
+          <Text style={[styles.errorText, { color: colors.error }]}>{error}</Text>
+          <TouchableOpacity
+            style={[styles.retryButton, { backgroundColor: colors.primary }]}
+            onPress={() => selectedPatientId ? void fetchLabReports(selectedPatientId) : null}
+          >
+            <Text style={styles.retryButtonText}>Retry</Text>
+          </TouchableOpacity>
+        </View>
+      </SafeAreaView>
+    );
+  }
+
   return (
     <SafeAreaView edges={['top']} style={[styles.container, { backgroundColor: colors.background }]}>
       <FlatList
@@ -320,7 +340,7 @@ export default function LabReportsIndexScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
-  centered: { flex: 1, justifyContent: 'center', alignItems: 'center' },
+  centered: { flex: 1, justifyContent: 'center', alignItems: 'center', gap: 12 },
   listContainer: { paddingBottom: TAB_BAR_HEIGHT + spacing.lg, paddingHorizontal: spacing.md },
   emptyContainer: { flex: 1, paddingBottom: TAB_BAR_HEIGHT + spacing.lg, paddingHorizontal: spacing.md },
 
@@ -424,4 +444,15 @@ const styles = StyleSheet.create({
     borderRadius: radius.md,
   },
   createButtonText: { color: '#fff', fontWeight: '600', fontSize: 15 },
+  errorText: {
+    fontSize: 15,
+    textAlign: 'center',
+    paddingHorizontal: spacing.lg,
+  },
+  retryButton: {
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.sm,
+    borderRadius: radius.md,
+  },
+  retryButtonText: { color: '#fff', fontWeight: '600', fontSize: 15 },
 });

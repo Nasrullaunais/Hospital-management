@@ -65,7 +65,7 @@ const paymentSchema = new Schema<IPayment>(
       type: Date,
     },
   },
-  { timestamps: true },
+  { timestamps: true, versionKey: false },
 );
 
 paymentSchema.index({ invoiceId: 1 });

@@ -1,6 +1,7 @@
-import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, ActivityIndicator, ScrollView } from 'react-native';
-import { useLocalSearchParams } from 'expo-router';
+import React, { useEffect, useState, useCallback } from 'react';
+import { View, Text, StyleSheet, ActivityIndicator, ScrollView, TouchableOpacity, Alert } from 'react-native';
+import { useLocalSearchParams, useRouter } from 'expo-router';
+import { Feather } from '@expo/vector-icons';
 import { useColorScheme } from '@/components/useColorScheme';
 import Colors from '@/constants/Colors';
 import { prescriptionService, type Prescription } from '../services/prescription.service';
@@ -8,11 +9,13 @@ import { spacing, radius } from '@/constants/ThemeTokens';
 
 export default function PrescriptionDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
+  const router = useRouter();
   const colorScheme = useColorScheme() ?? 'light';
   const theme = Colors[colorScheme];
   const [prescription, setPrescription] = useState<Prescription | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [cancelling, setCancelling] = useState(false);
 
   useEffect(() => {
     if (!id) return;
@@ -25,6 +28,36 @@ export default function PrescriptionDetailScreen() {
       })
       .finally(() => setLoading(false));
   }, [id]);
+
+  const handleCancel = useCallback(() => {
+    if (!prescription) return;
+    Alert.alert(
+      'Cancel Prescription',
+      'Are you sure you want to cancel this prescription? This action cannot be undone.',
+      [
+        { text: 'No', style: 'cancel' },
+        {
+          text: 'Yes, Cancel',
+          style: 'destructive',
+          onPress: async () => {
+            setCancelling(true);
+            try {
+              await prescriptionService.cancelPrescription(prescription._id);
+              Alert.alert('Success', 'Prescription cancelled successfully.');
+              router.back();
+            } catch (err) {
+              console.error('[PrescriptionDetail] cancel error:', err);
+              Alert.alert('Error', err instanceof Error ? err.message : 'Failed to cancel prescription. Please try again.');
+            } finally {
+              setCancelling(false);
+            }
+          },
+        },
+      ],
+    );
+  }, [prescription, router]);
+
+  const canCancel = prescription && (prescription.status === 'active' || prescription.status === 'pending');
 
   if (loading) return (
     <View style={[styles.center, { backgroundColor: theme.background }]}>
@@ -100,6 +133,24 @@ export default function PrescriptionDetailScreen() {
           <Text style={[styles.notes, { color: theme.textSecondary }]}>{prescription.notes}</Text>
         </View>
       )}
+
+      {canCancel && (
+        <View style={styles.actionRow}>
+          <TouchableOpacity
+            style={[styles.cancelButton, { backgroundColor: theme.error }, cancelling && { opacity: 0.6 }]}
+            onPress={handleCancel}
+            activeOpacity={0.7}
+            disabled={cancelling}
+          >
+            {cancelling ? (
+              <ActivityIndicator size="small" color="#FFFFFF" />
+            ) : (
+              <Feather name="x-circle" size={18} color="#FFFFFF" />
+            )}
+            <Text style={styles.cancelButtonText}>{cancelling ? 'Cancelling...' : 'Cancel Prescription'}</Text>
+          </TouchableOpacity>
+        </View>
+      )}
     </ScrollView>
   );
 }
@@ -124,4 +175,14 @@ const styles = StyleSheet.create({
   error: { fontSize: 15 },
   statusBadge: { paddingHorizontal: 10, paddingVertical: 4, borderRadius: radius.lg },
   statusText: { fontSize: 12, fontWeight: '700' },
+  actionRow: { padding: spacing.md, paddingBottom: spacing.xl },
+  cancelButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    height: 48,
+    borderRadius: radius.md,
+    gap: spacing.sm,
+  },
+  cancelButtonText: { color: '#FFFFFF', fontSize: 15, fontWeight: '600' },
 });

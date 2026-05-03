@@ -66,11 +66,21 @@ export const getPrescriptionsByPatient = async (req: Request, res: Response) => 
     throw new ApiError(403, "You are not authorized to view this patient's prescriptions");
   }
 
-  const prescriptions = await Prescription.find({ patientId })
-    .populate('doctorId', 'specialization')
-    .populate('items.medicineId', 'name price stockQuantity')
-    .sort({ createdAt: -1 });
-  res.json({ success: true, data: prescriptions });
+  const page = Math.max(1, parseInt(req.query.page as string) || 1);
+  const limit = Math.min(100, Math.max(1, parseInt(req.query.limit as string) || 20));
+  const skip = (page - 1) * limit;
+
+  const [prescriptions, total] = await Promise.all([
+    Prescription.find({ patientId })
+      .populate('doctorId', 'specialization')
+      .populate('items.medicineId', 'name price stockQuantity')
+      .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(limit),
+    Prescription.countDocuments({ patientId }),
+  ]);
+
+  res.json({ success: true, data: { prescriptions, total, page, limit, pages: Math.ceil(total / limit) } });
 };
 
 export const getPrescriptionById = async (req: Request, res: Response) => {

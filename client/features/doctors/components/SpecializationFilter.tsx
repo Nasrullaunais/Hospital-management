@@ -4,7 +4,7 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import { View, Text, ScrollView, TouchableOpacity, StyleSheet } from 'react-native';
 import { doctorService } from '../services/doctor.service';
-import Colors from '@/constants/Colors';
+import Colors, { button } from '@/constants/Colors';
 import { useColorScheme } from '@/components/useColorScheme';
 import { spacing, radius, typography } from '@/constants/ThemeTokens';
 
@@ -48,6 +48,7 @@ export function SpecializationFilter({ selected, onFilterChange }: Specializatio
     <ScrollView
       horizontal
       showsHorizontalScrollIndicator={false}
+      style={styles.scrollView}
       contentContainerStyle={styles.container}
     >
       <TouchableOpacity
@@ -61,8 +62,9 @@ export function SpecializationFilter({ selected, onFilterChange }: Specializatio
         <Text
           style={[
             styles.chipText,
-            { color: selected === null ? '#fff' : theme.textSecondary },
+            { color: selected === null ? button[colorScheme].primary.text : theme.textSecondary },
           ]}
+          numberOfLines={1}
         >
           All
         </Text>
@@ -82,8 +84,9 @@ export function SpecializationFilter({ selected, onFilterChange }: Specializatio
             <Text
               style={[
                 styles.chipText,
-                { color: isSelected ? '#fff' : theme.textSecondary },
+                { color: isSelected ? button[colorScheme].primary.text : theme.textSecondary },
               ]}
+              numberOfLines={1}
             >
               {spec}
             </Text>
@@ -95,16 +98,22 @@ export function SpecializationFilter({ selected, onFilterChange }: Specializatio
 }
 
 const styles = StyleSheet.create({
+  scrollView: {
+    height: 52,
+  },
   container: {
     flexDirection: 'row',
+    alignItems: 'center',
     paddingHorizontal: spacing.md,
-    paddingBottom: spacing.sm,
+    paddingVertical: spacing.sm,
     gap: spacing.sm,
   },
   chip: {
+    height: 36,
     borderRadius: radius.full,
     paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   chipText: {
     fontSize: typography.sm,

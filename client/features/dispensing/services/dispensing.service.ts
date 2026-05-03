@@ -17,6 +17,26 @@ export interface DispenseResponse {
   dispensedItems: Array<{ medicineId: string; quantityDispensed: number }>;
 }
 
+export interface DispenseRecord {
+  _id: string;
+  prescriptionId: string;
+  patientId: string;
+  pharmacistId: string | { _id: string; name?: string };
+  dispensedItems: Array<{
+    medicineId: string;
+    medicineName: string;
+    dosage?: string;
+    quantityPrescribed: number;
+    quantityDispensed: number;
+    instructions?: string;
+  }>;
+  status: 'fulfilled' | 'partial' | 'cancelled';
+  fulfilledAt: string;
+  invoiceId?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
 export const dispensingService = {
   getPendingPrescriptions: async (skip = 0, limit = 20) => {
     const res = await apiClient.get<ApiSuccessResponse<{ prescriptions: PendingPrescription[]; total: number; skip: number; limit: number }>>(
@@ -32,5 +52,12 @@ export const dispensingService = {
       { prescriptionId, dispensedItems }
     );
     return res.data.data;
+  },
+
+  getPatientDispenseHistory: async (patientId: string): Promise<DispenseRecord[]> => {
+    const res = await apiClient.get<ApiSuccessResponse<{ dispenses: DispenseRecord[] }>>(
+      ENDPOINTS.DISPENSE.PATIENT_HISTORY(patientId),
+    );
+    return res.data.data.dispenses;
   },
 };

@@ -10,6 +10,7 @@ import {
 } from './medicine.controller.js';
 import { authMiddleware, requireRole } from '../../shared/middlewares/authMiddleware.js';
 import { uploadSingle } from '../../shared/middlewares/uploadMiddleware.js';
+import { ROLES } from '../../shared/constants/roles.js';
 import {
   createMedicineValidation,
   updateMedicineValidation,
@@ -22,7 +23,7 @@ const router = Router();
 router.post(
   '/',
   authMiddleware,
-  requireRole('admin', 'pharmacist'),
+  requireRole(ROLES.ADMIN, ROLES.PHARMACIST),
   uploadSingle('packagingImage'),
   createMedicineValidation,
   addMedicine,
@@ -38,12 +39,12 @@ router.get('/:id', authMiddleware, getMedicineById);
 router.post('/batch', authMiddleware, getMedicinesByIds);
 
 /** PATCH /api/medicines/:id/stock — Protected */
-router.patch('/:id/stock', authMiddleware, requireRole('pharmacist', 'admin'), adjustStockValidation, adjustStock);
+router.patch('/:id/stock', authMiddleware, requireRole(ROLES.PHARMACIST, ROLES.ADMIN), adjustStockValidation, adjustStock);
 
 /** PUT /api/medicines/:id — Admin only */
-router.put('/:id', authMiddleware, requireRole('admin'), uploadSingle('packagingImage'), updateMedicineValidation, updateMedicine);
+router.put('/:id', authMiddleware, requireRole(ROLES.ADMIN), uploadSingle('packagingImage'), updateMedicineValidation, updateMedicine);
 
 /** DELETE /api/medicines/:id — Admin only */
-router.delete('/:id', authMiddleware, requireRole('admin'), deleteMedicine);
+router.delete('/:id', authMiddleware, requireRole(ROLES.ADMIN), deleteMedicine);
 
 export default router;

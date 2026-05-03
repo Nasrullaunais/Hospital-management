@@ -2,6 +2,7 @@ import type { Request, Response, NextFunction } from 'express';
 import { validationResult } from 'express-validator';
 import { User } from '../auth/auth.model.js';
 import { ApiError } from '../../shared/utils/ApiError.js';
+import { ROLES } from '../../shared/constants/roles.js';
 
 /** POST /api/admin/users — Create a receptionist or pharmacist user */
 export const createUser = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
@@ -99,7 +100,7 @@ export const getUserById = async (req: Request, res: Response, next: NextFunctio
     }
 
     // Only allow viewing staff roles (receptionist, pharmacist)
-    if (user.role !== 'receptionist' && user.role !== 'pharmacist') {
+    if (user.role !== ROLES.RECEPTIONIST && user.role !== ROLES.PHARMACIST) {
       return next(ApiError.forbidden('Cannot view non-staff users via this endpoint'));
     }
 
@@ -128,7 +129,7 @@ export const updateUser = async (req: Request, res: Response, next: NextFunction
     }
 
     // Only allow updating staff roles
-    if (user.role !== 'receptionist' && user.role !== 'pharmacist') {
+    if (user.role !== ROLES.RECEPTIONIST && user.role !== ROLES.PHARMACIST) {
       return next(ApiError.forbidden('Cannot update non-staff users'));
     }
 
@@ -174,7 +175,7 @@ export const deleteUser = async (req: Request, res: Response, next: NextFunction
     }
 
     // Prevent deleting admin users
-    if (user.role === 'admin') {
+    if (user.role === ROLES.ADMIN) {
       return next(ApiError.forbidden('Cannot delete admin users'));
     }
 

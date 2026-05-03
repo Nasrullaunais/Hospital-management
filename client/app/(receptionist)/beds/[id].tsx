@@ -108,7 +108,7 @@ export default function BedDetailScreen() {
           onPress: async () => {
             setUnassigning(true);
             try {
-              await wardReceptionistService.unassignPatient(bed.patientId!);
+              await wardReceptionistService.unassignPatient(bed.bedId);
               router.back();
             } catch (err) {
               console.error('[BedDetail] unassign error:', err);

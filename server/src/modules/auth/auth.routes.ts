@@ -1,10 +1,12 @@
 import { Router } from 'express';
 import { validationResult } from 'express-validator';
 import { register, login, getMyProfile, updateMyProfile, deleteMyProfile, searchPatients } from './auth.controller.js';
-import { authMiddleware } from '../../shared/middlewares/authMiddleware.js';
+import { authMiddleware, requireRole } from '../../shared/middlewares/authMiddleware.js';
+import { ROLES } from '../../shared/constants/roles.js';
 import { uploadSingle } from '../../shared/middlewares/uploadMiddleware.js';
 import { registerValidation, loginValidation, updateProfileValidation } from './auth.validation.js';
 import { ApiError } from '../../shared/utils/ApiError.js';
+import { authLimiter } from '../../shared/middlewares/rateLimiter.js';
 
 const router = Router();
 
@@ -20,10 +22,10 @@ const validate = (req: import('express').Request, _res: import('express').Respon
 // ── Public Routes ──────────────────────────────────────────────────────────────
 
 /** POST /api/auth/register — Create new user account */
-router.post('/auth/register', registerValidation, validate, register);
+router.post('/auth/register', authLimiter, registerValidation, validate, register);
 
 /** POST /api/auth/login — Login and receive JWT */
-router.post('/auth/login', loginValidation, validate, login);
+router.post('/auth/login', authLimiter, loginValidation, validate, login);
 
 /** POST /api/auth/logout — Invalidate token (client-side token deletion confirms logout) */
 router.post('/auth/logout', authMiddleware, (_req, res) => {
@@ -33,7 +35,7 @@ router.post('/auth/logout', authMiddleware, (_req, res) => {
 // ── Protected Patient Routes ───────────────────────────────────────────────────
 
 /** GET /api/patients/search?q= — Search patients by name or email */
-router.get('/patients/search', authMiddleware, searchPatients);
+router.get('/patients/search', authMiddleware, requireRole(ROLES.ADMIN, ROLES.DOCTOR, ROLES.RECEPTIONIST, ROLES.PHARMACIST), searchPatients);
 
 /** GET /api/patients/me — Get own profile */
 router.get('/patients/me', authMiddleware, getMyProfile);

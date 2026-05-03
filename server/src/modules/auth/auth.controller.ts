@@ -95,7 +95,7 @@ export const login = async (req: Request, res: Response, next: NextFunction): Pr
     const { email, password } = req.body as { email: string; password: string };
 
     // Explicitly select password (it has select: false on the schema)
-    const user = await User.findOne({ email }).select('+password');
+    const user = await User.findOne({ email, isActive: true }).select('+password');
     if (!user || !(await user.comparePassword(password))) {
       logger.warn(
         {

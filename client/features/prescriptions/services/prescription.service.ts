@@ -52,4 +52,11 @@ export const prescriptionService = {
     );
     return res.data.data;
   },
+
+  cancelPrescription: async (id: string): Promise<Prescription> => {
+    const res = await apiClient.put<ApiSuccessResponse<Prescription>>(
+      ENDPOINTS.PRESCRIPTIONS.CANCEL(id),
+    );
+    return res.data.data;
+  },
 };

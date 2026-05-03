@@ -67,15 +67,24 @@ export const getPatientRecords = async (req: Request, res: Response, next: NextF
       return next(ApiError.forbidden('You can only view your own medical records'));
     }
 
-    const records = await MedicalRecord.find({ patientId: targetId })
-      .populate({
-        path: 'doctorId',
-        select: 'specialization userId',
-        populate: { path: 'userId', select: 'name' },
-      })
-      .sort({ dateRecorded: -1 });
+    const page = Math.max(1, parseInt(req.query.page as string) || 1);
+    const limit = Math.min(100, Math.max(1, parseInt(req.query.limit as string) || 20));
+    const skip = (page - 1) * limit;
 
-    res.json({ success: true, data: { records, count: records.length } });
+    const [records, total] = await Promise.all([
+      MedicalRecord.find({ patientId: targetId })
+        .populate({
+          path: 'doctorId',
+          select: 'specialization userId',
+          populate: { path: 'userId', select: 'name' },
+        })
+        .sort({ dateRecorded: -1 })
+        .skip(skip)
+        .limit(limit),
+      MedicalRecord.countDocuments({ patientId: targetId }),
+    ]);
+
+    res.json({ success: true, data: { records, total, page, limit, pages: Math.ceil(total / limit) } });
   } catch (err) {
     next(err);
   }
@@ -88,11 +97,20 @@ export const getDoctorRecords = async (req: Request, res: Response, next: NextFu
     const doctor = await findDoctorProfileByUserId(userId);
     if (!doctor) return next(ApiError.notFound('Doctor profile not found for this account'));
 
-    const records = await MedicalRecord.find({ doctorId: doctor._id })
-      .populate('patientId', 'name email')
-      .sort({ dateRecorded: -1 });
+    const page = Math.max(1, parseInt(req.query.page as string) || 1);
+    const limit = Math.min(100, Math.max(1, parseInt(req.query.limit as string) || 20));
+    const skip = (page - 1) * limit;
 
-    res.json({ success: true, data: { records, count: records.length } });
+    const [records, total] = await Promise.all([
+      MedicalRecord.find({ doctorId: doctor._id })
+        .populate('patientId', 'name email')
+        .sort({ dateRecorded: -1 })
+        .skip(skip)
+        .limit(limit),
+      MedicalRecord.countDocuments({ doctorId: doctor._id }),
+    ]);
+
+    res.json({ success: true, data: { records, total, page, limit, pages: Math.ceil(total / limit) } });
   } catch (err) {
     next(err);
   }

@@ -81,7 +81,7 @@ const doctorScheduleSchema = new Schema<IDoctorSchedule>(
       default: [],
     },
   },
-  { timestamps: true },
+  { timestamps: true, versionKey: false },
 );
 
 doctorScheduleSchema.index({ doctorId: 1 }, { unique: true });
