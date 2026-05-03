@@ -138,21 +138,22 @@ export default function DoctorDetailScreen() {
       {canBookAppointment && (
         <>
           <TouchableOpacity
-            style={[styles.actionButton, { backgroundColor: c.primary }]}
+            style={[
+              styles.actionButton,
+              { backgroundColor: selectedSlot ? c.primary : c.surfaceTertiary },
+            ]}
+            disabled={!selectedSlot}
             onPress={() => {
-              if (selectedSlot) {
-                router.push({
-                  pathname: '/(patient)/appointments/book',
-                  params: { doctorId: doctor._id, date: selectedSlot.date, time: selectedSlot.time },
-                } as Href);
-              } else {
-                router.push({ pathname: '/(patient)/appointments/book', params: { doctorId: doctor._id } } as Href);
-              }
+              if (!selectedSlot) return;
+              router.push({
+                pathname: '/(patient)/appointments/book',
+                params: { doctorId: doctor._id, date: selectedSlot.date, time: selectedSlot.time },
+              } as Href);
             }}
           >
-            <Feather name="calendar" size={18} color="#fff" style={{ marginRight: spacing.sm }} />
-            <Text style={styles.actionButtonText}>
-              {selectedSlot ? `Book ${selectedSlot.date} at ${selectedSlot.time}` : 'Book Appointment'}
+            <Feather name="calendar" size={18} color={selectedSlot ? '#fff' : c.textTertiary} style={{ marginRight: spacing.sm }} />
+            <Text style={[styles.actionButtonText, { color: selectedSlot ? '#fff' : c.textTertiary }]}>
+              {selectedSlot ? `Book ${selectedSlot.date} at ${selectedSlot.time}` : 'Select a time slot to book'}
             </Text>
           </TouchableOpacity>
 

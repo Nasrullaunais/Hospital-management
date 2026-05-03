@@ -2,6 +2,8 @@ import type { Request, Response, NextFunction } from 'express';
 import mongoose from 'mongoose';
 import { validationResult } from 'express-validator';
 import { Appointment } from './appointment.model.js';
+import { Doctor } from '../doctors/doctor.model.js';
+import { DoctorSchedule } from '../doctors/doctorSchedule.model.js';
 import { ApiError } from '../../shared/utils/ApiError.js';
 import { s3Service } from '../../shared/services/s3.service.js';
 import { formatFileReference } from '../../shared/utils/fileReference.js';
@@ -10,6 +12,76 @@ import { APPOINTMENT_STATUS } from '../../shared/constants/appointmentStatus.js'
 import { ROLES } from '../../shared/constants/roles.js';
 import { findDoctorProfileByUserId } from '../../shared/utils/doctorLookup.js';
 
+// ── Slot Validation Helpers ────────────────────────────────────────────────
+
+function timeToMinutes(time: string): number {
+  const [h, m] = time.split(':').map(Number);
+  return h * 60 + (m ?? 0);
+}
+
+function isTimeInSlot(time: string, start: string, end: string, slotDuration: number): boolean {
+  const t = timeToMinutes(time);
+  const s = timeToMinutes(start);
+  const e = timeToMinutes(end);
+  if (t < s || t + slotDuration > e) return false;
+  // Check alignment: request time must land on a slot boundary
+  return (t - s) % slotDuration === 0;
+}
+
+/**
+ * Validate that a requested appointment time falls within the doctor's schedule.
+ * Throws ApiError if validation fails.
+ */
+async function validateSlotAvailability(
+  doctorId: string,
+  appointmentDate: Date,
+): Promise<void> {
+  const doctor = await Doctor.findById(doctorId);
+  if (!doctor) throw ApiError.notFound('Doctor not found');
+  if (doctor.availability !== 'Available') {
+    throw ApiError.badRequest('Doctor is not currently available for appointments');
+  }
+
+  const schedule = await DoctorSchedule.findOne({ doctorId });
+  if (!schedule || schedule.weeklySlots.length === 0) {
+    throw ApiError.badRequest('No schedule configured for this doctor — cannot book');
+  }
+
+  const dateStr = appointmentDate.toISOString().split('T')[0];
+  const dayOfWeek = appointmentDate.getUTCDay();
+
+  // Check exceptions
+  const dateStart = new Date(`${dateStr}T00:00:00.000Z`);
+  const dateEnd = new Date(`${dateStr}T23:59:59.999Z`);
+  const exception = schedule.exceptions.find(
+    (ex) => ex.date >= dateStart && ex.date <= dateEnd,
+  );
+  if (exception && !exception.isAvailable) {
+    throw ApiError.badRequest(
+      exception.reason || 'Doctor is unavailable on this date',
+    );
+  }
+
+  // Find active weekly slot for this day
+  const weeklySlot = schedule.weeklySlots.find(
+    (ws) => ws.dayOfWeek === dayOfWeek && ws.isActive,
+  );
+  if (!weeklySlot) {
+    throw ApiError.badRequest('Doctor has no active schedule for this day');
+  }
+
+  // Format appointment time as HH:mm
+  const hours = String(appointmentDate.getUTCHours()).padStart(2, '0');
+  const minutes = String(appointmentDate.getUTCMinutes()).padStart(2, '0');
+  const timeStr = `${hours}:${minutes}`;
+
+  if (!isTimeInSlot(timeStr, weeklySlot.startTime, weeklySlot.endTime, schedule.slotDuration)) {
+    throw ApiError.badRequest(
+      `Requested time ${timeStr} is not within the doctor's available slots (${weeklySlot.startTime}–${weeklySlot.endTime})`,
+    );
+  }
+}
+
 /** POST /api/appointments — Book an appointment */
 export const bookAppointment = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   const errors = validationResult(req);
@@ -17,6 +89,11 @@ export const bookAppointment = async (req: Request, res: Response, next: NextFun
   try {
     const userId = req.user?.id;
     if (!userId) return next(ApiError.unauthorized());
+
+    const appointmentDate = new Date(req.body.appointmentDate);
+
+    // Validate against doctor's schedule
+    await validateSlotAvailability(req.body.doctorId, appointmentDate);
 
     let referralDocumentUrl: string | undefined;
 
@@ -31,7 +108,7 @@ export const bookAppointment = async (req: Request, res: Response, next: NextFun
     const appointment = await Appointment.create({
       patientId: userId,
       doctorId: req.body.doctorId,
-      appointmentDate: req.body.appointmentDate,
+      appointmentDate,
       reasonForVisit: req.body.reasonForVisit,
       referralDocumentUrl,
     });
