@@ -1,4 +1,4 @@
-# Hospital Management App - Mock Data & Bug Fixes Summary
+# Hospital Management App — Mock Data & Bug Fixes Summary
 
 ## Goal
 
@@ -6,32 +6,26 @@ Populate the MongoDB database with realistic mock data to demo the hospital mana
 
 ## Seed Scripts
 
-Two seed scripts exist:
+Three seed scripts exist:
 
 | Script | Method | Use Case |
 |--------|--------|----------|
 | `server/src/scripts/seed.ts` | Direct Mongoose + raw MongoDB driver | Fast, reliable bulk seeding |
-| `server/src/scripts/reseed.ts` | REST API + direct MongoDB (role fix) | API-level seeding, role-correct tokens |
+| `server/src/scripts/reseed.ts` | REST API + direct MongoDB (role fix) | API-level seeding (original) |
+| `server/src/scripts/reseed-v2.ts` | API-first + MongoDB for roles/users/appointments | Rate-limit-aware hybrid (current) |
 
-Both use `Password123` for all user accounts. The `reseed.ts` script was fixed (2026-05-02) — it previously used `Admin123` for the admin user, causing a password mismatch.
-
-### Running seed.ts
-
-```bash
-cd server
-MONGO_URI="mongodb+srv://<user>:<pass>@<cluster>.mongodb.net/?appName=<app>" bun run src/scripts/seed.ts
-```
-
-**Important**: `seed.ts` no longer hardcodes a database name. It uses whatever database the URI resolves to (matching the deployed app behavior). Previously it hardcoded `dbName: 'hospital-management'` which caused data to go to a different database than the deployed app.
-
-### Running reseed.ts
+### Running reseed-v2.ts (Current Seed Script)
 
 ```bash
 cd server
-MONGO_URI="mongodb+srv://<user>:<pass>@<cluster>.mongodb.net/?appName=<app>" bun run src/scripts/reseed.ts
+bun run src/scripts/reseed-v2.ts
 ```
 
-Requires the API to be running at `http://localhost:5000` (update `API` constant in script if deploying against a remote instance). Uses direct MongoDB access only for role corrections (register endpoint always assigns `patient` role by default).
+Credentials are hardcoded:
+- **API**: `https://hospital-management-l5lc.onrender.com`
+- **MongoDB**: `mongodb+srv://it24101774_db_user:hospital123@hospital-management-clu.0v47ubw.mongodb.net/hospital_db`
+
+Strategy: MongoDB for users (bypasses auth rate limit of 10/15min), appointments (bypasses future-date + schedule validators). API for all other entities. Total API calls: ~91 (under global 100/15min limit). 2s delays between calls.
 
 ## Discoveries
 
@@ -44,157 +38,129 @@ Requires the API to be running at `http://localhost:5000` (update `API` constant
 7. **Pre-save hook `next()` signature changed in Mongoose 9** - the appointment conflict-check hook used `return next(new Error(...))` but Mongoose 9 passes a `SaveOptions` object instead of a callback. Fix: throw directly instead of calling `next()`.
 8. **Deploy database mismatch** (2026-05-02) - Render's `MONGO_URI` had no database name (`mongodb+srv://.../?appName=...`), causing Mongoose to default to `test` database. Seed data was written to a different database (`hospital_db`), so the deployed app showed no data. Fixed by seeding directly into the default database.
 9. **Duplicate mongoose indexes** - `Appointment` model had both a regular and unique index on `{ doctorId, appointmentDate }`. `Medicine` model had `unique: true` on the `name` field AND a separate `schema.index({ name: 1 }, { unique: true })`. Both duplicates removed.
+10. **Rate limiting** (2026-05-03) - Render deployment has two rate limiters: auth limiter (10 requests/15min per IP for login/register) and global limiter (100 requests/15min per IP). Seeding purely via API hits both limits. Fix: MongoDB direct insert for users, logins, and appointments; API for remaining entities with 2s delays.
+11. **API response `id` vs `_id` inconsistency** - Deployed API returns `id` (not `_id`) for some entities (wards, medicines) while others use `_id`. Seed script uses `getEid()` helper to normalize.
+12. **API response wrapping varies** - Some endpoints return `data: { entity }` (doctor, ward, medicine, record, invoice, assignment), others return `data: entity` directly (prescription, dispense). Seed script handles both.
 
-## Accomplished
+## Bug Fixes Applied
 
-### Phase 1: Initial Mock Data Population
+### Phase 1-7: Previous Fixes (See commit history)
 
-- Analyzed database schema using analyzer agents
-- Generated realistic mock data for all collections using multiple agents
-- Inserted all data via MCP `insertMany`
-- Discovered issues with string IDs and plain-text passwords
+- Null reference bugs in 6 client files
+- Invoice display bug in `invoice.service.ts`
+- Mongoose 9 pre-save hook in `appointment.model.ts`
+- Removed duplicate indexes in `appointment.model.ts` and `medicine.model.ts`
+- Removed hardcoded database name from `seed.ts`
+- Fixed admin password mismatch in `reseed.ts`
+- Deleted entire Departments module (replaced by wards)
 
-### Phase 2: Fix Null Reference Bug
+### Phase 8: Seed Script v2 (2026-05-03)
 
-- Fixed `typeof null === 'object'` bug in 6 files:
-  - `client/features/doctors/screens/DoctorListScreen.tsx` (line 62)
-  - `client/features/doctors/screens/DoctorDetailScreen.tsx` (line 60)
-  - `client/features/appointments/screens/MyAppointmentsScreen.tsx` (lines 91, 93)
-  - `client/features/prescriptions/screens/PrescriptionListScreen.tsx` (line 62)
-  - `client/features/dispensing/screens/PendingPrescriptionsScreen.tsx` (lines 40-41)
-  - `client/features/prescriptions/screens/PrescriptionDetailScreen.tsx` (lines 24-25)
+- Created `server/src/scripts/reseed-v2.ts` — rate-limit-aware hybrid seeder
+- MongoDB: users (bcrypt hashed, correct roles), appointments
+- API: wards, doctors, schedules, records, medicines, prescriptions, invoices, assignments, ward medications
+- Fix: `apiPost`/`apiPostForm` return `j.data` (unwrap success wrapper)
+- Fix: `getEid()` normalizes `_id` vs `id` from API responses
+- Fix: Variable shadowing in seedRecords loop
+- Fix: Client update to handle both `id` and `_id` from API responses
 
-### Phase 3: Proper Re-seeding with Bcrypt Passwords
+## Current Seed Data (seeded 2026-05-03)
 
-- Deleted all mock data (keeping original admin user)
-- Re-inserted wards, medicines without specifying `_id` (MongoDB generates proper ObjectIds)
-- Generated bcrypt hashes via Node.js: `node -e "const bcrypt = require('bcryptjs'); console.log(bcrypt.hashSync('doctor123', 12));"`
-- Inserted users with proper bcrypt hashed passwords
-- Inserted doctors, medical records, appointments, prescriptions, dispenses, invoices with proper ObjectId references
-- Verified all data consistency
+All data created by `reseed-v2.ts` via the deployed API at `hospital-management-l5lc.onrender.com`.
 
-### Phase 4: Fix Invoice Display Bug
+### Users (19 total)
 
-- Used bugfixworkflow skill with analyzer agent
-- Found root cause: `invoice.service.ts` returned `res.data.data` (wrapper object) instead of `res.data.data.invoices` (the array)
-- Fixed both `getMyBills()` and `getAllInvoices()` functions in `client/features/billing/services/invoice.service.ts`
-- Updated type annotations from `ApiSuccessResponse<Invoice[]>` to `ApiSuccessResponse<{ invoices: Invoice[]; count: number }>`
+| Role | Email | Password |
+|------|-------|----------|
+| Admin | `admin@hospital.com` | `Admin123!` |
+| Doctor | `sarah.mitchell@hospital.com` | `Doctor123!` |
+| Doctor | `james.chen@hospital.com` | `Doctor123!` |
+| Doctor | `maria.rodriguez@hospital.com` | `Doctor123!` |
+| Doctor | `emily.thompson@hospital.com` | `Doctor123!` |
+| Doctor | `robert.williams@hospital.com` | `Doctor123!` |
+| Doctor | `priya.patel@hospital.com` | `Doctor123!` |
+| Pharmacist | `pharmacist@hospital.com` | `Pharmacy123!` |
+| Receptionist | `reception@hospital.com` | `Reception123!` |
+| Patient | `john.anderson@email.com` | `Patient123!` |
+| Patient | `emma.wilson@email.com` | `Patient123!` |
+| Patient | `michael.brown@email.com` | `Patient123!` |
+| Patient | `sophia.martinez@email.com` | `Patient123!` |
+| Patient | `william.taylor@email.com` | `Patient123!` |
+| Patient | `olivia.johnson@email.com` | `Patient123!` |
+| Patient | `benjamin.lee@email.com` | `Patient123!` |
+| Patient | `isabella.garcia@email.com` | `Patient123!` |
+| Patient | `lucas.davis@email.com` | `Patient123!` |
+| Patient | `mia.thompson@email.com` | `Patient123!` |
 
-### Phase 5: Server-Side Bug Fixes (Discovered During Seeding)
+All passwords meet the backend requirement: `/(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/` + min 8 chars.
 
-#### `appointment.model.ts` — Pre-save hook `next()` signature
+### Database Collection Summary
 
-**File:** `server/src/modules/appointments/appointment.model.ts` (lines 63–79)
+| Collection | Count | Method | Notes |
+|-----------|-------|--------|-------|
+| users | 19 | MongoDB | 1 admin, 6 doctors, 1 pharmacist, 1 receptionist, 10 patients |
+| doctors | 6 | API | Specializations: Cardiology, Neurology, Orthopedics, Pediatrics, Dermatology, General Medicine |
+| doctorschedules | 6 | API | Weekly slots with 30min/45min durations |
+| appointments | 15 | MongoDB | 10 past (Completed), 5 future (Pending/Confirmed) |
+| medicalrecords | 15 | API | Linked to appointments and doctors |
+| medicines | 20 | API | 11 categories: Antibiotic, Cardiovascular, Gastrointestinal, Diabetes, Analgesic, Dermatological, Antihistamine, Corticosteroid, Respiratory, Supplements, Thyroid |
+| prescriptions | 12 | API | Linked to patients, doctors, medical records, and medicines |
+| invoices | 8 | API | All created as Unpaid (payment flow not executed to stay under rate limits) |
+| wards | 13 | API | Types: icu, private, general, emergency |
+| wardassignments | 6 | API | Linked to patients and wards |
+| wardmedications | 7 | API | Linked to ward assignments and medicines |
+| dispenses | 0 | — | Not seeded (requires pharmacist + prescription flow) |
+| labreports | 0 | — | Not seeded (requires doctor auth for specific patients) |
+| payments | 0 | — | Not seeded (payment flow skipped to stay under rate limits) |
+| tokenblacklists | 0 | — | Runtime-managed |
 
-**Problem:** The conflict-check pre-save hook used `return next(new Error(...))` with Mongoose 5/7 callback style. In Mongoose 9, Kareem passes a `SaveOptions` object as the first parameter, not a callback. The hook was crashing with `TypeError: next is not a function`.
+### Doctors & Fees
 
-**Fix:** Removed `next` parameter and threw directly:
-```typescript
-// Before (broken in Mongoose 9)
-appointmentSchema.pre('save', async function (next) {
-  if (conflict) { return next(new Error('slot conflict')); }
-  next();
-});
+| Doctor | Specialization | Fee | Experience |
+|--------|---------------|-----|------------|
+| Dr. Sarah Mitchell | Cardiology | $350 | 12 years |
+| Dr. James Chen | Neurology | $400 | 8 years |
+| Dr. Maria Rodriguez | Orthopedics | $300 | 15 years |
+| Dr. Emily Thompson | Pediatrics | $250 | 10 years |
+| Dr. Robert Williams | Dermatology | $280 | 7 years |
+| Dr. Priya Patel | General Medicine | $200 | 20 years |
 
-// After (works in Mongoose 9)
-appointmentSchema.pre('save', async function () {
-  if (conflict) { throw new Error('slot conflict'); }
-});
-```
+### Wards
 
-#### `appointment.model.ts` — Validator stale `Date.now()` capture
+| Ward | Type | Beds |
+|------|------|------|
+| Cardiac ICU | icu | 8 |
+| Cardiac Ward A | private | 20 |
+| Neuro ICU | icu | 6 |
+| Neuro Ward | general | 24 |
+| Ortho Ward 1 | general | 30 |
+| Ortho Private | private | 12 |
+| Pediatric Ward | general | 25 |
+| NICU | icu | 10 |
+| Derma Ward | general | 15 |
+| General Ward A | general | 40 |
+| Private Rooms B | private | 20 |
+| Emergency Beds | emergency | 30 |
+| Critical Care | icu | 10 |
 
-**Problem:** The appointment schema's `appointmentDate` field validator captured `Date.now()` at schema definition time. When the server was started in 2025 and the date was April 24, 2026, all appointment dates in the past were being rejected even for `Completed`/`Cancelled` statuses.
+### Appointments
 
-**Fix:** Used raw MongoDB driver (`mongoClient.db().collection('appointments').insertMany()`) for appointment inserts in `seed.ts` to bypass all Mongoose validators and hooks. This is appropriate for seeding only.
+10 past appointments (Completed status) and 5 future appointments (Pending/Confirmed). Past appointments span 1-10 days ago. Future appointments span 1-5 days ahead. Dates computed relative to seed execution time.
 
-### Phase 6: Final Seeding Run (seed.ts)
+## Current Data Limitations
 
-**Script:** `server/src/scripts/seed.ts`
-
-Seeding is done via direct Mongoose access (not the API) for reliability. The script:
-1. Wipes all collections
-2. Creates users with bcrypt hashed passwords (12 salt rounds)
-3. Creates all cross-referenced data in dependency order
-4. Uses raw MongoDB insert for appointments to bypass stale validators
-
-### Phase 7: Deploy & Seed Fixes (2026-05-02)
-
-- **`seed.ts`**: Removed hardcoded `dbName: 'hospital-management'` — now uses database from URI
-- **`seed.ts`**: Fixed `mongoClient.db('hospital-management')` → `mongoClient.db()` — matches URI database
-- **`reseed.ts`**: Fixed admin password `Admin123` → `Password123` to match `seed.ts`
-- **`appointment.model.ts`**: Removed duplicate non-unique index on `{ doctorId, appointmentDate }` (unique partial index already covers this)
-- **`medicine.model.ts`**: Removed duplicate `unique: true` from `name` field (separate `schema.index` already handles uniqueness)
-- **Departments module**: Deleted entirely (replaced by wards module) — no more `/api/departments` endpoint
-
-## Relevant Files
-
-### Files Modified (Bug Fixes):
-
-- `client/features/doctors/screens/DoctorListScreen.tsx` — null check fix for `typeof userId === 'object'`
-- `client/features/doctors/screens/DoctorDetailScreen.tsx` — null check fix
-- `client/features/appointments/screens/MyAppointmentsScreen.tsx` — null check fix (lines 91, 93)
-- `client/features/prescriptions/screens/PrescriptionListScreen.tsx` — null check fix (line 62)
-- `client/features/dispensing/screens/PendingPrescriptionsScreen.tsx` — null check fix (lines 40-41)
-- `client/features/prescriptions/screens/PrescriptionDetailScreen.tsx` — null check fix (lines 24-25)
-- `client/features/billing/services/invoice.service.ts` — fixed `getMyBills()` and `getAllInvoices()` to return `res.data.data.invoices` instead of `res.data.data`
-- `server/src/modules/appointments/appointment.model.ts` — fixed pre-save hook `next()` → throw; removed duplicate index
-- `server/src/modules/pharmacy/medicine.model.ts` — removed duplicate `unique: true` on name field
-- `server/src/scripts/seed.ts` — removed hardcoded database name; uses URI default
-- `server/src/scripts/reseed.ts` — fixed admin password mismatch
-
-### Reference Files:
-
-- `server/src/modules/auth/auth.model.ts` — User model with bcrypt pre-save hook
-- `server/src/modules/auth/auth.controller.ts` — register/login controllers
-- `server/src/modules/billing/invoice.controller.ts` — invoice API response format
-- `server/src/modules/doctors/doctor.controller.ts` — doctor API with populate
-- `client/shared/types/index.ts` — TypeScript interfaces
+- **Invoices**: All are "Unpaid" — payment flow not executed to stay under global rate limit (100 requests/15min). Use the app to process payments.
+- **Dispenses**: Not seeded — requires pharmacist login + prescription dispensing flow via app.
+- **Lab Reports**: Not seeded — requires doctor auth for specific patient records.
+- **File URLs**: All `licenseDocumentUrl` and `packagingImageUrl` fields use placeholder local paths or S3 URLs generated by the API during upload.
+- **Patient dateOfBirth**: Not set (requires profile update via app).
 
 ## Demo Credentials (All with bcrypt hashed passwords — 12 salt rounds)
 
 | Role | Email | Password |
 |------|-------|----------|
-| Admin | `admin@hospital.com` | `Password123` |
-| Pharmacist | `pharmacist@hospital.com` | `Password123` |
-| Receptionist | `receptionist@hospital.com` | `Password123` |
-| Doctor | `dr.petrov@hospital.com` | `Password123` |
-| Doctor | `dr.sharma@hospital.com` | `Password123` |
-| Doctor | `dr.thompson@hospital.com` | `Password123` |
-| Doctor | `dr.okafor@hospital.com` | `Password123` |
-| Doctor | `dr.mendes@hospital.com` | `Password123` |
-| Patient | `robert.w@example.com` | `Password123` |
-| Patient | `jennifer.m@example.com` | `Password123` |
-| Patient | `david.kim@example.com` | `Password123` |
-| Patient | `fatima.ah@example.com` | `Password123` |
-| Patient | `thomas.ob@example.com` | `Password123` |
-| Patient | `sofia.and@example.com` | `Password123` |
-| Patient | `marcus.j@example.com` | `Password123` |
-| Patient | `layla.ib@example.com` | `Password123` |
-
-## Database State (After seed.ts Run)
-
-All 13 collections populated with proper MongoDB ObjectIds and referential integrity:
-
-| Collection | Count | Notes |
-|-----------|-------|-------|
-| users | 16 | 1 admin, 1 pharmacist, 1 receptionist, 5 doctors, 8 patients |
-| doctors | 5 | Linked to user accounts; specializations: Cardiology, Pediatrics, Orthopedic Surgery, Neurology, Internal Medicine |
-| wards | 9 | ICU, private, general, emergency types; independent (no department linking) |
-| medicines | 25 | 11 categories: Antibiotic, Analgesic, Cardiovascular, Gastrointestinal, Respiratory, Neurological, Orthopedic, Mental Health, Controlled, Endocrine, Supplements |
-| appointments | 12 | Mix of future (Pending/Confirmed), past (Completed), and Cancelled |
-| medicalrecords | 6 | Linked to appointments and doctors |
-| labreports | 8 | Hematology, radiology, biochemistry, microbiology, serology types; statuses: completed, reviewed |
-| prescriptions | 6 | Mix of active, fulfilled, and cancelled |
-| invoices | 7 | Paid, Pending Verification, Overdue, Unpaid; includes itemized billing with items[], discount, invoiceNumber |
-| payments | 5 | Methods: bank_transfer, mock_card; statuses: completed, processing, pending |
-| wardassignments | 5 | 3 active admissions, 2 discharged |
-| wardmedications | 8 | Active, completed, and discontinued; linked to ward assignments |
-| dispenses | 3 | Fulfilled prescriptions by pharmacist |
-
-## Current Data Limitations
-
-- All `*Url` fields (`licenseDocumentUrl`, `packagingImageUrl`, `labReportUrl`, `paymentReceiptUrl`) use placeholder paths like `/uploads/dr_petrov_license.pdf` — no actual files
-- `idDocumentUrl` on patient profiles is null
-- Ward occupancy was manually synced in the seed script — the `PATCH /api/wards/:id/beds` endpoint would do this automatically in production use
-- **No departments collection** — the departments module was deleted (commit `3bd5478`). Wards are now independent entities with `location` and `phone` fields instead of a `departmentId` reference.
+| Admin | `admin@hospital.com` | `Admin123!` |
+| Doctor | `sarah.mitchell@hospital.com` | `Doctor123!` |
+| Pharmacist | `pharmacist@hospital.com` | `Pharmacy123!` |
+| Receptionist | `reception@hospital.com` | `Reception123!` |
+| Patient | `john.anderson@email.com` | `Patient123!` |
