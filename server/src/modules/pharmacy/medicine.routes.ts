@@ -41,8 +41,8 @@ router.post('/batch', authMiddleware, getMedicinesByIds);
 /** PATCH /api/medicines/:id/stock — Protected */
 router.patch('/:id/stock', authMiddleware, requireRole(ROLES.PHARMACIST, ROLES.ADMIN), adjustStockValidation, adjustStock);
 
-/** PUT /api/medicines/:id — Admin only */
-router.put('/:id', authMiddleware, requireRole(ROLES.ADMIN), uploadSingle('packagingImage'), updateMedicineValidation, updateMedicine);
+/** PUT /api/medicines/:id — Admin or Pharmacist */
+router.put('/:id', authMiddleware, requireRole(ROLES.ADMIN, ROLES.PHARMACIST), uploadSingle('packagingImage'), updateMedicineValidation, updateMedicine);
 
 /** DELETE /api/medicines/:id — Admin only */
 router.delete('/:id', authMiddleware, requireRole(ROLES.ADMIN), deleteMedicine);
