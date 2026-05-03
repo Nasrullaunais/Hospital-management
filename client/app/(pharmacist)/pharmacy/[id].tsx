@@ -190,7 +190,7 @@ export default function MedicineDetailScreen() {
         <View style={styles.actionRow}>
           <TouchableOpacity
             style={[styles.actionBtn, styles.editBtn, { backgroundColor: theme.primary }]}
-            onPress={() => router.push(`/(pharmacist)/pharmacy/add-medicine`)}
+            onPress={() => router.push(`/(pharmacist)/pharmacy/add-medicine?id=${medicine!._id}`)}
             activeOpacity={0.7}
           >
             <Feather name="edit-2" size={18} color="#FFFFFF" />
