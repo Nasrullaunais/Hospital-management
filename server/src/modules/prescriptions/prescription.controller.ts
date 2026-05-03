@@ -65,6 +65,11 @@ export const createPrescription = asyncHandler(async (req: Request, res: Respons
 export const getPrescriptionsByPatient = asyncHandler(async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   const { patientId } = req.params;
 
+  // Validate patientId is a valid MongoDB ObjectId (not a JWT token or other invalid value)
+  if (!mongoose.Types.ObjectId.isValid(patientId as string)) {
+    return next(ApiError.badRequest('Invalid patient ID'));
+  }
+
   // Authorization: user must be the patient themselves, or a doctor/admin
   const userId = req.user?.id;
   const userRole = req.user?.role;
@@ -94,6 +99,10 @@ export const getPrescriptionsByPatient = asyncHandler(async (req: Request, res: 
 });
 
 export const getPrescriptionById = asyncHandler(async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+  if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
+    return next(ApiError.badRequest('Invalid prescription ID format'));
+  }
+
   const prescription = await Prescription.findById(req.params.id)
     .populate('doctorId', 'userId.name specialization')
     .populate('patientId', 'name email')

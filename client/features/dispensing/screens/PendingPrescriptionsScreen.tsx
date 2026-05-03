@@ -77,7 +77,7 @@ export default function PendingPrescriptionsScreen() {
     return (
       <TouchableOpacity
         style={[styles.card, { backgroundColor: theme.surface, ...shadows.card }]}
-        onPress={() => router.push(`/(pharmacist)/dispense/${item._id}`)}
+        onPress={() => { if (item._id) { router.push(`/(pharmacist)/dispense/${item._id}`); } }}
         activeOpacity={0.7}
       >
         <View style={styles.cardTop}>
@@ -104,7 +104,7 @@ export default function PendingPrescriptionsScreen() {
 
         <TouchableOpacity
           style={[styles.dispenseBtn, { backgroundColor: theme.accent }]}
-          onPress={() => router.push(`/(pharmacist)/dispense/${item._id}`)}
+          onPress={() => { if (item._id) { router.push(`/(pharmacist)/dispense/${item._id}`); } }}
           activeOpacity={0.8}
         >
           <Feather name="check-circle" size={16} color="#FFFFFF" />
@@ -114,7 +114,7 @@ export default function PendingPrescriptionsScreen() {
     );
   }, [theme, router]);
 
-  const keyExtractor = useCallback((item: PendingPrescription) => item._id, []);
+  const keyExtractor = useCallback((item: PendingPrescription) => item._id ?? `pending-${Math.random().toString(36).slice(2)}`, []);
 
   const ListHeaderComponent = useMemo(() => (
     <View style={[styles.headerBar, { backgroundColor: theme.surface, borderBottomColor: theme.border }]}>

@@ -26,7 +26,14 @@ export default function DispenseScreen() {
   const [submitting, setSubmitting] = useState(false);
   const [dispensed, setDispensed] = useState<Record<string, number>>({});
   const [isMounted, setIsMounted] = useState(true);
+  const [invalidId, setInvalidId] = useState(false);
   const router = useRouter();
+
+  useEffect(() => {
+    if (id && !/^[a-fA-F0-9]{24}$/.test(id)) {
+      setInvalidId(true);
+    }
+  }, [id]);
 
   const medicineStocksRef = useRef(medicineStocks);
   medicineStocksRef.current = medicineStocks;
@@ -37,7 +44,7 @@ export default function DispenseScreen() {
   }, []);
 
   useEffect(() => {
-    if (!id) return;
+    if (!id || !/^[a-fA-F0-9]{24}$/.test(id)) return;
     prescriptionService.getPrescriptionById(id)
       .then((rx: PendingPrescription) => {
         if (!isMounted) return;
@@ -198,6 +205,23 @@ export default function DispenseScreen() {
     if (allFailed) return false;
     return true;
   }, [prescription, stocksLoaded, medicineStocks]);
+
+  if (invalidId) {
+    return (
+      <SafeAreaView style={[styles.safeArea, { backgroundColor: theme.background }]}>
+        <View style={[styles.center, { backgroundColor: theme.background }]}>
+          <Feather name="alert-circle" size={48} color={theme.error} />
+          <Text style={[styles.errorText, { color: theme.error }]}>Invalid prescription ID</Text>
+          <TouchableOpacity
+            style={[styles.retryBtn, { backgroundColor: theme.primary }]}
+            onPress={() => router.back()}
+          >
+            <Text style={styles.retryBtnText}>Go Back</Text>
+          </TouchableOpacity>
+        </View>
+      </SafeAreaView>
+    );
+  }
 
   if (loading) {
     return (
