@@ -20,6 +20,7 @@ export interface CreateMedicinePayload {
   price: number;
   stockQuantity: number;
   expiryDate: string; // ISO 8601
+  fileKey?: string; // S3 file key from presigned upload (used instead of FormData file)
 }
 
 export interface UpdateMedicinePayload {
@@ -28,6 +29,7 @@ export interface UpdateMedicinePayload {
   price?: number;
   stockQuantity?: number;
   expiryDate?: string;
+  fileKey?: string; // S3 file key from presigned upload (used instead of FormData file)
 }
 
 export interface AdjustStockPayload {

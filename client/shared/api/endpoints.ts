@@ -113,6 +113,14 @@ export const ENDPOINTS = {
     PATIENT_HISTORY: (patientId: string) => `/dispense/patient/${patientId}`,
   },
 
+  // Files — S3 presigned URL upload/download
+  FILES: {
+    UPLOAD_URL: '/files/upload-url',
+    DOWNLOAD_URL: '/files/download-url',
+    DOWNLOAD_URLS: '/files/download-urls',
+    IMAGE: (encodedKey: string) => `/files/image/${encodedKey}`,
+  },
+
   // Wards
   WARDS: {
     BASE: '/wards',
