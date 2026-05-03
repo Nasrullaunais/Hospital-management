@@ -123,8 +123,9 @@ const invoiceSchema = new Schema<IInvoice>(
     toJSON: {
       virtuals: true,
       transform: (_doc, ret) => {
-        ret.id = ret._id.toString();
-        delete ret._id;
+        const idStr = ret._id.toString();
+        ret.id = idStr;
+        ret._id = idStr;
         delete ret.__v;
         return ret;
       },
