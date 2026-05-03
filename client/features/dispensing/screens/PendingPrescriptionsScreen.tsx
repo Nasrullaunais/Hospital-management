@@ -9,7 +9,7 @@ import { useColorScheme } from '@/components/useColorScheme';
 import { spacing, radius, shadows, typography } from '@/constants/ThemeTokens';
 
 interface PendingPrescription {
-  _id: string;
+  id: string;
   patientId: string | { _id: string; name?: string };
   doctorId: string | { _id: string; userId?: { name?: string } };
   items: Array<{ medicineId: string | { _id: string; name?: string }; medicineName: string; dosage: string; quantity: number }>;
@@ -77,7 +77,7 @@ export default function PendingPrescriptionsScreen() {
     return (
       <TouchableOpacity
         style={[styles.card, { backgroundColor: theme.surface, ...shadows.card }]}
-        onPress={() => { if (item._id) { router.push(`/(pharmacist)/dispense/${item._id}`); } }}
+        onPress={() => { if (item.id) { router.push(`/(pharmacist)/dispense/${item.id}`); } }}
         activeOpacity={0.7}
       >
         <View style={styles.cardTop}>
@@ -104,7 +104,7 @@ export default function PendingPrescriptionsScreen() {
 
         <TouchableOpacity
           style={[styles.dispenseBtn, { backgroundColor: theme.accent }]}
-          onPress={() => { if (item._id) { router.push(`/(pharmacist)/dispense/${item._id}`); } }}
+          onPress={() => { if (item.id) { router.push(`/(pharmacist)/dispense/${item.id}`); } }}
           activeOpacity={0.8}
         >
           <Feather name="check-circle" size={16} color="#FFFFFF" />
@@ -114,7 +114,7 @@ export default function PendingPrescriptionsScreen() {
     );
   }, [theme, router]);
 
-  const keyExtractor = useCallback((item: PendingPrescription) => item._id ?? `pending-${Math.random().toString(36).slice(2)}`, []);
+  const keyExtractor = useCallback((item: PendingPrescription) => item.id, []);
 
   const ListHeaderComponent = useMemo(() => (
     <View style={[styles.headerBar, { backgroundColor: theme.surface, borderBottomColor: theme.border }]}>

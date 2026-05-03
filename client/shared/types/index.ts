@@ -276,7 +276,7 @@ export interface PrescriptionItem {
 }
 
 export interface PendingPrescription {
-  _id: string;
+  id: string;
   patientId: string | { _id: string; name?: string };
   doctorId: string | { _id: string; userId?: { name?: string } };
   items: PrescriptionItem[];
