@@ -53,7 +53,7 @@ export default function PrescriptionListScreen() {
     return (
       <TouchableOpacity
         style={[styles.card, { backgroundColor: theme.surface, borderColor: theme.border }]}
-        onPress={() => router.push(`/(patient)/prescriptions/${String(item._id)}`)}
+        onPress={() => router.push(`/(patient)/prescriptions/${item.id}`)}
         activeOpacity={0.7}
       >
         <View style={styles.cardHeader}>
@@ -74,7 +74,7 @@ export default function PrescriptionListScreen() {
     );
   }, [theme, router]);
 
-  const keyExtractor = useCallback((item: Prescription) => item._id, []);
+  const keyExtractor = useCallback((item: Prescription) => item.id, []);
 
   const ListEmptyComponent = useMemo(() => (
     <View style={styles.emptyContainer}>

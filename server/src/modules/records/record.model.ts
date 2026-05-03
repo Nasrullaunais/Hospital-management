@@ -50,8 +50,9 @@ const medicalRecordSchema = new Schema<IMedicalRecord>(
   { timestamps: true, versionKey: false, toJSON: {
     virtuals: true,
     transform: (_doc, ret) => {
-      ret.id = ret._id.toString();
-      delete ret._id;
+      const idStr = ret._id.toString();
+      ret.id = idStr;
+      ret._id = idStr; // keep _id as string — client types reference it
       delete ret.__v;
       return ret;
     },

@@ -42,7 +42,7 @@ export default function PrescriptionDetailScreen() {
           onPress: async () => {
             setCancelling(true);
             try {
-              await prescriptionService.cancelPrescription(prescription._id);
+              await prescriptionService.cancelPrescription(prescription.id);
               Alert.alert('Success', 'Prescription cancelled successfully.');
               router.back();
             } catch (err) {
@@ -77,7 +77,7 @@ export default function PrescriptionDetailScreen() {
 
   const getDoctorName = (doc: Prescription['doctorId']): string => {
     if (doc && typeof doc === 'object' && doc.userId?.name) return doc.userId.name;
-    console.warn('PrescriptionDetailScreen: doctor name incomplete for prescription', prescription?._id);
+    console.warn('PrescriptionDetailScreen: doctor name incomplete for prescription', prescription?.id);
     return 'Doctor';
   };
   const getDoctorSpec = (doc: Prescription['doctorId']): string => {
