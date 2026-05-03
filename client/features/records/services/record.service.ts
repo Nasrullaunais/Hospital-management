@@ -4,7 +4,7 @@
  */
 import { apiClient } from '@/shared/api/client';
 import { ENDPOINTS } from '@/shared/api/endpoints';
-import type { MedicalRecord, PopulatedMedicalRecord, ApiSuccessResponse } from '@/shared/types';
+import type { MedicalRecord, PopulatedMedicalRecord, ApiSuccessResponse, PaginatedResponse } from '@/shared/types';
 
 export interface UpdateRecordPayload {
   diagnosis?: string;
@@ -30,20 +30,20 @@ export const recordService = {
    * Patients can only access their own records; doctors/admins can access any.
    */
   getPatientHistory: async (patientId: string): Promise<PopulatedMedicalRecord[]> => {
-    const res = await apiClient.get<ApiSuccessResponse<{ records: PopulatedMedicalRecord[]; count: number }>>(
+    const res = await apiClient.get<ApiSuccessResponse<PaginatedResponse<PopulatedMedicalRecord>>>(
       ENDPOINTS.RECORDS.BY_PATIENT(patientId),
     );
-    return res.data.data.records;
+    return res.data.data.items;
   },
 
   /**
    * Fetch all records created by the currently authenticated doctor.
    */
   getDoctorLogs: async (): Promise<PopulatedMedicalRecord[]> => {
-    const res = await apiClient.get<ApiSuccessResponse<{ records: PopulatedMedicalRecord[]; count: number }>>(
+    const res = await apiClient.get<ApiSuccessResponse<PaginatedResponse<PopulatedMedicalRecord>>>(
       ENDPOINTS.RECORDS.DOCTOR_LOGS,
     );
-    return res.data.data.records;
+    return res.data.data.items;
   },
 
   /**

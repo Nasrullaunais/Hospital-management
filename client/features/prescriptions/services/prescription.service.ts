@@ -3,7 +3,7 @@
  */
 import { apiClient } from '@/shared/api/client';
 import { ENDPOINTS } from '@/shared/api/endpoints';
-import type { ApiSuccessResponse, PendingPrescription, PrescriptionStatus } from '@/shared/types';
+import type { ApiSuccessResponse, PaginatedResponse, PendingPrescription, PrescriptionStatus } from '@/shared/types';
 
 export interface PrescriptionItem {
   medicineId: string;
@@ -20,10 +20,10 @@ export interface Prescription extends Omit<PendingPrescription, 'status'> {
 
 export const prescriptionService = {
   getMyPrescriptions: async (patientId: string): Promise<Prescription[]> => {
-    const res = await apiClient.get<ApiSuccessResponse<Prescription[]>>(
+    const res = await apiClient.get<ApiSuccessResponse<PaginatedResponse<Prescription>>>(
       ENDPOINTS.PRESCRIPTIONS.BY_PATIENT(patientId)
     );
-    return res.data.data;
+    return res.data.data.items;
   },
 
   getPrescriptionById: async (id: string): Promise<Prescription> => {
@@ -47,10 +47,10 @@ export const prescriptionService = {
   },
 
   getPrescriptionsByRecordId: async (recordId: string): Promise<Prescription[]> => {
-    const res = await apiClient.get<ApiSuccessResponse<Prescription[]>>(
+    const res = await apiClient.get<ApiSuccessResponse<{ prescriptions: Prescription[]; total: number; skip: number; limit: number }>>(
       ENDPOINTS.PRESCRIPTIONS.BY_RECORD(recordId),
     );
-    return res.data.data;
+    return res.data.data.prescriptions;
   },
 
   cancelPrescription: async (id: string): Promise<Prescription> => {

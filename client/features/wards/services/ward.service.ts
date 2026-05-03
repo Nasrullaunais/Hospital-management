@@ -4,7 +4,7 @@
  */
 import { apiClient } from '@/shared/api/client';
 import { ENDPOINTS } from '@/shared/api/endpoints';
-import type { ApiSuccessResponse } from '@/shared/types';
+import type { ApiSuccessResponse, PaginatedResponse } from '@/shared/types';
 import type { Ward } from '@/shared/types';
 
 export interface WardFilters {
@@ -41,11 +41,11 @@ export const wardService = {
    * Requires authentication.
    */
   getWards: async (filters?: WardFilters): Promise<Ward[]> => {
-    const res = await apiClient.get<ApiSuccessResponse<{ wards: Ward[]; count: number }>>(
+    const res = await apiClient.get<ApiSuccessResponse<PaginatedResponse<Ward>>>(
       ENDPOINTS.WARDS.BASE,
       { params: filters },
     );
-    return res.data.data.wards;
+    return res.data.data.items;
   },
 
   /**

@@ -4,7 +4,7 @@
  */
 import { apiClient } from '@/shared/api/client';
 import { ENDPOINTS } from '@/shared/api/endpoints';
-import type { Appointment, AppointmentStatus, ApiSuccessResponse } from '@/shared/types';
+import type { Appointment, AppointmentStatus, ApiSuccessResponse, PaginatedResponse } from '@/shared/types';
 
 export interface BookAppointmentPayload {
   doctorId: string;
@@ -35,20 +35,20 @@ export const appointmentService = {
    * Fetch all appointments for the currently authenticated patient.
    */
   getMyAppointments: async (): Promise<Appointment[]> => {
-    const res = await apiClient.get<ApiSuccessResponse<{ appointments: Appointment[]; count: number }>>(
+    const res = await apiClient.get<ApiSuccessResponse<PaginatedResponse<Appointment>>>(
       ENDPOINTS.APPOINTMENTS.MY_APPOINTMENTS,
     );
-    return res.data.data.appointments;
+    return res.data.data.items;
   },
 
   /**
    * Fetch all appointments for a specific doctor. Doctor / Admin only.
    */
   getDoctorSchedule: async (doctorId: string): Promise<Appointment[]> => {
-    const res = await apiClient.get<ApiSuccessResponse<Appointment[]>>(
+    const res = await apiClient.get<ApiSuccessResponse<{ appointments: Appointment[]; count: number }>>(
       ENDPOINTS.APPOINTMENTS.DOCTOR_SCHEDULE(doctorId),
     );
-    return res.data.data;
+    return res.data.data.appointments;
   },
 
   /**
