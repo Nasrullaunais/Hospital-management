@@ -286,6 +286,86 @@ async function seedDoctors(): Promise<void> {
   }
 }
 
+async function seedDoctorSchedules(): Promise<void> {
+  console.log('\n[3a/10] Seeding Doctor Schedules...');
+
+  // Build schedules matching the same 6 doctors from seedDoctors
+  const scheduleData = [
+    {
+      doctorId: doctors[0]._id,
+      weeklySlots: [
+        { dayOfWeek: 1, startTime: '09:00', endTime: '17:00', isActive: true },
+        { dayOfWeek: 2, startTime: '09:00', endTime: '17:00', isActive: true },
+        { dayOfWeek: 3, startTime: '09:00', endTime: '17:00', isActive: true },
+        { dayOfWeek: 4, startTime: '09:00', endTime: '17:00', isActive: true },
+        { dayOfWeek: 5, startTime: '09:00', endTime: '15:00', isActive: true },
+      ],
+      slotDuration: 30,
+    },
+    {
+      doctorId: doctors[1]._id,
+      weeklySlots: [
+        { dayOfWeek: 2, startTime: '10:00', endTime: '18:00', isActive: true },
+        { dayOfWeek: 3, startTime: '10:00', endTime: '18:00', isActive: true },
+        { dayOfWeek: 4, startTime: '10:00', endTime: '18:00', isActive: true },
+      ],
+      slotDuration: 30,
+    },
+    {
+      doctorId: doctors[2]._id,
+      weeklySlots: [
+        { dayOfWeek: 1, startTime: '10:00', endTime: '16:00', isActive: true },
+        { dayOfWeek: 3, startTime: '10:00', endTime: '16:00', isActive: true },
+        { dayOfWeek: 5, startTime: '10:00', endTime: '14:00', isActive: true },
+      ],
+      slotDuration: 45,
+    },
+    {
+      doctorId: doctors[3]._id,
+      weeklySlots: [
+        { dayOfWeek: 1, startTime: '08:00', endTime: '14:00', isActive: true },
+        { dayOfWeek: 2, startTime: '08:00', endTime: '14:00', isActive: true },
+        { dayOfWeek: 3, startTime: '08:00', endTime: '14:00', isActive: true },
+        { dayOfWeek: 4, startTime: '08:00', endTime: '14:00', isActive: true },
+        { dayOfWeek: 5, startTime: '08:00', endTime: '14:00', isActive: true },
+        { dayOfWeek: 6, startTime: '09:00', endTime: '12:00', isActive: true },
+      ],
+      slotDuration: 30,
+    },
+    {
+      doctorId: doctors[4]._id,
+      weeklySlots: [
+        { dayOfWeek: 1, startTime: '09:00', endTime: '16:00', isActive: true },
+        { dayOfWeek: 2, startTime: '09:00', endTime: '16:00', isActive: true },
+        { dayOfWeek: 4, startTime: '09:00', endTime: '16:00', isActive: true },
+        { dayOfWeek: 5, startTime: '09:00', endTime: '13:00', isActive: true },
+      ],
+      slotDuration: 30,
+    },
+    {
+      doctorId: doctors[5]._id,
+      weeklySlots: [
+        { dayOfWeek: 1, startTime: '08:00', endTime: '16:00', isActive: true },
+        { dayOfWeek: 2, startTime: '08:00', endTime: '16:00', isActive: true },
+        { dayOfWeek: 3, startTime: '08:00', endTime: '16:00', isActive: true },
+        { dayOfWeek: 4, startTime: '08:00', endTime: '16:00', isActive: true },
+        { dayOfWeek: 5, startTime: '08:00', endTime: '14:00', isActive: true },
+      ],
+      slotDuration: 30,
+    },
+  ];
+
+  for (const sched of scheduleData) {
+    await apiPost('/doctors/schedule', {
+      doctorId: sched.doctorId,
+      weeklySlots: sched.weeklySlots,
+      slotDuration: sched.slotDuration,
+    }, adminToken);
+    console.log(`  ✓ Schedule for doctor ${sched.doctorId}`);
+    await delay(200);
+  }
+}
+
 async function seedAppointments(): Promise<void> {
   console.log('\n[4/10] Seeding Appointments...');
 
@@ -588,6 +668,9 @@ async function main() {
     await seedDoctors();
     await delay(500);
 
+    await seedDoctorSchedules();
+    await delay(500);
+
     await seedAppointments();
     await delay(500);
 
@@ -616,6 +699,7 @@ async function main() {
     console.log(`  Users:        ${1 + doctorTokens.length + 1 + 1 + patientTokens.length}`);
     console.log(`  Wards:        ${wards.length}`);
     console.log(`  Doctors:      ${doctors.length}`);
+    console.log(`  Schedules:    6`);
     console.log(`  Appointments:  ${appointments.length}`);
     console.log(`  Records:       ${medicalRecords.length}`);
     console.log(`  Medicines:     ${medicines.length}`);

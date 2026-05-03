@@ -23,6 +23,10 @@ export const ENDPOINTS = {
     BASE: '/doctors',
     ME: '/doctors/me',
     BY_ID: (id: string) => `/doctors/${id}`,
+    SPECIALIZATIONS: '/doctors/specializations',
+    SCHEDULE: '/doctors/schedule',
+    SCHEDULE_BY_DOCTOR: (id: string) => `/doctors/${id}/schedule`,
+    AVAILABLE_SLOTS: (id: string, date: string) => `/doctors/${id}/available-slots?date=${date}`,
   },
 
   // Member 3 — Appointments

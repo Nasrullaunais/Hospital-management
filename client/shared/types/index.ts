@@ -29,6 +29,7 @@ export interface User {
   phone?: string;
   dateOfBirth?: string;
   idDocumentUrl?: string;
+  isActive?: boolean;
   createdAt: string;
   updatedAt: string;
 }
@@ -50,6 +51,44 @@ export interface Doctor {
   consultationFee: number;
   availability: DoctorAvailability;
   licenseDocumentUrl: string;
+}
+
+// ── Doctor Schedule ─────────────────────────────────────────────────────────────
+
+export interface WeeklySlot {
+  dayOfWeek: number;
+  startTime: string;
+  endTime: string;
+  isActive: boolean;
+}
+
+export interface ScheduleException {
+  date: string;
+  isAvailable: boolean;
+  reason?: string;
+}
+
+export interface DoctorSchedule {
+  _id: string;
+  doctorId: string;
+  weeklySlots: WeeklySlot[];
+  slotDuration: number;
+  exceptions: ScheduleException[];
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface AvailableSlot {
+  time: string;
+  label: string;
+}
+
+export interface AvailableSlotsResponse {
+  date: string;
+  slotDuration: number;
+  slots: AvailableSlot[];
+  total: number;
+  reason?: string;
 }
 
 // ── Appointment ────────────────────────────────────────────────────────────────

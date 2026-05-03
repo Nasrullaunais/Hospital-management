@@ -91,4 +91,12 @@ export const doctorService = {
     );
     return res.data.data.doctor;
   },
+
+  /** Get all distinct specializations */
+  getSpecializations: async (): Promise<string[]> => {
+    const res = await apiClient.get<ApiSuccessResponse<{ specializations: string[] }>>(
+      ENDPOINTS.DOCTORS.SPECIALIZATIONS,
+    );
+    return res.data.data.specializations;
+  },
 };

@@ -13,6 +13,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Feather } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { doctorService, type DoctorFilters } from '../services/doctor.service';
+import { SpecializationFilter } from '../components/SpecializationFilter';
 import type { Doctor } from '@/shared/types';
 import { useAuth } from '@/shared/context/AuthContext';
 import Colors from '@/constants/Colors';
@@ -33,6 +34,7 @@ export default function DoctorListScreen() {
   const [error, setError] = useState<string | null>(null);
   const [filters, setFilters] = useState<DoctorFilters>({});
   const [search, setSearch] = useState('');
+  const [selectedSpec, setSelectedSpec] = useState<string | null>(null);
 
   const fetchDoctors = useCallback(async () => {
     try {
@@ -48,6 +50,10 @@ export default function DoctorListScreen() {
     setLoading(true);
     fetchDoctors().finally(() => setLoading(false));
   }, [fetchDoctors]);
+
+  useEffect(() => {
+    setFilters((prev) => ({ ...prev, specialization: selectedSpec || undefined }));
+  }, [selectedSpec]);
 
   const filteredDoctors = useMemo(() => {
     if (!search.trim()) return doctors;
@@ -157,6 +163,7 @@ export default function DoctorListScreen() {
             onChangeText={setSearch}
           />
         </View>
+        <SpecializationFilter selected={selectedSpec} onFilterChange={setSelectedSpec} />
         <View style={styles.skeletonList}>
           {[1, 2, 3].map((i) => (
             <SkeletonCard key={i} />
@@ -188,6 +195,8 @@ export default function DoctorListScreen() {
           onChangeText={setSearch}
         />
       </View>
+
+      <SpecializationFilter selected={selectedSpec} onFilterChange={setSelectedSpec} />
 
       <FlatList
         data={filteredDoctors}

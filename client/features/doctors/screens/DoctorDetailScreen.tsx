@@ -14,6 +14,7 @@ import Colors from '@/constants/Colors';
 import { useColorScheme } from '@/components/useColorScheme';
 import { spacing, radius, shadows, typography } from '@/constants/ThemeTokens';
 import { doctorService } from '../services/doctor.service';
+import { DoctorScheduleCalendar } from '../components/DoctorScheduleCalendar';
 import type { Doctor } from '@/shared/types';
 import { useAuth } from '@/shared/context/AuthContext';
 
@@ -34,6 +35,7 @@ export default function DoctorDetailScreen() {
   const [doctor, setDoctor] = useState<Doctor | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [selectedSlot, setSelectedSlot] = useState<{ date: string; time: string } | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -134,25 +136,44 @@ export default function DoctorDetailScreen() {
       </View>
 
       {canBookAppointment && (
-        <TouchableOpacity
-          style={[styles.actionButton, { backgroundColor: c.primary }]}
-          onPress={() => {
-            router.push({ pathname: '/(patient)/appointments/book', params: { doctorId: doctor._id } } as Href);
-          }}
-        >
-          <Feather name="calendar" size={18} color="#fff" style={{ marginRight: spacing.sm }} />
-          <Text style={styles.actionButtonText}>Book Appointment</Text>
-        </TouchableOpacity>
+        <>
+          <TouchableOpacity
+            style={[styles.actionButton, { backgroundColor: c.primary }]}
+            onPress={() => {
+              if (selectedSlot) {
+                router.push({
+                  pathname: '/(patient)/appointments/book',
+                  params: { doctorId: doctor._id, date: selectedSlot.date, time: selectedSlot.time },
+                } as Href);
+              } else {
+                router.push({ pathname: '/(patient)/appointments/book', params: { doctorId: doctor._id } } as Href);
+              }
+            }}
+          >
+            <Feather name="calendar" size={18} color="#fff" style={{ marginRight: spacing.sm }} />
+            <Text style={styles.actionButtonText}>
+              {selectedSlot ? `Book ${selectedSlot.date} at ${selectedSlot.time}` : 'Book Appointment'}
+            </Text>
+          </TouchableOpacity>
+
+          <View style={styles.scheduleSection}>
+            <View style={styles.scheduleHeader}>
+              <Feather name="clock" size={16} color={c.textSecondary} />
+              <Text style={[styles.scheduleHeaderText, { color: c.textSecondary }]}>Available Slots</Text>
+            </View>
+            <DoctorScheduleCalendar
+              doctorId={doctor._id}
+              onSlotSelect={(date, time) => setSelectedSlot({ date, time })}
+            />
+          </View>
+        </>
       )}
 
       {isAdmin && (
         <View style={styles.adminSection}>
           <TouchableOpacity
             style={[styles.actionButton, { backgroundColor: c.primary }]}
-            onPress={() => Alert.alert(
-              'Edit Doctor',
-              'Edit functionality will be available in a future update.',
-            )}
+            onPress={() => router.push(`/(admin)/doctors/${doctorId}/edit` as any)}
           >
             <Feather name="edit-2" size={18} color="#fff" style={{ marginRight: spacing.sm }} />
             <Text style={styles.actionButtonText}>Edit Doctor</Text>
@@ -278,4 +299,17 @@ const styles = StyleSheet.create({
     fontWeight: typography.semibold,
   },
   adminSection: { marginTop: spacing.xs, gap: spacing.sm },
+  scheduleSection: {
+    marginTop: spacing.lg,
+  },
+  scheduleHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
+    marginBottom: spacing.sm,
+  },
+  scheduleHeaderText: {
+    fontSize: typography.sm,
+    fontWeight: typography.medium,
+  },
 });

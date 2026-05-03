@@ -176,3 +176,17 @@ export const deleteDoctor = async (req: Request, res: Response, next: NextFuncti
     next(err);
   }
 };
+
+/** GET /api/doctors/specializations — List all distinct specializations */
+export const getSpecializations = async (
+  _req: Request,
+  res: Response,
+  next: NextFunction,
+): Promise<void> => {
+  try {
+    const specializations = await Doctor.distinct('specialization');
+    res.json({ success: true, data: { specializations } });
+  } catch (err) {
+    next(err);
+  }
+};

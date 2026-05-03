@@ -19,6 +19,7 @@ await import('dotenv/config');
 // ── Models ──────────────────────────────────────────────────────────────────────
 import { User } from '../modules/auth/auth.model.js';
 import { Doctor } from '../modules/doctors/doctor.model.js';
+import { DoctorSchedule } from '../modules/doctors/doctorSchedule.model.js';
 import { Appointment } from '../modules/appointments/appointment.model.js';
 import { MedicalRecord } from '../modules/records/record.model.js';
 import { Medicine } from '../modules/pharmacy/medicine.model.js';
@@ -69,6 +70,7 @@ async function seed() {
   await Promise.all([
     User.deleteMany({}),
     Doctor.deleteMany({}),
+    DoctorSchedule.deleteMany({}),
     Appointment.deleteMany({}),
     MedicalRecord.deleteMany({}),
     Medicine.deleteMany({}),
@@ -298,6 +300,74 @@ async function seed() {
     },
   ]);
   console.log(`👨‍⚕️ Created ${doctors.length} doctors`);
+
+  // ── 2a. DOCTOR SCHEDULES ────────────────────────────────────────────────────
+  const scheduleData = [
+    // Dr. Petrov (Cardiologist) — Mon-Fri 9-17
+    {
+      doctorId: doctors[0]._id,
+      weeklySlots: [
+        { dayOfWeek: 1, startTime: '09:00', endTime: '17:00', isActive: true },
+        { dayOfWeek: 2, startTime: '09:00', endTime: '17:00', isActive: true },
+        { dayOfWeek: 3, startTime: '09:00', endTime: '17:00', isActive: true },
+        { dayOfWeek: 4, startTime: '09:00', endTime: '17:00', isActive: true },
+        { dayOfWeek: 5, startTime: '09:00', endTime: '15:00', isActive: true },
+      ],
+      slotDuration: 30,
+    },
+    // Dr. Sharma (Pediatrician) — Mon-Sat 8-14
+    {
+      doctorId: doctors[1]._id,
+      weeklySlots: [
+        { dayOfWeek: 1, startTime: '08:00', endTime: '14:00', isActive: true },
+        { dayOfWeek: 2, startTime: '08:00', endTime: '14:00', isActive: true },
+        { dayOfWeek: 3, startTime: '08:00', endTime: '14:00', isActive: true },
+        { dayOfWeek: 4, startTime: '08:00', endTime: '14:00', isActive: true },
+        { dayOfWeek: 5, startTime: '08:00', endTime: '14:00', isActive: true },
+        { dayOfWeek: 6, startTime: '09:00', endTime: '12:00', isActive: true },
+      ],
+      slotDuration: 30,
+    },
+    // Dr. Thompson (Orthopedic) — On Leave, but has schedule
+    {
+      doctorId: doctors[2]._id,
+      weeklySlots: [
+        { dayOfWeek: 1, startTime: '10:00', endTime: '16:00', isActive: true },
+        { dayOfWeek: 3, startTime: '10:00', endTime: '16:00', isActive: true },
+        { dayOfWeek: 5, startTime: '10:00', endTime: '14:00', isActive: true },
+      ],
+      slotDuration: 45,
+      exceptions: [
+        { date: new Date(new Date().getFullYear(), 4, 15), isAvailable: false, reason: 'Annual leave' },
+      ],
+    },
+    // Dr. Okafor (Neurologist) — Tue-Thu 10-18
+    {
+      doctorId: doctors[3]._id,
+      weeklySlots: [
+        { dayOfWeek: 2, startTime: '10:00', endTime: '18:00', isActive: true },
+        { dayOfWeek: 3, startTime: '10:00', endTime: '18:00', isActive: true },
+        { dayOfWeek: 4, startTime: '10:00', endTime: '18:00', isActive: true },
+      ],
+      slotDuration: 30,
+    },
+    // Dr. Mendes (Internal Medicine) — Mon-Fri 8-16
+    {
+      doctorId: doctors[4]._id,
+      weeklySlots: [
+        { dayOfWeek: 1, startTime: '08:00', endTime: '16:00', isActive: true },
+        { dayOfWeek: 2, startTime: '08:00', endTime: '16:00', isActive: true },
+        { dayOfWeek: 3, startTime: '08:00', endTime: '16:00', isActive: true },
+        { dayOfWeek: 4, startTime: '08:00', endTime: '16:00', isActive: true },
+        { dayOfWeek: 5, startTime: '08:00', endTime: '14:00', isActive: true },
+      ],
+      slotDuration: 30,
+    },
+  ];
+
+  await DoctorSchedule.deleteMany({});
+  await DoctorSchedule.insertMany(scheduleData);
+  console.log(`📅 Created ${scheduleData.length} doctor schedules`);
 
   // ── 3. MEDICINES ───────────────────────────────────────────────────────────
   const medicines = await Medicine.create([
