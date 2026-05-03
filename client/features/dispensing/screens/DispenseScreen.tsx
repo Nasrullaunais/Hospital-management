@@ -313,7 +313,7 @@ export default function DispenseScreen() {
 
           return (
             <View
-              key={item.medicineId ?? `${medId}-${index}`}
+              key={medId || `item-${index}`}
               style={[
                 styles.itemCard,
                 { backgroundColor: theme.surface, borderColor: isOverStock ? theme.error : theme.border, ...shadows.card },
