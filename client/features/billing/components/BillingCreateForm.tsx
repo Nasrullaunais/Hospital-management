@@ -112,8 +112,9 @@ export function BillingCreateForm({ initialPatient, onSuccess }: BillingCreateFo
       const res = await apiClient.get<ApiSuccessResponse<User[]>>(
         `${ENDPOINTS.PATIENTS.SEARCH}?q=${encodeURIComponent(query)}`,
       );
-      setPatients(res.data.data);
-      setShowDropdown(res.data.data.length > 0);
+      const patients = res.data.data ?? [];
+      setPatients(patients);
+      setShowDropdown(patients.length > 0);
     } catch {
       setPatients([]);
       setShowDropdown(false);
@@ -378,7 +379,7 @@ export function BillingCreateForm({ initialPatient, onSuccess }: BillingCreateFo
 
               return (
                 <TouchableOpacity
-                  key={`suggestion-${index}`}
+                  key={`suggestion-${suggestion.source}-${suggestion.sourceId}`}
                   onPress={() => handleToggleSuggestion(index)}
                   activeOpacity={0.7}
                   style={[
@@ -459,7 +460,7 @@ export function BillingCreateForm({ initialPatient, onSuccess }: BillingCreateFo
 
           {items.map((item, index) => (
             <View
-              key={`item-${item.description || 'new'}-${index}`}
+              key={item._id ?? `item-${item.description || 'new'}-${index}`}
               style={[styles.itemCard, { backgroundColor: colors.surfaceSecondary, borderColor: colors.border }]}
             >
               <View style={styles.itemHeader}>

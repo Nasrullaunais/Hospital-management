@@ -251,8 +251,8 @@ export default function RecordDetailScreen() {
             <View style={styles.prescriptionList}>
               {prescriptions.map((rx, rxIndex) => (
                 <View key={rx._id ?? rxIndex} style={rxIndex > 0 ? { marginTop: spacing.md } : undefined}>
-                  {rx.items.map((item, itemIndex) => (
-                    <View key={itemIndex} style={[styles.rxItem, { backgroundColor: colors.primaryMuted }]}>
+                  {rx.items?.map((item, itemIndex) => (
+                    <View key={item.medicineId ?? item.medicineName ?? itemIndex} style={[styles.rxItem, { backgroundColor: colors.primaryMuted }]}>
                       <View style={styles.rxItemHeader}>
                         <Feather name="activity" size={16} color={colors.primary} />
                         <Text style={[styles.rxItemName, { color: colors.text }]}>{item.medicineName}</Text>

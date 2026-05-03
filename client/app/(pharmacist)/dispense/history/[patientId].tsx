@@ -84,7 +84,7 @@ export default function PatientDispenseHistoryScreen() {
         <View style={styles.medicineSection}>
           <Text style={[styles.sectionLabel, { color: theme.textSecondary }]}>MEDICINES DISPENSED</Text>
           {item.dispensedItems.map((disp, idx) => (
-            <View key={idx} style={[styles.medicineRow, idx > 0 && { borderTopWidth: 1, borderTopColor: theme.border }]}>
+            <View key={disp.medicineId ?? idx} style={[styles.medicineRow, idx > 0 && { borderTopWidth: 1, borderTopColor: theme.border }]}>
               <View style={styles.medicineInfo}>
                 <Text style={[styles.medicineName, { color: theme.text }]}>{disp.medicineName}</Text>
                 {disp.dosage && (

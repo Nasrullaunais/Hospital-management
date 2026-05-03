@@ -120,7 +120,7 @@ export default function DoctorScheduleScreen() {
 
       <FlatList
         data={appointments}
-        keyExtractor={(item) => item._id}
+        keyExtractor={(item, index) => item._id ?? index.toString()}
         renderItem={renderItem}
         refreshControl={
           <RefreshControl

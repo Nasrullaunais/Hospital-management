@@ -372,7 +372,7 @@ export default function LabReportDetailScreen() {
             const isEven = index % 2 === 0;
             return (
               <View
-                key={`lab-result-${result.parameter || 'param'}-${index}`}
+                key={`lab-result-${result.parameter || 'param'}-${result.value || ''}`}
                 style={[
                   styles.tableRow,
                   {

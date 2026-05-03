@@ -57,10 +57,10 @@ export default function RecordsScreen() {
     try {
       if (user.role === 'patient') {
         const data = await recordService.getPatientHistory(user._id);
-        setRecords(data);
+        setRecords(data ?? []);
       } else if (user.role === 'doctor') {
         const data = await recordService.getDoctorLogs();
-        setRecords(data);
+        setRecords(data ?? []);
       }
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Failed to load records.';
@@ -198,7 +198,7 @@ export default function RecordsScreen() {
         data={records}
         keyExtractor={(item) => item._id}
         renderItem={renderRecord}
-        contentContainerStyle={records.length === 0 ? styles.emptyContainer : styles.list}
+        contentContainerStyle={records?.length === 0 ? styles.emptyContainer : styles.list}
         onRefresh={handleRefresh}
         refreshing={refreshing}
         ListEmptyComponent={
