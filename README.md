@@ -1,144 +1,69 @@
-# Hospital Management System
+# Feature: Pharmacy — Member 5
 
-A full-stack Hospital Management System built with **React Native (Expo)** and **Node.js/Express**, backed by **MongoDB Atlas**, with **AWS** deployment.
+## Assignment
+**Member 5** owns `client/features/pharmacy/` and `server/src/modules/pharmacy/`.
 
----
+## Scope
+- Browse medicine catalog (filterable by category)
+- View individual medicine details
+- Admin: add, edit, delete medicines with optional image upload
 
-## Team Assignment
+## Files
 
-| Member | Phase | Module | Folder |
-|--------|-------|--------|--------|
-| (Common) | — | Authentication | `server/src/modules/auth/` · `client/shared/context/AuthContext.tsx` |
-| Member 1 | Phase 1 | Ward Management | `server/src/modules/departments/` · `server/src/modules/wards/` · `server/src/modules/wardAssignments/` · `server/src/modules/wardMedications/` · `client/features/wards/` · `client/features/wardReceptionist/` |
-| Member 2 | Phase 2 | Doctor & Staff Management | `server/src/modules/doctors/` · `client/features/doctors/` |
-| Member 3 | Phase 3 | Appointment Booking | `server/src/modules/appointments/` · `client/features/appointments/` |
-| Member 4 | Phase 4 | Medical Records & Lab Reports | `server/src/modules/records/` · `client/features/records/` |
-| Member 5 | Phase 5 | Pharmacy & Inventory | `server/src/modules/pharmacy/` · `client/features/pharmacy/` |
-| Member 6 | Phase 6 | Billing & Deployment | `server/src/modules/billing/` · `client/features/billing/` |
+| File | Status | Notes |
+|---|---|---|
+| `services/medicine.service.ts` | ✅ Scaffold | All API calls typed |
+| `screens/MedicineListScreen.tsx` | ✅ Scaffold | Catalog with image, stock, expiry warnings |
+| `screens/MedicineDetailScreen.tsx` | ✅ Scaffold | Detail with admin actions |
+| `components/index.ts` | ✅ Scaffold | Add shared components here |
 
-> **Authentication** is a shared/common module used by all members. It provides JWT-based user registration, login, and role-based access control (`patient`, `doctor`, `admin`, `pharmacist`, `receptionist`). Every member integrates auth middleware into their protected routes — see `server/src/shared/middlewares/authMiddleware.ts` and `client/shared/context/AuthContext.tsx`.
+## Screens to Implement
 
----
+| Screen | Route | Auth Required |
+|---|---|---|
+| `MedicineListScreen` | `/(tabs)/pharmacy` | Yes |
+| `MedicineDetailScreen` | `/pharmacy/[id]` | Yes |
 
-## Prerequisites
+## API Endpoints Consumed
 
-- **[Bun](https://bun.sh/) ≥ 1.1** — package manager & runtime (`curl -fsSL https://bun.sh/install | bash`)
-- **Node.js ≥ 18** — required by Expo tooling
-- **MongoDB** — local instance or [MongoDB Atlas](https://www.mongodb.com/atlas) free tier URI
-- **Expo Go** app on your phone, or an Android/iOS emulator
+| Method | Endpoint | Auth | Purpose |
+|---|---|---|---|
+| `GET` | `/medicines` | Auth | List medicines (filterable) |
+| `GET` | `/medicines/:id` | Auth | Single medicine |
+| `POST` | `/medicines` | Admin | Add medicine |
+| `PUT` | `/medicines/:id` | Admin | Update medicine |
+| `DELETE` | `/medicines/:id` | Admin | Remove medicine |
 
----
-
-## Quick Start
-
-### 1. Clone the repository
-
-```bash
-git clone <repo-url>
-cd Hospital-management
-```
-
-### 2. Start the Backend
-
-```bash
-cd server
-bun install
-cp .env.example .env          # then fill in your values
-bun run dev
-```
-
-Server starts at `http://localhost:5000`. Health check: `GET /api/health`
-
-### 3. Start the Mobile App
-
-```bash
-cd client
-bun install
-cp .env.example .env          # then fill in your values
-bun start
-```
-
-Scan the QR code with **Expo Go**, or press `a` for Android / `i` for iOS emulator.
-
-> **Physical device**: Change `EXPO_PUBLIC_API_URL` in `client/.env` to your machine's local IP address, e.g. `http://192.168.1.x:5000/api`
-
----
-
-## Project Structure
+## Filters
 
 ```
-Hospital-management/
-├── Docs/
-│   └── Project.md          — Full project blueprint & API spec
-├── server/                 — Node.js + Express backend (TypeScript)
-│   └── src/
-│       ├── modules/        — One folder per team member (feature modules)
-│       ├── shared/         — Shared middlewares, utils, types
-│       ├── config/         — DB connection, env validation
-│       └── routes/         — Central route aggregator
-└── client/                 — Expo React Native app (TypeScript)
-    ├── features/           — One folder per team member (feature screens)
-    ├── shared/             — Shared API client, auth context, types
-    └── app/                — Expo Router file-based routing
+GET /medicines?category=Antibiotic
 ```
 
----
+## Usage
 
-## Tech Stack
+```tsx
+import { medicineService } from '@/features/pharmacy/services/medicine.service';
 
-| Layer | Technology |
-|-------|-----------|
-| Mobile App | React Native, Expo (Expo Router), TypeScript |
-| Backend | Node.js, Express.js, TypeScript |
-| Database | MongoDB via Mongoose |
-| Auth | JWT + Bcrypt |
-| File Uploads | Multer (local dev) → AWS S3 (production) |
-| Deployment | AWS (EC2/ECS) + MongoDB Atlas |
-| Package Manager | **Bun** (all commands must use `bun`, not `npm` or `yarn`) |
+// Browse all antibiotics:
+const meds = await medicineService.getMedicines({ category: 'Antibiotic' });
 
----
+// Admin adds a medicine with image:
+const formData = new FormData();
+formData.append('name', 'Amoxicillin');
+formData.append('category', 'Antibiotic');
+formData.append('price', '4.99');
+formData.append('stockQuantity', '500');
+formData.append('expiryDate', '2027-01-01');
+formData.append('file', { uri, name: 'amox.jpg', type: 'image/jpeg' } as any);
+await medicineService.createMedicine(formData);
+```
 
-## Environment Variables
+## TODOs
 
-Each package has a `.env.example` file. **Copy it to `.env` and fill in your values before running.**
-
-- `server/.env.example` — backend configuration
-- `client/.env.example` — mobile app configuration
-
-> ⚠️ Never commit `.env` files. They are gitignored.
-
----
-
-## Development Workflow (for all team members)
-
-1. Pick up the `README.md` inside your module folder — it describes your scope, schema, and API endpoints.
-2. Implement your Mongoose model, controller, validation, and routes in `server/src/modules/<your-module>/`.
-3. Implement your screens and API service calls in `client/features/<your-feature>/`.
-4. All modules share the middlewares in `server/src/shared/` — use `authMiddleware` for protected routes and `uploadMiddleware` for file uploads.
-5. The Axios client in `client/shared/api/client.ts` automatically attaches the auth token — use it in your service files.
-
----
-
-## API Conventions
-
-- Base URL: `http://localhost:5000/api`
-- All responses follow the shape:
-  ```json
-  { "success": true, "data": {} }
-  { "success": false, "message": "Error description" }
-  ```
-- Protected routes require `Authorization: Bearer <token>` header (handled automatically by the Axios client in the mobile app).
-- File upload endpoints use `multipart/form-data`.
-
----
-
-## Deployment (Phase 6 — Member 6)
-
-Refer to `server/src/modules/billing/README.md` for the full AWS deployment guide.
-
-Summary:
-- **Backend**: AWS EC2 or ECS
-- **Database**: MongoDB Atlas (connected via `MONGO_URI`)
-- **File Storage**: AWS S3 (switch `uploadMiddleware.ts` from local disk to S3)
-- **SSL**: AWS Certificate Manager
-- **Secrets**: AWS Systems Manager Parameter Store
+- [ ] Wire `MedicineListScreen` into tab navigator
+- [ ] Wire `MedicineDetailScreen` into `/pharmacy/[id]` dynamic route
+- [ ] Replace text category filter with chip selector
+- [ ] Admin: build "Add Medicine" form screen with `expo-image-picker` for packaging photo
+- [ ] Show expiry warning banner in detail screen (within 30 days)
+- [ ] Add low-stock alert for admin dashboard
