@@ -64,7 +64,7 @@ const doctorScheduleSchema = new Schema<IDoctorSchedule>(
       type: Schema.Types.ObjectId,
       ref: 'Doctor',
       required: [true, 'Doctor reference is required'],
-      unique: true,
+      index: { unique: true },
     },
     weeklySlots: {
       type: [weeklySlotSchema],
@@ -83,8 +83,6 @@ const doctorScheduleSchema = new Schema<IDoctorSchedule>(
   },
   { timestamps: true, versionKey: false },
 );
-
-doctorScheduleSchema.index({ doctorId: 1 }, { unique: true });
 
 export const DoctorSchedule = mongoose.model<IDoctorSchedule>(
   'DoctorSchedule',

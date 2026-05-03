@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useEffect } from 'react';
+import React, { useState, useCallback, useEffect, useMemo } from 'react';
 import {
   View,
   Text,
@@ -25,29 +25,47 @@ import { appointmentService } from '../services/appointment.service';
 import { doctorService } from '@/features/doctors/services/doctor.service';
 import type { Doctor } from '@/shared/types';
 
+/**
+ * Build a UTC Date from a selected slot. The server treats schedule times as UTC,
+ * so we must send appointmentDate as a UTC ISO string matching the slot time.
+ */
+function buildSlotDate(dateStr: string, timeStr: string): Date {
+  return new Date(`${dateStr}T${timeStr}:00.000Z`);
+}
+
 export default function BookAppointmentScreen() {
-  const { doctorId: paramDoctorId } = useLocalSearchParams<{ doctorId?: string }>();
+  const { doctorId: paramDoctorId, date: paramDate, time: paramTime } =
+    useLocalSearchParams<{ doctorId?: string; date?: string; time?: string }>();
   const router = useRouter();
   const colorScheme = useColorScheme() ?? 'light';
   const colors = Colors[colorScheme];
 
+  // Pre-construct slot date from navigation params (if user came from DoctorScheduleCalendar)
+  const preselectedSlotDate = useMemo(
+    () => (paramDate && paramTime ? buildSlotDate(paramDate, paramTime) : null),
+    [paramDate, paramTime],
+  );
+
+  const MS_PER_DAY = 24 * 60 * 60 * 1000;
   const [doctorId, setDoctorId] = useState(paramDoctorId ?? '');
   const [selectedDoctor, setSelectedDoctor] = useState<Doctor | null>(null);
   const [showDoctorPicker, setShowDoctorPicker] = useState(false);
   const [doctors, setDoctors] = useState<Doctor[]>([]);
   const [loadingDoctors, setLoadingDoctors] = useState(false);
-  const MS_PER_DAY = 24 * 60 * 60 * 1000;
-  const [date, setDate] = useState(new Date(Date.now() + MS_PER_DAY));
+  const [date, setDate] = useState(preselectedSlotDate ?? new Date(Date.now() + MS_PER_DAY));
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [showTimePicker, setShowTimePicker] = useState(false);
   const [reason, setReason] = useState('');
   const [selectedFile, setSelectedFile] = useState<DocumentPicker.DocumentPickerAsset | null>(null);
   const [loading, setLoading] = useState(false);
 
-  // Fetch doctor details if doctorId is provided
+  // Fetch doctor details and set selectedDoctor when doctorId param is provided
   useEffect(() => {
     if (paramDoctorId) {
-      doctorService.getDoctorById(paramDoctorId)      .catch((err: unknown) => console.warn('Failed to pre-load doctor details:', err));
+      doctorService
+        .getDoctorById(paramDoctorId)
+        .then((doc) => setSelectedDoctor(doc))
+        .catch((err: unknown) => console.warn('Failed to pre-load doctor details:', err));
     }
   }, [paramDoctorId]);
 
@@ -123,12 +141,32 @@ export default function BookAppointmentScreen() {
       return;
     }
 
+    // Build a UTC-stable ISO string from the selected slot time.
+    // The server treats schedule times as UTC, so appointmentDate MUST be a UTC
+    // ISO string whose hours/minutes match the slot time.
+    let appointmentISO: string;
+    if (preselectedSlotDate) {
+      appointmentISO = preselectedSlotDate.toISOString();
+    } else {
+      // Fallback: strip local-timezone offset by constructing from UTC parts
+      appointmentISO = new Date(
+        Date.UTC(
+          date.getUTCFullYear(),
+          date.getUTCMonth(),
+          date.getUTCDate(),
+          date.getUTCHours(),
+          date.getUTCMinutes(),
+          0,
+        ),
+      ).toISOString();
+    }
+
     try {
       setLoading(true);
 
       const formData = new FormData();
       formData.append('doctorId', doctorId.trim());
-      formData.append('appointmentDate', date.toISOString());
+      formData.append('appointmentDate', appointmentISO);
       if (reason.trim()) {
         formData.append('reasonForVisit', reason.trim());
       }
@@ -203,44 +241,53 @@ export default function BookAppointmentScreen() {
 
           <View style={styles.fieldContainer}>
             <Text style={[styles.label, { color: colors.text }]}>Appointment Date & Time *</Text>
-            <View style={styles.dateRow}>
-              <TouchableOpacity
-                style={[styles.dateButton, { flex: 1, backgroundColor: colors.inputBackground, borderColor: colors.inputBorder }]}
-                onPress={() => setShowDatePicker(true)}
-                disabled={loading}
-              >
-                <Feather name="calendar" size={16} color={colors.textTertiary} />
-                <Text style={[styles.dateButtonText, { color: colors.text }]}>{formattedDate}</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={[styles.dateButton, { width: 110, backgroundColor: colors.inputBackground, borderColor: colors.inputBorder }]}
-                onPress={() => setShowTimePicker(true)}
-                disabled={loading}
-              >
-                <Feather name="clock" size={16} color={colors.textTertiary} />
-                <Text style={[styles.dateButtonText, { color: colors.text }]}>{formattedTime}</Text>
-              </TouchableOpacity>
-            </View>
+            {preselectedSlotDate ? (
+              <View style={[styles.slotConfirmed, { backgroundColor: colors.successBg, borderColor: colors.success }]}>
+                <Feather name="check-circle" size={16} color={colors.success} style={{ marginRight: 8 }} />
+                <Text style={[styles.slotConfirmedText, { color: colors.success }]}>
+                  {paramDate} at {paramTime}
+                </Text>
+              </View>
+            ) : (
+              <>
+                <View style={styles.dateRow}>
+                  <TouchableOpacity
+                    style={[styles.dateButton, { flex: 1, backgroundColor: colors.inputBackground, borderColor: colors.inputBorder }]}
+                    onPress={() => setShowDatePicker(true)}
+                    disabled={loading}
+                  >
+                    <Feather name="calendar" size={16} color={colors.textTertiary} />
+                    <Text style={[styles.dateButtonText, { color: colors.text }]}>{formattedDate}</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={[styles.dateButton, { width: 110, backgroundColor: colors.inputBackground, borderColor: colors.inputBorder }]}
+                    onPress={() => setShowTimePicker(true)}
+                    disabled={loading}
+                  >
+                    <Feather name="clock" size={16} color={colors.textTertiary} />
+                    <Text style={[styles.dateButtonText, { color: colors.text }]}>{formattedTime}</Text>
+                  </TouchableOpacity>
+                </View>
+                {showDatePicker && (
+                  <DateTimePicker
+                    value={date}
+                    mode="date"
+                    display={Platform.OS === 'ios' ? 'inline' : 'default'}
+                    minimumDate={new Date()}
+                    onChange={onDateChange}
+                  />
+                )}
+                {showTimePicker && (
+                  <DateTimePicker
+                    value={date}
+                    mode="time"
+                    display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+                    onChange={onTimeChange}
+                  />
+                )}
+              </>
+            )}
           </View>
-
-          {showDatePicker && (
-            <DateTimePicker
-              value={date}
-              mode="date"
-              display={Platform.OS === 'ios' ? 'inline' : 'default'}
-              minimumDate={new Date()}
-              onChange={onDateChange}
-            />
-          )}
-
-          {showTimePicker && (
-            <DateTimePicker
-              value={date}
-              mode="time"
-              display={Platform.OS === 'ios' ? 'spinner' : 'default'}
-              onChange={onTimeChange}
-            />
-          )}
 
           <Input
             label="Reason for Visit"
@@ -489,5 +536,17 @@ const styles = StyleSheet.create({
   emptyText: {
     textAlign: 'center',
     marginTop: spacing.xl,
+  },
+  slotConfirmed: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderWidth: 1.5,
+    borderRadius: radius.md,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.md,
+  },
+  slotConfirmedText: {
+    fontSize: 16,
+    fontWeight: '500',
   },
 });
