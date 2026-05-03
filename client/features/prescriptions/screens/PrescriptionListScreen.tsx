@@ -36,6 +36,11 @@ export default function PrescriptionListScreen() {
     }
   }, [user?._id]);
 
+  // Load prescriptions on mount
+  useEffect(() => {
+    void loadPrescriptions();
+  }, [loadPrescriptions]);
+
   const onRefresh = useCallback(() => {
     setRefreshing(true);
     void loadPrescriptions();
