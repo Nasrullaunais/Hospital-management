@@ -101,13 +101,13 @@ export const dispensePrescription = async (req: Request, res: Response, next: Ne
       };
     });
 
-    const dispense = await Dispense.create(({
+    const dispense = await new Dispense({
       prescriptionId,
       patientId: prescription.patientId,
       pharmacistId,
       dispensedItems: fullDispensedItems,
       status: 'fulfilled',
-    }) as any, { session });
+    }).save({ session });
 
     prescription.status = PRESCRIPTION_STATUS.FULFILLED;
     await prescription.save({ session });
