@@ -104,6 +104,7 @@ export default function StaffListScreen() {
         <TouchableOpacity
           style={[styles.card, { backgroundColor: theme.surface, borderColor: theme.border }]}
           activeOpacity={0.7}
+          onPress={() => router.push(`/(admin)/staff/${item._id}`)}
           onLongPress={() => handleDelete(item)}
           disabled={isDeleting}
         >
@@ -144,20 +145,12 @@ export default function StaffListScreen() {
             {isDeleting && (
               <ActivityIndicator size="small" color={theme.error} style={{ marginLeft: 8 }} />
             )}
+            <Feather name="chevron-right" size={18} color={theme.textTertiary} style={{ marginLeft: spacing.sm }} />
           </View>
-          {!isDeleting && (
-            <TouchableOpacity
-              style={styles.deleteTouch}
-              onPress={() => handleDelete(item)}
-              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-            >
-              <Feather name="trash-2" size={16} color={theme.textTertiary} />
-            </TouchableOpacity>
-          )}
         </TouchableOpacity>
       );
     },
-    [theme, handleDelete, deletingId],
+    [theme, handleDelete, deletingId, router],
   );
 
   const keyExtractor = useCallback((item: User) => item._id, []);
@@ -361,9 +354,6 @@ const styles = StyleSheet.create({
   roleBadgeText: {
     fontSize: 11,
     fontWeight: '600',
-  },
-  deleteTouch: {
-    paddingLeft: spacing.sm,
   },
 
   errorText: { fontSize: typography.sm, marginTop: spacing.md },

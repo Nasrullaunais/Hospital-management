@@ -84,6 +84,80 @@ export const listUsers = async (req: Request, res: Response, next: NextFunction)
   }
 };
 
+/** GET /api/admin/users/:id — Get a single staff user by ID */
+export const getUserById = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+  const errors = validationResult(req);
+  if (!errors.isEmpty()) {
+    return next(new ApiError(422, 'Validation failed'));
+  }
+  try {
+    const { id } = req.params;
+
+    const user = await User.findById(id);
+    if (!user) {
+      return next(ApiError.notFound('User not found'));
+    }
+
+    // Only allow viewing staff roles (receptionist, pharmacist)
+    if (user.role !== 'receptionist' && user.role !== 'pharmacist') {
+      return next(ApiError.forbidden('Cannot view non-staff users via this endpoint'));
+    }
+
+    res.json({
+      success: true,
+      data: { user },
+    });
+  } catch (err) {
+    next(err);
+  }
+};
+
+/** PUT /api/admin/users/:id — Update a staff user's details */
+export const updateUser = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+  const errors = validationResult(req);
+  if (!errors.isEmpty()) {
+    return next(new ApiError(422, 'Validation failed'));
+  }
+  try {
+    const { id } = req.params;
+    const { name, email, phone, role } = req.body;
+
+    const user = await User.findById(id);
+    if (!user) {
+      return next(ApiError.notFound('User not found'));
+    }
+
+    // Only allow updating staff roles
+    if (user.role !== 'receptionist' && user.role !== 'pharmacist') {
+      return next(ApiError.forbidden('Cannot update non-staff users'));
+    }
+
+    // If email changed, check uniqueness
+    if (email && email !== user.email) {
+      const existingUser = await User.findOne({ email });
+      if (existingUser) {
+        return next(ApiError.conflict('Email already in use'));
+      }
+    }
+
+    // Update allowed fields
+    if (name !== undefined) user.name = name;
+    if (email !== undefined) user.email = email;
+    if (phone !== undefined) user.phone = phone;
+    if (role !== undefined) user.role = role;
+
+    await user.save();
+
+    res.json({
+      success: true,
+      message: 'User updated',
+      data: { user },
+    });
+  } catch (err) {
+    next(err);
+  }
+};
+
 /** DELETE /api/admin/users/:id — Soft-delete a staff user (set isActive: false) */
 export const deleteUser = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   const errors = validationResult(req);

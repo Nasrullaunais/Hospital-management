@@ -9,6 +9,13 @@ export interface CreateStaffPayload {
   role: 'receptionist' | 'pharmacist';
 }
 
+export interface UpdateStaffPayload {
+  name?: string;
+  email?: string;
+  phone?: string;
+  role?: 'receptionist' | 'pharmacist';
+}
+
 export const staffService = {
   getStaff: async (role?: 'receptionist' | 'pharmacist'): Promise<User[]> => {
     const res = await apiClient.get<ApiSuccessResponse<{ users: User[] }>>(
@@ -18,9 +25,24 @@ export const staffService = {
     return res.data.data.users;
   },
 
+  getStaffById: async (id: string): Promise<User> => {
+    const res = await apiClient.get<ApiSuccessResponse<{ user: User }>>(
+      ENDPOINTS.ADMIN.USER_BY_ID(id),
+    );
+    return res.data.data.user;
+  },
+
   createStaff: async (payload: CreateStaffPayload): Promise<User> => {
     const res = await apiClient.post<ApiSuccessResponse<{ user: User }>>(
       ENDPOINTS.ADMIN.USERS,
+      payload,
+    );
+    return res.data.data.user;
+  },
+
+  updateStaff: async (id: string, payload: UpdateStaffPayload): Promise<User> => {
+    const res = await apiClient.put<ApiSuccessResponse<{ user: User }>>(
+      ENDPOINTS.ADMIN.USER_BY_ID(id),
       payload,
     );
     return res.data.data.user;

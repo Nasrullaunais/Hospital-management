@@ -197,6 +197,42 @@ export default function AdminLayout() {
               headerBackTitleVisible: false,
             }}
           />
+          <Stack.Screen
+            name="staff/[id]"
+            options={{
+              headerShown: true,
+              title: 'Staff Details',
+              headerStyle: { backgroundColor: theme.surface },
+              headerTintColor: theme.primary,
+              headerTitleStyle: { fontWeight: '600', fontSize: 16 },
+              headerShadowVisible: false,
+              headerBackTitleVisible: false,
+            }}
+          />
+          <Stack.Screen
+            name="staff/[id]/edit"
+            options={{
+              headerShown: true,
+              title: 'Edit Staff',
+              headerStyle: { backgroundColor: theme.surface },
+              headerTintColor: theme.primary,
+              headerTitleStyle: { fontWeight: '600', fontSize: 16 },
+              headerShadowVisible: false,
+              headerBackTitleVisible: false,
+            }}
+          />
+          <Stack.Screen
+            name="doctors/[id]/edit"
+            options={{
+              headerShown: true,
+              title: 'Edit Doctor',
+              headerStyle: { backgroundColor: theme.surface },
+              headerTintColor: theme.primary,
+              headerTitleStyle: { fontWeight: '600', fontSize: 16 },
+              headerShadowVisible: false,
+              headerBackTitleVisible: false,
+            }}
+          />
         </Stack>
 
         <CustomTabBar activeTab={activeTab} onTabPress={handleTabPress} tabs={tabs} />

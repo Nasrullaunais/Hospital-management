@@ -39,3 +39,36 @@ export const deleteUserValidation = [
     .isMongoId()
     .withMessage('Invalid user ID'),
 ];
+
+export const getUserByIdValidation = [
+  param('id')
+    .isMongoId()
+    .withMessage('Invalid user ID'),
+];
+
+export const updateUserValidation = [
+  param('id')
+    .isMongoId()
+    .withMessage('Invalid user ID'),
+  body('name')
+    .optional()
+    .trim()
+    .notEmpty()
+    .withMessage('Name cannot be empty')
+    .isLength({ max: 100 })
+    .withMessage('Name must not exceed 100 characters'),
+  body('email')
+    .optional()
+    .isEmail()
+    .withMessage('Please provide a valid email')
+    .normalizeEmail(),
+  body('phone')
+    .optional()
+    .trim()
+    .isLength({ min: 7, max: 15 })
+    .withMessage('Phone must be between 7 and 15 characters'),
+  body('role')
+    .optional()
+    .isIn(['receptionist', 'pharmacist'])
+    .withMessage('Role must be receptionist or pharmacist'),
+];
