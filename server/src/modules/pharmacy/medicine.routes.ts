@@ -9,7 +9,7 @@ import {
   getMedicinesByIds,
 } from './medicine.controller.js';
 import { authMiddleware, requireRole } from '../../shared/middlewares/authMiddleware.js';
-import { uploadSingle } from '../../shared/middlewares/uploadMiddleware.js';
+import { uploadSingleMemory } from '../../shared/middlewares/uploadMiddleware.js';
 import { ROLES } from '../../shared/constants/roles.js';
 import {
   createMedicineValidation,
@@ -24,7 +24,7 @@ router.post(
   '/',
   authMiddleware,
   requireRole(ROLES.ADMIN, ROLES.PHARMACIST),
-  uploadSingle('packagingImage'),
+  uploadSingleMemory('packagingImage'),
   createMedicineValidation,
   addMedicine,
 );
@@ -42,7 +42,7 @@ router.post('/batch', authMiddleware, getMedicinesByIds);
 router.patch('/:id/stock', authMiddleware, requireRole(ROLES.PHARMACIST, ROLES.ADMIN), adjustStockValidation, adjustStock);
 
 /** PUT /api/medicines/:id — Admin or Pharmacist */
-router.put('/:id', authMiddleware, requireRole(ROLES.ADMIN, ROLES.PHARMACIST), uploadSingle('packagingImage'), updateMedicineValidation, updateMedicine);
+router.put('/:id', authMiddleware, requireRole(ROLES.ADMIN, ROLES.PHARMACIST), uploadSingleMemory('packagingImage'), updateMedicineValidation, updateMedicine);
 
 /** DELETE /api/medicines/:id — Admin only */
 router.delete('/:id', authMiddleware, requireRole(ROLES.ADMIN), deleteMedicine);

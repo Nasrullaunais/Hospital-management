@@ -1,10 +1,13 @@
 import type { Request, Response, NextFunction } from 'express';
 import { validationResult } from 'express-validator';
+import crypto from 'node:crypto';
+import path from 'node:path';
 import mongoose from 'mongoose';
 import { Medicine } from './medicine.model.js';
 import { ApiError } from '../../shared/utils/ApiError.js';
 import { s3Service } from '../../shared/services/s3.service.js';
 import { formatFileReference } from '../../shared/utils/fileReference.js';
+import { S3_PREFIX } from '../../config/s3.js';
 import { parsePagination, buildPaginatedResponse } from '../../shared/types/pagination.js';
 
 /** POST /api/medicines */
@@ -22,8 +25,11 @@ export const addMedicine = async (req: Request, res: Response, next: NextFunctio
       await s3Service.verifyAndConsume(req.user!.id, req.body.fileKey);
       packagingImageUrl = formatFileReference('s3', req.body.fileKey);
     } else if (req.file) {
-      // Legacy multer upload: store with local protocol
-      packagingImageUrl = formatFileReference('local', `/uploads/${req.file.filename}`);
+      // Memory-storage multer upload: upload directly to S3
+      const ext = path.extname(req.file.originalname);
+      const key = `${S3_PREFIX}pharmacy/${crypto.randomUUID()}${ext}`;
+      await s3Service.uploadBuffer(key, req.file.buffer, req.file.mimetype);
+      packagingImageUrl = formatFileReference('s3', key);
     } else {
       return next(ApiError.badRequest('Either fileKey (S3) or file upload is required'));
     }
@@ -147,8 +153,11 @@ export const updateMedicine = async (req: Request, res: Response, next: NextFunc
       await s3Service.verifyAndConsume(req.user!.id, req.body.fileKey);
       updates['packagingImageUrl'] = formatFileReference('s3', req.body.fileKey);
     } else if (req.file) {
-      // Legacy multer upload: store with local protocol
-      updates['packagingImageUrl'] = formatFileReference('local', `/uploads/${req.file.filename}`);
+      // Memory-storage multer upload: upload directly to S3
+      const ext = path.extname(req.file.originalname);
+      const key = `${S3_PREFIX}pharmacy/${crypto.randomUUID()}${ext}`;
+      await s3Service.uploadBuffer(key, req.file.buffer, req.file.mimetype);
+      updates['packagingImageUrl'] = formatFileReference('s3', key);
     }
 
     if (Object.keys(updates).length === 0) {

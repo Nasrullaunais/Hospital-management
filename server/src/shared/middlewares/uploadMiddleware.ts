@@ -81,3 +81,18 @@ export const uploadSingle = (fieldName: string) => upload.single(fieldName);
  */
 export const uploadMultiple = (fieldName: string, maxCount = 5) =>
   upload.array(fieldName, maxCount);
+
+// ── Memory-storage multer for S3 uploads ───────────────────────────────────────
+// Files are kept in memory (req.file.buffer) so they can be uploaded directly to S3
+// without writing to ephemeral local disk.
+const memoryUpload = multer({
+  storage: multer.memoryStorage(),
+  fileFilter,
+  limits: { fileSize: FILE_SIZE_LIMIT },
+});
+
+/**
+ * Upload a single file from a named form field using memory storage.
+ * Use this when the file will be uploaded to S3 — avoids local disk I/O.
+ */
+export const uploadSingleMemory = (fieldName: string) => memoryUpload.single(fieldName);

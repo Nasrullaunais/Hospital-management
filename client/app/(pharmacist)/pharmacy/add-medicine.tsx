@@ -18,10 +18,7 @@ import * as ImagePicker from 'expo-image-picker';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { useAuth } from '@/shared/context/AuthContext';
-import { medicineService } from '@/features/pharmacy/services/medicine.service';
-import { type CreateMedicinePayload, type UpdateMedicinePayload } from '@/features/pharmacy/services/medicine.service';
-import { apiClient } from '@/shared/api/client';
-import { ENDPOINTS } from '@/shared/api/endpoints';
+import { medicineService, type UpdateMedicinePayload } from '@/features/pharmacy/services/medicine.service';
 import Colors from '@/constants/Colors';
 import { getImageUrl } from '@/shared/utils/getImageUrl';
 import { useColorScheme } from '@/components/useColorScheme';
@@ -77,32 +74,6 @@ export default function AddMedicineScreen() {
     })();
     return () => { cancelled = true; };
   }, [editId, isEditing]);
-
-  const uploadImageToS3 = async (image: PackagingImage): Promise<string> => {
-    // 1. Get presigned upload URL from backend
-    const res = await apiClient.post(ENDPOINTS.FILES.UPLOAD_URL, {
-      fileName: image.name,
-      mimeType: image.type,
-      module: 'pharmacy',
-    });
-    const { uploadUrl, fileKey } = res.data.data as { uploadUrl: string; fileKey: string };
-
-    // 2. Read local file and upload directly to S3
-    const fileResponse = await fetch(image.uri);
-    const blob = await fileResponse.blob();
-
-    const uploadResponse = await fetch(uploadUrl, {
-      method: 'PUT',
-      headers: { 'Content-Type': image.type },
-      body: blob,
-    });
-
-    if (!uploadResponse.ok) {
-      throw new Error(`Failed to upload image (status ${uploadResponse.status})`);
-    }
-
-    return fileKey;
-  };
 
   const canSubmit = useMemo(
     () => user?.role === 'admin' || user?.role === 'pharmacist',
@@ -209,39 +180,52 @@ export default function AddMedicineScreen() {
     try {
       setSubmitting(true);
 
-      // Upload image to S3 if a new image was picked
-      let fileKey: string | undefined;
-      if (packagingImage) {
-        fileKey = await uploadImageToS3(packagingImage);
-      }
-
       if (isEditing && editId) {
-        const payload: UpdateMedicinePayload = {
-          name: name.trim(),
-          category: category.trim(),
-          price: Number(price),
-          stockQuantity: Number(stockQuantity),
-          expiryDate: expiryDate.toISOString(),
-        };
-        if (fileKey) payload.fileKey = fileKey;
+        if (packagingImage) {
+          // Edit with new image: send FormData (server uploads to S3)
+          const formData = new FormData();
+          formData.append('name', name.trim());
+          formData.append('category', category.trim());
+          formData.append('price', String(Number(price)));
+          formData.append('stockQuantity', String(Number(stockQuantity)));
+          formData.append('expiryDate', expiryDate.toISOString());
+          formData.append('packagingImage', {
+            uri: packagingImage.uri,
+            name: packagingImage.name,
+            type: packagingImage.type,
+          } as any);
 
-        await medicineService.updateMedicine(editId, payload as UpdateMedicinePayload);
+          await medicineService.updateMedicine(editId, formData);
+        } else {
+          // Edit without new image: send JSON payload
+          const payload: UpdateMedicinePayload = {
+            name: name.trim(),
+            category: category.trim(),
+            price: Number(price),
+            stockQuantity: Number(stockQuantity),
+            expiryDate: expiryDate.toISOString(),
+          };
+          await medicineService.updateMedicine(editId, payload);
+        }
 
         Alert.alert('Success', 'Medication updated successfully.', [
           { text: 'OK', onPress: () => router.replace(`/(pharmacist)/pharmacy/${editId}`) },
         ]);
       } else {
-        const payload: CreateMedicinePayload = {
-          name: name.trim(),
-          category: category.trim(),
-          price: Number(price),
-          stockQuantity: Number(stockQuantity),
-          expiryDate: expiryDate.toISOString(),
-        };
-        if (fileKey) payload.fileKey = fileKey;
+        // Create: always send FormData with image (validate() ensures image is selected)
+        const formData = new FormData();
+        formData.append('name', name.trim());
+        formData.append('category', category.trim());
+        formData.append('price', String(Number(price)));
+        formData.append('stockQuantity', String(Number(stockQuantity)));
+        formData.append('expiryDate', expiryDate.toISOString());
+        formData.append('packagingImage', {
+          uri: packagingImage!.uri,
+          name: packagingImage!.name,
+          type: packagingImage!.type,
+        } as any);
 
-        await medicineService.createMedicine(payload);
-
+        await medicineService.createMedicine(formData);
         Alert.alert('Success', 'Medication added successfully.', [
           { text: 'OK', onPress: () => router.back() },
         ]);
