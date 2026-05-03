@@ -1,5 +1,5 @@
 import type { Request, Response, NextFunction } from 'express';
-import { WardMedication, IWardMedication } from './wardMedication.model.js';
+import { WardMedication, type IWardMedication } from './wardMedication.model.js';
 import { WardAssignment } from '../wardAssignments/wardAssignment.model.js';
 import { ApiError } from '../../shared/utils/ApiError.js';
 import mongoose from 'mongoose';
@@ -93,7 +93,7 @@ export const getMedicationById = async (
     const { id } = req.params;
 
     if (!mongoose.Types.ObjectId.isValid(id)) {
-      throw ApiError.badRequest('Invalid medication ID format');
+      return next(ApiError.badRequest('Invalid medication ID format'));
     }
 
     const medication = await WardMedication.findById(id).populate<{
@@ -101,7 +101,7 @@ export const getMedicationById = async (
     }>('medicationId', 'name');
 
     if (!medication) {
-      throw ApiError.notFound('Medication not found');
+      return next(ApiError.notFound('Medication not found'));
     }
 
     const activeAssignment = await WardAssignment.findOne({
@@ -110,7 +110,7 @@ export const getMedicationById = async (
     });
 
     if (!activeAssignment) {
-      throw ApiError.notFound('Medication not found');
+      return next(ApiError.notFound('Medication not found'));
     }
 
     const masked = maskMedication(medication);
@@ -133,10 +133,10 @@ export const addWardMedication = async (
     const { wardAssignmentId, medicationId, dosage, frequency, route, startDate, endDate, notes } = req.body;
 
     if (!mongoose.Types.ObjectId.isValid(wardAssignmentId)) {
-      throw ApiError.badRequest('Invalid ward assignment ID format');
+      return next(ApiError.badRequest('Invalid ward assignment ID format'));
     }
     if (!mongoose.Types.ObjectId.isValid(medicationId)) {
-      throw ApiError.badRequest('Invalid medication ID format');
+      return next(ApiError.badRequest('Invalid medication ID format'));
     }
 
     const assignment = await WardAssignment.findOne({
@@ -145,7 +145,7 @@ export const addWardMedication = async (
     });
 
     if (!assignment) {
-      throw ApiError.notFound('Active ward assignment not found');
+      return next(ApiError.notFound('Active ward assignment not found'));
     }
 
     const medication = await WardMedication.create({
@@ -180,13 +180,13 @@ export const updateWardMedication = async (
     const { dosage, frequency, route, endDate, status, notes } = req.body;
 
     if (!mongoose.Types.ObjectId.isValid(id)) {
-      throw ApiError.badRequest('Invalid medication ID format');
+      return next(ApiError.badRequest('Invalid medication ID format'));
     }
 
     const medication = await WardMedication.findById(id);
 
     if (!medication) {
-      throw ApiError.notFound('Medication not found');
+      return next(ApiError.notFound('Medication not found'));
     }
 
     const activeAssignment = await WardAssignment.findOne({
@@ -195,7 +195,7 @@ export const updateWardMedication = async (
     });
 
     if (!activeAssignment) {
-      throw ApiError.notFound('Medication not found');
+      return next(ApiError.notFound('Medication not found'));
     }
 
     const updated = await WardMedication.findByIdAndUpdate(
@@ -222,13 +222,13 @@ export const discontinueMedication = async (
     const { id } = req.params;
 
     if (!mongoose.Types.ObjectId.isValid(id)) {
-      throw ApiError.badRequest('Invalid medication ID format');
+      return next(ApiError.badRequest('Invalid medication ID format'));
     }
 
     const medication = await WardMedication.findById(id);
 
     if (!medication) {
-      throw ApiError.notFound('Medication not found');
+      return next(ApiError.notFound('Medication not found'));
     }
 
     const activeAssignment = await WardAssignment.findOne({
@@ -237,7 +237,7 @@ export const discontinueMedication = async (
     });
 
     if (!activeAssignment) {
-      throw ApiError.notFound('Medication not found');
+      return next(ApiError.notFound('Medication not found'));
     }
 
     const discontinued = await WardMedication.findByIdAndUpdate(

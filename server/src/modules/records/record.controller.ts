@@ -1,7 +1,9 @@
 import type { Request, Response, NextFunction } from 'express';
 import { validationResult } from 'express-validator';
 import { MedicalRecord } from './record.model.js';
+import { Appointment } from '../appointments/appointment.model.js';
 import { ApiError } from '../../shared/utils/ApiError.js';
+import { parsePagination, buildPaginatedResponse } from '../../shared/types/pagination.js';
 import { s3Service } from '../../shared/services/s3.service.js';
 import { formatFileReference } from '../../shared/utils/fileReference.js';
 import { findDoctorProfileByUserId } from '../../shared/utils/doctorLookup.js';
@@ -12,12 +14,12 @@ export const createRecord = async (req: Request, res: Response, next: NextFuncti
   const errors = validationResult(req);
   if (!errors.isEmpty()) return next(new ApiError(422, 'Validation failed'));
   try {
-    const userId = req.user!.id as string;
-    const doctor = await findDoctorProfileByUserId(userId);
+    const userId = req.user?.id;
+    if (!userId) return next(ApiError.unauthorized());
+    const doctor = await findDoctorProfileByUserId(userId as string);
     if (!doctor) return next(ApiError.notFound('Doctor profile not found for this account'));
 
     if (req.body.appointmentId) {
-      const { Appointment } = await import('../appointments/appointment.model.js');
       const appointment = await Appointment.findById(req.body.appointmentId);
       if (!appointment) return next(ApiError.badRequest('Appointment not found'));
       if (appointment.patientId.toString() !== req.body.patientId) {
@@ -28,7 +30,8 @@ export const createRecord = async (req: Request, res: Response, next: NextFuncti
     let labReportUrl: string | undefined;
 
     if (req.body.fileKey && typeof req.body.fileKey === 'string' && req.body.fileKey.trim().length > 0) {
-      await s3Service.verifyAndConsume(req.user!.id, req.body.fileKey);
+      if (!req.user?.id) return next(ApiError.unauthorized());
+      await s3Service.verifyAndConsume(req.user.id, req.body.fileKey);
       labReportUrl = formatFileReference('s3', req.body.fileKey);
     } else if (req.file) {
       labReportUrl = formatFileReference('local', `/uploads/${req.file.filename}`);
@@ -60,16 +63,14 @@ export const createRecord = async (req: Request, res: Response, next: NextFuncti
 /** GET /api/records/patient/:patientId — Get all records for a patient */
 export const getPatientRecords = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   try {
-    // Patients can only view their own records
-    const requesterId = req.user!.id;
+    const requesterId = req.user?.id;
+    if (!requesterId) return next(ApiError.unauthorized());
     const targetId = req.params.patientId;
-    if (req.user!.role === ROLES.PATIENT && requesterId !== targetId) {
+    if (req.user?.role === ROLES.PATIENT && requesterId !== targetId) {
       return next(ApiError.forbidden('You can only view your own medical records'));
     }
 
-    const page = Math.max(1, parseInt(req.query.page as string) || 1);
-    const limit = Math.min(100, Math.max(1, parseInt(req.query.limit as string) || 20));
-    const skip = (page - 1) * limit;
+    const { page, limit, skip } = parsePagination(req.query);
 
     const [records, total] = await Promise.all([
       MedicalRecord.find({ patientId: targetId })
@@ -84,7 +85,8 @@ export const getPatientRecords = async (req: Request, res: Response, next: NextF
       MedicalRecord.countDocuments({ patientId: targetId }),
     ]);
 
-    res.json({ success: true, data: { records, total, page, limit, pages: Math.ceil(total / limit) } });
+    const paginatedData = buildPaginatedResponse(records, total, page, limit);
+    res.json({ success: true, data: paginatedData });
   } catch (err) {
     next(err);
   }
@@ -93,13 +95,12 @@ export const getPatientRecords = async (req: Request, res: Response, next: NextF
 /** GET /api/records/doctor-logs — Get all records created by the authenticated doctor */
 export const getDoctorRecords = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   try {
-    const userId = req.user!.id as string;
-    const doctor = await findDoctorProfileByUserId(userId);
+    const userId = req.user?.id;
+    if (!userId) return next(ApiError.unauthorized());
+    const doctor = await findDoctorProfileByUserId(userId as string);
     if (!doctor) return next(ApiError.notFound('Doctor profile not found for this account'));
 
-    const page = Math.max(1, parseInt(req.query.page as string) || 1);
-    const limit = Math.min(100, Math.max(1, parseInt(req.query.limit as string) || 20));
-    const skip = (page - 1) * limit;
+    const { page, limit, skip } = parsePagination(req.query);
 
     const [records, total] = await Promise.all([
       MedicalRecord.find({ doctorId: doctor._id })
@@ -110,7 +111,8 @@ export const getDoctorRecords = async (req: Request, res: Response, next: NextFu
       MedicalRecord.countDocuments({ doctorId: doctor._id }),
     ]);
 
-    res.json({ success: true, data: { records, total, page, limit, pages: Math.ceil(total / limit) } });
+    const paginatedData = buildPaginatedResponse(records, total, page, limit);
+    res.json({ success: true, data: paginatedData });
   } catch (err) {
     next(err);
   }
@@ -126,13 +128,14 @@ export const getRecordById = async (req: Request, res: Response, next: NextFunct
     if (!record) return next(ApiError.notFound('Medical record not found'));
 
     // Patients can only see their own records
-    if (req.user!.role === ROLES.PATIENT && record.patientId.toString() !== req.user!.id) {
+    if (req.user?.role === ROLES.PATIENT && record.patientId.toString() !== req.user?.id) {
       return next(ApiError.forbidden());
     }
 
     // Doctors can only view records they created (unless admin)
-    if (req.user!.role === ROLES.DOCTOR) {
-      const userId = req.user!.id as string;
+    if (req.user?.role === ROLES.DOCTOR) {
+      const userId = req.user?.id;
+      if (!userId) return next(ApiError.unauthorized());
       const doctor = await findDoctorProfileByUserId(userId);
       // Compare raw ObjectIds — both are Doctor profile _ids stored/looked up the same way
       if (doctor && record.doctorId.toString() !== doctor._id.toString()) {
@@ -159,8 +162,9 @@ export const updateRecord = async (req: Request, res: Response, next: NextFuncti
   const errors = validationResult(req);
   if (!errors.isEmpty()) return next(new ApiError(422, 'Validation failed'));
   try {
-    const userId = req.user!.id as string;
-    const doctor = await findDoctorProfileByUserId(userId);
+    const userId = req.user?.id;
+    if (!userId) return next(ApiError.unauthorized());
+    const doctor = await findDoctorProfileByUserId(userId as string);
     if (!doctor) return next(ApiError.notFound('Doctor profile not found for this account'));
 
     const record = await MedicalRecord.findById(req.params.id);

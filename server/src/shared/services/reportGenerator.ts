@@ -1,4 +1,3 @@
-import { PutObjectCommand } from '@aws-sdk/client-s3';
 import path from 'node:path';
 import fs from 'node:fs';
 import handlebars from 'handlebars';
@@ -10,6 +9,7 @@ handlebars.registerHelper('eq', function (a: unknown, b: unknown) {
 });
 import { s3Client, S3_BUCKET, S3_PREFIX } from '../../config/s3.js';
 import { s3Service } from './s3.service.js';
+import { env } from '../../config/env.js';
 
 // ── Types ──────────────────────────────────────────────────────────────────────
 
@@ -78,7 +78,7 @@ export class ReportGenerator {
       browser = await puppeteer.launch({
         headless: true,
         args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage'],
-        executablePath: process.env['PUPPETEER_EXECUTABLE_PATH']
+        executablePath: env.PUPPETEER_EXECUTABLE_PATH
           || (fs.existsSync('/usr/bin/chromium-browser') ? '/usr/bin/chromium-browser' : undefined)
           || (fs.existsSync('/usr/bin/chromium') ? '/usr/bin/chromium' : undefined),
         protocolTimeout: 60000,
@@ -114,31 +114,27 @@ export class ReportGenerator {
         await page.close();
       }
 
-      if (!S3_BUCKET) {
-        const localDir = path.join(import.meta.dirname, '..', '..', '..', 'uploads', 'reports');
-        fs.mkdirSync(localDir, { recursive: true });
-        const localPath = path.join(localDir, fileName);
-        fs.writeFileSync(localPath, pdfBuffer);
-        logger.info({ event: 'pdf_uploaded', reportType: request.type, fileKey: fileName, storageType: 'local' }, 'PDF stored');
+      const fileKey = `${S3_PREFIX}reports/${fileName}`;
+
+      if (s3Client) {
+        // Upload to S3 via s3Service
+        await s3Service.uploadBuffer(fileKey, pdfBuffer, 'application/pdf');
+
+        logger.info({ event: 'pdf_uploaded', reportType: request.type, fileKey, s3Bucket: S3_BUCKET }, 'PDF stored in S3');
+
+        const downloadUrl = await s3Service.generateDownloadUrl(fileKey);
         logger.info({ event: 'pdf_render_completed', reportType: request.type, reportId: request.reportId, durationMs: Date.now() - startTime }, 'PDF rendering completed');
-        return { fileKey: fileName, downloadUrl: `/uploads/reports/${fileName}` };
+        return { fileKey, downloadUrl };
       }
 
-      const fileKey = `${S3_PREFIX}reports/${fileName}`;
-      await s3Client.send(
-        new PutObjectCommand({
-          Bucket: S3_BUCKET,
-          Key: fileKey,
-          Body: pdfBuffer,
-          ContentType: 'application/pdf',
-        }),
-      );
-
-      logger.info({ event: 'pdf_uploaded', reportType: request.type, fileKey, s3Bucket: S3_BUCKET || 'local' }, 'PDF stored');
-
-      const downloadUrl = await s3Service.generateDownloadUrl(fileKey);
+      // Fallback: store locally when S3 is not configured
+      const localDir = path.join(import.meta.dirname, '..', '..', '..', 'uploads', 'reports');
+      fs.mkdirSync(localDir, { recursive: true });
+      const localPath = path.join(localDir, fileName);
+      fs.writeFileSync(localPath, pdfBuffer);
+      logger.info({ event: 'pdf_stored_local', reportType: request.type, fileKey: fileName, storageType: 'local' }, 'PDF stored locally (no S3)');
       logger.info({ event: 'pdf_render_completed', reportType: request.type, reportId: request.reportId, durationMs: Date.now() - startTime }, 'PDF rendering completed');
-      return { fileKey, downloadUrl };
+      return { fileKey: fileName, downloadUrl: `/uploads/reports/${fileName}` };
     } catch (err) {
       logger.error({ event: 'pdf_render_error', reportType: request.type, err }, 'PDF rendering failed');
       throw err;
@@ -158,7 +154,7 @@ export class ReportGenerator {
       browser = await puppeteer.launch({
         headless: true,
         args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage'],
-        executablePath: process.env['PUPPETEER_EXECUTABLE_PATH']
+        executablePath: env.PUPPETEER_EXECUTABLE_PATH
           || (fs.existsSync('/usr/bin/chromium-browser') ? '/usr/bin/chromium-browser' : undefined)
           || (fs.existsSync('/usr/bin/chromium') ? '/usr/bin/chromium' : undefined),
         protocolTimeout: 30000,

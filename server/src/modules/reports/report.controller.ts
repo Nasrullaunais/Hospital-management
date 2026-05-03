@@ -1,5 +1,7 @@
 import type { Request, Response, NextFunction } from 'express';
 import { MedicalRecord } from '../records/record.model.js';
+import { LabReport } from '../labReports/labReport.model.js';
+import { Prescription } from '../prescriptions/prescription.model.js';
 import { reportGenerator } from '../../shared/services/reportGenerator.js';
 import { ApiError } from '../../shared/utils/ApiError.js';
 import { logger, getRequestContext } from '../../shared/utils/logger.js';
@@ -47,8 +49,6 @@ export const generateLabReport = async (req: Request, res: Response, next: NextF
 
     const { labReportId } = req.body;
     if (!labReportId) return next(ApiError.badRequest('labReportId is required'));
-
-    const { LabReport } = await import('../labReports/labReport.model.js');
 
     const labReport = await LabReport.findById(labReportId)
       .populate('patientId', 'name email dateOfBirth phone')
@@ -118,8 +118,6 @@ export const generatePrescriptionPDF = async (req: Request, res: Response, next:
 
     const { prescriptionId } = req.body;
     if (!prescriptionId) return next(ApiError.badRequest('prescriptionId is required'));
-
-    const { Prescription } = await import('../prescriptions/prescription.model.js');
 
     const prescription = await Prescription.findById(prescriptionId)
       .populate('patientId', 'name email dateOfBirth phone')

@@ -5,8 +5,8 @@ import {
   getAllInvoices,
   getInvoiceById,
   getInvoiceStats,
-  getSuggestions,
-  getPendingBillingPatients,
+  getInvoiceSuggestions,
+  getInvoicePendingBilling,
   uploadPaymentReceipt,
   verifyPayment,
   deleteInvoice,
@@ -31,10 +31,10 @@ router.get('/', authMiddleware, requireRole(ROLES.ADMIN, ROLES.RECEPTIONIST), ge
 router.get('/stats', authMiddleware, requireRole(ROLES.ADMIN, ROLES.RECEPTIONIST), getInvoiceStats);
 
 /** GET /api/invoices/suggestions/:patientId — Auto-detect unbilled charges (Staff/Admin) */
-router.get('/suggestions/:patientId', authMiddleware, requireRole(ROLES.ADMIN, ROLES.RECEPTIONIST), getSuggestions);
+router.get('/suggestions/:patientId', authMiddleware, requireRole(ROLES.ADMIN, ROLES.RECEPTIONIST), getInvoiceSuggestions);
 
 /** GET /api/invoices/pending-patients — Patients needing billing (Receptionist/Admin) */
-router.get('/pending-patients', authMiddleware, requireRole(ROLES.RECEPTIONIST, ROLES.ADMIN), getPendingBillingPatients);
+router.get('/pending-patients', authMiddleware, requireRole(ROLES.RECEPTIONIST, ROLES.ADMIN), getInvoicePendingBilling);
 
 /** GET /api/invoices/:id — Get single invoice (Patient own, Admin, Receptionist) */
 router.get('/:id', authMiddleware, requireRole(ROLES.PATIENT, ROLES.ADMIN, ROLES.RECEPTIONIST), getInvoiceById);

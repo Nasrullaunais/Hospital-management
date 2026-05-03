@@ -93,7 +93,15 @@ const labReportSchema = new Schema<ILabReport>(
     interpretation: { type: String },
     notes: { type: String },
   },
-  { timestamps: true, versionKey: false },
+  { timestamps: true, versionKey: false, toJSON: {
+    virtuals: true,
+    transform: (_doc, ret) => {
+      ret.id = ret._id.toString();
+      delete ret._id;
+      delete ret.__v;
+      return ret;
+    },
+  } },
 );
 
 labReportSchema.index({ patientId: 1, testDate: -1 });

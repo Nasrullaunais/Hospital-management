@@ -1,19 +1,34 @@
 import type { Request, Response, NextFunction } from 'express';
 import { validationResult } from 'express-validator';
+import crypto from 'node:crypto';
 import jwt from 'jsonwebtoken';
 import { User } from './auth.model.js';
+import { TokenBlacklist } from './tokenBlacklist.model.js';
 import { ApiError } from '../../shared/utils/ApiError.js';
 import { s3Service } from '../../shared/services/s3.service.js';
 import { formatFileReference } from '../../shared/utils/fileReference.js';
 import { env } from '../../config/env.js';
 import { getRequestContext, logger } from '../../shared/utils/logger.js';
 
-// ── Helper ─────────────────────────────────────────────────────────────────────
+// ── Helpers ─────────────────────────────────────────────────────────────────────
 
-function signToken(userId: string, email: string, role: string): string {
-  return jwt.sign({ id: userId, email, role }, env.JWT_SECRET, {
+function signToken(userId: string, email: string, role: string): { token: string; jti: string; expiresAt: Date } {
+  const jti = crypto.randomUUID();
+  const expiresAt = new Date(Date.now() + parseDuration(env.JWT_EXPIRES_IN));
+  const token = jwt.sign({ id: userId, email, role, jti }, env.JWT_SECRET, {
     expiresIn: env.JWT_EXPIRES_IN as jwt.SignOptions['expiresIn'],
   });
+  return { token, jti, expiresAt };
+}
+
+/** Parse a vercel/ms-style duration string to milliseconds. Supports "7d", "24h", "30m", etc. */
+function parseDuration(input: string): number {
+  const match = input.match(/^(\d+)\s*(s|m|h|d)$/);
+  if (!match) return 7 * 24 * 60 * 60 * 1000; // default 7 days
+  const value = parseInt(match[1], 10);
+  const unit = match[2];
+  const multipliers: Record<string, number> = { s: 1000, m: 60000, h: 3600000, d: 86400000 };
+  return value * (multipliers[unit] ?? 1);
 }
 
 function handleValidationErrors(req: Request, next: NextFunction): boolean {
@@ -62,7 +77,7 @@ export const register = async (req: Request, res: Response, next: NextFunction):
     }
 
     const user = await User.create({ name, email, password });
-    const token = signToken(user._id.toString(), user.email, user.role);
+    const { token } = signToken(user._id.toString(), user.email, user.role);
 
     logger.info(
       {
@@ -108,7 +123,7 @@ export const login = async (req: Request, res: Response, next: NextFunction): Pr
       return next(ApiError.unauthorized('Invalid credentials'));
     }
 
-    const token = signToken(user._id.toString(), user.email, user.role);
+    const { token } = signToken(user._id.toString(), user.email, user.role);
 
     logger.info(
       {
@@ -229,6 +244,44 @@ export const searchPatients = async (
       .lean();
 
     res.json({ success: true, data: patients });
+  } catch (err) {
+    next(err);
+  }
+};
+
+/**
+ * POST /api/auth/logout
+ * Stores the token's JTI in the blacklist so it cannot be reused.
+ */
+export const logout = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+  try {
+    const userId = req.user?.id ?? 'unknown';
+
+    // Extract the raw token from the Authorization header
+    const authHeader = req.headers['authorization'] ?? '';
+    const rawToken = authHeader.startsWith('Bearer ') ? authHeader.slice(7) : '';
+
+    if (rawToken) {
+      try {
+        // Decode without verifying (token was already verified by authMiddleware)
+        const decoded = jwt.decode(rawToken) as { jti?: string; exp?: number } | null;
+        if (decoded?.jti && decoded?.exp) {
+          await TokenBlacklist.create({
+            jti: decoded.jti,
+            expiresAt: new Date(decoded.exp * 1000),
+            revokedAt: new Date(),
+            userId,
+          });
+        }
+      } catch {
+        // If we can't decode the token, proceed with logout anyway
+        logger.warn({ event: 'logout_decode_failed', userId }, 'Could not decode token for blacklisting');
+      }
+    }
+
+    logger.info({ event: 'user_logout', ...getRequestContext(req) }, 'User logged out');
+
+    res.json({ success: true, message: 'Logged out successfully' });
   } catch (err) {
     next(err);
   }

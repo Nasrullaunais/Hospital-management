@@ -21,23 +21,23 @@ export const getUploadUrl = async (req: Request, res: Response, next: NextFuncti
     const { fileName, mimeType, module: fileModule, expirySeconds: rawExpiry } = req.body as Record<string, unknown>;
 
     if (!fileName || typeof fileName !== 'string' || fileName.trim().length === 0) {
-      throw ApiError.badRequest('fileName is required and must be a non-empty string');
+      return next(ApiError.badRequest('fileName is required and must be a non-empty string'));
     }
 
     if (!mimeType || typeof mimeType !== 'string') {
-      throw ApiError.badRequest('mimeType is required');
+      return next(ApiError.badRequest('mimeType is required'));
     }
 
     if (!ALLOWED_MIME_TYPES.includes(mimeType)) {
-      throw ApiError.badRequest(`Invalid mimeType. Allowed: ${ALLOWED_MIME_TYPES.join(', ')}`);
+      return next(ApiError.badRequest(`Invalid mimeType. Allowed: ${ALLOWED_MIME_TYPES.join(', ')}`));
     }
 
     if (!fileModule || typeof fileModule !== 'string') {
-      throw ApiError.badRequest('module is required');
+      return next(ApiError.badRequest('module is required'));
     }
 
     if (!ALLOWED_MODULES.includes(fileModule)) {
-      throw ApiError.badRequest(`Invalid module. Allowed: ${ALLOWED_MODULES.join(', ')}`);
+      return next(ApiError.badRequest(`Invalid module. Allowed: ${ALLOWED_MODULES.join(', ')}`));
     }
 
     const expirySeconds = typeof rawExpiry === 'number' && rawExpiry > 0 ? rawExpiry : 3600;
@@ -50,7 +50,7 @@ export const getUploadUrl = async (req: Request, res: Response, next: NextFuncti
     );
 
     if (!req.user) {
-      throw ApiError.unauthorized();
+      return next(ApiError.unauthorized());
     }
 
     await PendingUpload.create({
@@ -72,11 +72,11 @@ export const getDownloadUrl = async (req: Request, res: Response, next: NextFunc
     const { fileKey } = req.body as Record<string, unknown>;
 
     if (!fileKey || typeof fileKey !== 'string' || fileKey.trim().length === 0) {
-      throw ApiError.badRequest('fileKey is required and must be a non-empty string');
+      return next(ApiError.badRequest('fileKey is required and must be a non-empty string'));
     }
 
     if (!fileKey.startsWith(S3_PREFIX)) {
-      throw ApiError.forbidden('Invalid file key prefix');
+      return next(ApiError.forbidden('Invalid file key prefix'));
     }
 
     const downloadUrl = await s3Service.generateDownloadUrl(fileKey.trim());
@@ -94,11 +94,11 @@ export const getDownloadUrl = async (req: Request, res: Response, next: NextFunc
  */
 export const serveImage = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   try {
-    const { encodedKey } = req.params;
+    const encodedKey = String(req.params.encodedKey);
     const fileKey = decodeURIComponent(encodedKey);
 
     if (!fileKey.startsWith(S3_PREFIX)) {
-      throw ApiError.forbidden('Invalid file key prefix');
+      return next(ApiError.forbidden('Invalid file key prefix'));
     }
 
     const downloadUrl = await s3Service.generateDownloadUrl(fileKey);
@@ -115,14 +115,14 @@ export const getDownloadUrls = async (req: Request, res: Response, next: NextFun
     const { fileKeys } = req.body as Record<string, unknown>;
 
     if (!Array.isArray(fileKeys) || fileKeys.length === 0) {
-      throw ApiError.badRequest('fileKeys is required and must be a non-empty array');
+      return next(ApiError.badRequest('fileKeys is required and must be a non-empty array'));
     }
 
     const stringFileKeys = fileKeys as string[];
 
     for (const key of stringFileKeys) {
       if (typeof key !== 'string' || !key.startsWith(S3_PREFIX)) {
-        throw ApiError.forbidden(`All file keys must start with ${S3_PREFIX}`);
+        return next(ApiError.forbidden(`All file keys must start with ${S3_PREFIX}`));
       }
     }
 

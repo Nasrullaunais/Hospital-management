@@ -2,6 +2,7 @@ import type { Request, Response, NextFunction } from 'express';
 import type { Error as MongooseError } from 'mongoose';
 import { ApiError } from '../utils/ApiError.js';
 import { getRequestContext, logger } from '../utils/logger.js';
+import { env } from '../../config/env.js';
 
 interface MongoServerError extends Error {
   code?: number;
@@ -24,7 +25,7 @@ export const errorHandler = (
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   _next: NextFunction,
 ): void => {
-  const isDev = process.env.NODE_ENV === 'development';
+  const isDev = env.NODE_ENV === 'development';
   const requestContext = getRequestContext(req);
 
   // ── 1. Already an ApiError (operational) ────────────────────────────────────

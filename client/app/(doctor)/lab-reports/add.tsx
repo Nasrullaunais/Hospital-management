@@ -267,7 +267,7 @@ export default function AddLabReportScreen() {
           >
             {results.map((result, index) => (
               <View
-                key={index}
+                key={`result-${result.parameter || 'param'}-${index}`}
                 style={[
                   styles.resultRowContainer,
                   index < results.length - 1 && {

@@ -4,6 +4,7 @@ import { Medicine } from './medicine.model.js';
 import { ApiError } from '../../shared/utils/ApiError.js';
 import { s3Service } from '../../shared/services/s3.service.js';
 import { formatFileReference } from '../../shared/utils/fileReference.js';
+import { parsePagination, buildPaginatedResponse } from '../../shared/types/pagination.js';
 
 /** POST /api/medicines */
 export const addMedicine = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
@@ -69,15 +70,15 @@ export const getAllMedicines = async (
     const filter: Record<string, unknown> = {};
     if (req.query.category) filter.category = req.query.category;
 
-    const skip = Math.max(0, Number(req.query.skip) || 0);
-    const limit = Math.min(100, Math.max(1, Number(req.query.limit) || 20));
+    const { page, limit, skip } = parsePagination(req.query);
 
     const [medicines, total] = await Promise.all([
       Medicine.find(filter).sort({ name: 1 }).collation({ locale: 'en' }).skip(skip).limit(limit),
       Medicine.countDocuments(filter),
     ]);
 
-    res.json({ success: true, data: { medicines, count: medicines.length, total, skip, limit } });
+    const paginatedData = buildPaginatedResponse(medicines, total, page, limit);
+    res.json({ success: true, data: paginatedData });
   } catch (err) {
     next(err);
   }

@@ -2,7 +2,9 @@ import type { Request, Response, NextFunction } from 'express';
 import mongoose from 'mongoose';
 import { validationResult } from 'express-validator';
 import { Ward } from './ward.model.js';
+import { WardAssignment } from '../wardAssignments/wardAssignment.model.js';
 import { ApiError } from '../../shared/utils/ApiError.js';
+import { parsePagination, buildPaginatedResponse } from '../../shared/types/pagination.js';
 
 // ── Helpers ────────────────────────────────────────────────────────────────────
 
@@ -47,9 +49,7 @@ export const getWards = async (req: Request, res: Response, next: NextFunction):
     if (req.query.type) filter.type = req.query.type;
     if (req.query.status) filter.status = req.query.status;
 
-    const page = Math.max(1, parseInt(req.query.page as string) || 1);
-    const limit = Math.min(100, Math.max(1, parseInt(req.query.limit as string) || 20));
-    const skip = (page - 1) * limit;
+    const { page, limit, skip } = parsePagination(req.query);
 
     const [wards, total] = await Promise.all([
       Ward.find(filter)
@@ -58,14 +58,8 @@ export const getWards = async (req: Request, res: Response, next: NextFunction):
         .limit(limit),
       Ward.countDocuments(filter),
     ]);
-    res.json({
-      success: true,
-      data: {
-        wards,
-        count: wards.length,
-        pagination: { total, page, limit, pages: Math.ceil(total / limit) },
-      },
-    });
+    const paginatedData = buildPaginatedResponse(wards, total, page, limit);
+    res.json({ success: true, data: paginatedData });
   } catch (err) {
     next(err);
   }
@@ -175,7 +169,6 @@ export const updateBeds = async (req: Request, res: Response, next: NextFunction
     if (!existingWard) return next(ApiError.notFound('Ward not found'));
 
     // Validate occupancy against actual active assignments
-    const { WardAssignment } = await import('../wardAssignments/wardAssignment.model.js');
     const actualOccupancy = await WardAssignment.countDocuments({
       wardId: new mongoose.Types.ObjectId(wardId),
       status: 'active',

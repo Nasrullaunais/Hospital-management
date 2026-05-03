@@ -19,6 +19,8 @@ interface EnvConfig {
   JWT_SECRET: string;
   JWT_EXPIRES_IN: string;
   CORS_ORIGINS: string;
+  UPLOADS_DIR: string;
+  PUPPETEER_EXECUTABLE_PATH?: string;
   // Phase 6: AWS (optional in dev, required in production)
   AWS_ACCESS_KEY_ID?: string;
   AWS_SECRET_ACCESS_KEY?: string;
@@ -64,6 +66,8 @@ function validateEnv(): EnvConfig {
     JWT_SECRET: jwtSecret,
     JWT_EXPIRES_IN: jwtExpiresIn,
     CORS_ORIGINS: process.env['CORS_ORIGINS'] ?? 'http://localhost:8082,http://localhost:8081',
+    UPLOADS_DIR: process.env['UPLOADS_DIR'] ?? 'uploads',
+    PUPPETEER_EXECUTABLE_PATH: process.env['PUPPETEER_EXECUTABLE_PATH'],
     AWS_ACCESS_KEY_ID: process.env['AWS_ACCESS_KEY_ID'],
     AWS_SECRET_ACCESS_KEY: process.env['AWS_SECRET_ACCESS_KEY'],
     AWS_REGION: process.env['AWS_REGION'],

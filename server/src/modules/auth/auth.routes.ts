@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import { validationResult } from 'express-validator';
-import { register, login, getMyProfile, updateMyProfile, deleteMyProfile, searchPatients } from './auth.controller.js';
+import { register, login, getMyProfile, updateMyProfile, deleteMyProfile, searchPatients, logout } from './auth.controller.js';
 import { authMiddleware, requireRole } from '../../shared/middlewares/authMiddleware.js';
 import { ROLES } from '../../shared/constants/roles.js';
 import { uploadSingle } from '../../shared/middlewares/uploadMiddleware.js';
@@ -27,10 +27,8 @@ router.post('/auth/register', authLimiter, registerValidation, validate, registe
 /** POST /api/auth/login — Login and receive JWT */
 router.post('/auth/login', authLimiter, loginValidation, validate, login);
 
-/** POST /api/auth/logout — Invalidate token (client-side token deletion confirms logout) */
-router.post('/auth/logout', authMiddleware, (_req, res) => {
-  res.json({ success: true, message: 'Logged out successfully' });
-});
+/** POST /api/auth/logout — Invalidate token (server-side blacklisting) */
+router.post('/auth/logout', authMiddleware, logout);
 
 // ── Protected Patient Routes ───────────────────────────────────────────────────
 

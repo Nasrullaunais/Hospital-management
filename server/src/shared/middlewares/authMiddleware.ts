@@ -4,19 +4,24 @@ import { ApiError } from '../utils/ApiError.js';
 import { env } from '../../config/env.js';
 import { logger } from '../utils/logger.js';
 import { getRequestContext } from '../utils/logger.js';
+import mongoose from 'mongoose';
+
+// Lazy-loaded to avoid circular dependency (loaded once, cached by Bun)
+let _TokenBlacklistModel: typeof import('../../modules/auth/tokenBlacklist.model.js').TokenBlacklist | null = null;
 
 /**
- * Auth Middleware — JWT Verification
+ * Auth Middleware — JWT Verification with Token Blacklist checking
  *
  * Reads the Bearer token from the Authorization header, verifies it,
- * and attaches the decoded payload to req.user.
+ * checks if it has been revoked (blacklisted), and attaches the decoded
+ * payload to req.user.
  *
  * Usage: router.get('/protected', authMiddleware, handler)
  *
  * Role-based access:
  *   - Use requireRole('admin') after authMiddleware to restrict by role.
  */
-export const authMiddleware = (req: Request, _res: Response, next: NextFunction): void => {
+export const authMiddleware = async (req: Request, _res: Response, next: NextFunction): Promise<void> => {
   const authHeader = req.headers['authorization'];
 
   if (!authHeader || !authHeader.startsWith('Bearer ')) {
@@ -44,8 +49,34 @@ export const authMiddleware = (req: Request, _res: Response, next: NextFunction)
   }
 
   try {
-    const decoded = jwt.verify(token, env.JWT_SECRET) as Express.Request['user'];
-    req.user = decoded;
+    const decoded = jwt.verify(token, env.JWT_SECRET) as Express.Request['user'] & { jti?: string };
+
+    // Check token blacklist (fail-closed: reject if check unavailable)
+    if (decoded?.jti && mongoose.connection.readyState === 1) {
+      try {
+        _TokenBlacklistModel ??= (await import('../../modules/auth/tokenBlacklist.model.js')).TokenBlacklist;
+        const isBlacklisted = await _TokenBlacklistModel.exists({ jti: decoded.jti });
+        if (isBlacklisted) {
+          logger.warn(
+            { event: 'auth_blacklisted_token', jti: decoded.jti, ...getRequestContext(req) },
+            'Authentication failed: token has been revoked',
+          );
+          return next(ApiError.unauthorized('Token has been revoked. Please log in again.'));
+        }
+      } catch (err) {
+        logger.error(
+          { event: 'auth_blacklist_check_failed', jti: decoded.jti, err, ...getRequestContext(req) },
+          'Authentication failed: unable to verify token blacklist',
+        );
+        return next(ApiError.internal('Authentication service unavailable. Please try again.'));
+      }
+    }
+
+    req.user = {
+      id: decoded.id,
+      email: decoded.email,
+      role: decoded.role,
+    };
     next();
   } catch {
     logger.warn(

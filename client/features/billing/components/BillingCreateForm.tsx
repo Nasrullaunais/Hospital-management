@@ -8,6 +8,8 @@ import {
   Alert,
   ActivityIndicator,
   StyleSheet,
+  KeyboardAvoidingView,
+  Platform,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
@@ -281,10 +283,14 @@ export function BillingCreateForm({ initialPatient, onSuccess }: BillingCreateFo
 
   return (
     <SafeAreaView edges={['bottom']} style={[styles.safeArea, { backgroundColor: colors.background }]}>
-      <ScrollView
-        contentContainerStyle={styles.scrollContent}
-        keyboardShouldPersistTaps="handled"
+      <KeyboardAvoidingView
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        style={{ flex: 1 }}
       >
+        <ScrollView
+          contentContainerStyle={styles.scrollContent}
+          keyboardShouldPersistTaps="handled"
+        >
         <Text style={[styles.heading, { color: colors.text }]}>Create New Invoice</Text>
         <Text style={[styles.subheading, { color: colors.textSecondary }]}>
           Generate a new invoice for a patient.
@@ -372,7 +378,7 @@ export function BillingCreateForm({ initialPatient, onSuccess }: BillingCreateFo
 
               return (
                 <TouchableOpacity
-                  key={index}
+                  key={`suggestion-${index}`}
                   onPress={() => handleToggleSuggestion(index)}
                   activeOpacity={0.7}
                   style={[
@@ -453,7 +459,7 @@ export function BillingCreateForm({ initialPatient, onSuccess }: BillingCreateFo
 
           {items.map((item, index) => (
             <View
-              key={index}
+              key={`item-${item.description || 'new'}-${index}`}
               style={[styles.itemCard, { backgroundColor: colors.surfaceSecondary, borderColor: colors.border }]}
             >
               <View style={styles.itemHeader}>
@@ -599,7 +605,8 @@ export function BillingCreateForm({ initialPatient, onSuccess }: BillingCreateFo
           onPress={() => router.back()}
           style={styles.cancelBtn}
         />
-      </ScrollView>
+        </ScrollView>
+      </KeyboardAvoidingView>
     </SafeAreaView>
   );
 }

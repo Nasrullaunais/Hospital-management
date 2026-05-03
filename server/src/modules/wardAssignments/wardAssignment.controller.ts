@@ -6,6 +6,7 @@ import { User } from '../auth/auth.model.js';
 import { Ward } from '../wards/ward.model.js';
 import { ApiError } from '../../shared/utils/ApiError.js';
 import { MS_PER_DAY } from '../../shared/constants/time.js';
+import { parsePagination, buildPaginatedResponse } from '../../shared/types/pagination.js';
 
 // Typed interfaces for populate results
 interface PopulatedWard {
@@ -90,13 +91,12 @@ export const getWardAssignments = async (req: Request, res: Response, next: Next
   if (!errors.isEmpty()) return next(new ApiError(422, 'Validation failed'));
   try {
     const wardId = req.params.wardId as string;
-    const skip = parseInt(req.query.skip as string) || 0;
-    const limit = parseInt(req.query.limit as string) || 50;
+    const { page, limit, skip } = parsePagination(req.query);
 
     const ward = await Ward.findById(wardId);
     if (!ward) return next(ApiError.notFound('Ward not found'));
 
-    const [assignments, totalCount] = await Promise.all([
+    const [assignments, total] = await Promise.all([
       WardAssignment.find({ wardId })
         .populate('patientId', 'name email phone dateOfBirth')
         .sort({ bedNumber: 1 })
@@ -105,7 +105,8 @@ export const getWardAssignments = async (req: Request, res: Response, next: Next
       WardAssignment.countDocuments({ wardId }),
     ]);
 
-    res.json({ success: true, data: { assignments, count: assignments.length, totalCount } });
+    const paginatedData = buildPaginatedResponse(assignments, total, page, limit);
+    res.json({ success: true, data: paginatedData });
   } catch (err) {
     next(err);
   }
@@ -207,7 +208,7 @@ export const getWardStats = async (req: Request, res: Response, next: NextFuncti
       filter.wardId = new mongoose.Types.ObjectId(wardId);
     }
 
-    const [totalAssignments, activeAssignments, dischargedToday, upcomingDischarges, wardsWithBeds] = await Promise.all([
+    const [, activeAssignments, dischargedToday, upcomingDischarges, wardsWithBeds] = await Promise.all([
       WardAssignment.countDocuments(filter),
       WardAssignment.countDocuments({ ...filter, status: 'active' }),
       WardAssignment.countDocuments({
@@ -340,8 +341,6 @@ export const getBedStatuses = async (req: Request, res: Response, next: NextFunc
 export const getWardPatients = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   try {
     const wardId = req.params.wardId as string;
-    const skip = parseInt(req.query.skip as string) || 0;
-    const limit = parseInt(req.query.limit as string) || 50;
 
     if (!mongoose.Types.ObjectId.isValid(wardId)) {
       return next(ApiError.badRequest('Invalid ward ID'));
@@ -350,7 +349,9 @@ export const getWardPatients = async (req: Request, res: Response, next: NextFun
     const ward = await Ward.findById(wardId);
     if (!ward) return next(ApiError.notFound('Ward not found'));
 
-    const [assignments, totalCount] = await Promise.all([
+    const { page, limit, skip } = parsePagination(req.query);
+
+    const [assignments, total] = await Promise.all([
       WardAssignment.find({
         wardId: new mongoose.Types.ObjectId(wardId),
         status: 'active',
@@ -383,7 +384,8 @@ export const getWardPatients = async (req: Request, res: Response, next: NextFun
       bedNumber: assignment.bedNumber,
     }));
 
-    res.json({ success: true, data: { patients, count: patients.length, totalCount } });
+    const paginatedData = buildPaginatedResponse(patients, total, page, limit);
+    res.json({ success: true, data: paginatedData });
   } catch (err) {
     next(err);
   }
@@ -435,19 +437,18 @@ export const getPatientById = async (req: Request, res: Response, next: NextFunc
 /** GET /api/assignments/patients — Get all patients with optional pagination (receptionist only) */
 export const getAllPatients = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   try {
-    const skip = parseInt(req.query.skip as string) || 0;
-    const limit = parseInt(req.query.limit as string) || 50;
+    const { page, limit, skip } = parsePagination(req.query);
     const wardId = req.query.wardId as string | undefined;
 
     const filter: Record<string, unknown> = { status: 'active' };
     if (wardId) {
       if (!mongoose.Types.ObjectId.isValid(wardId)) {
-        return next(ApiError.badRequest('Invalid ward ID'));
+        return next(new ApiError(400, 'Invalid ward ID'));
       }
       filter.wardId = new mongoose.Types.ObjectId(wardId);
     }
 
-    const [assignments, totalCount] = await Promise.all([
+    const [assignments, total] = await Promise.all([
       WardAssignment.find(filter)
       .populate<{ patientId: PopulatedPatient }>('patientId', 'name email phone dateOfBirth gender bloodType diagnosis')
       .populate<{ wardId: PopulatedWard }>('wardId', 'name type')
@@ -475,7 +476,8 @@ export const getAllPatients = async (req: Request, res: Response, next: NextFunc
       expectedDischarge: assignment.expectedDischarge?.toISOString(),
     }));
 
-    res.json({ success: true, data: { patients, count: patients.length, totalCount } });
+    const paginatedData = buildPaginatedResponse(patients, total, page, limit);
+    res.json({ success: true, data: paginatedData });
   } catch (err) {
     next(err);
   }

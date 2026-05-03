@@ -120,7 +120,15 @@ const invoiceSchema = new Schema<IInvoice>(
   {
     timestamps: true,
     versionKey: false,
-    toJSON: { virtuals: true },
+    toJSON: {
+      virtuals: true,
+      transform: (_doc, ret) => {
+        ret.id = ret._id.toString();
+        delete ret._id;
+        delete ret.__v;
+        return ret;
+      },
+    },
     toObject: { virtuals: true },
   },
 );

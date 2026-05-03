@@ -159,7 +159,7 @@ export default function PatientInvoiceDetailScreen() {
           {items.map((item: InvoiceItem, index: number) => {
             const lineTotal = item.quantity * item.unitPrice;
             return (
-              <View key={index}>
+              <View key={`invoice-item-${item.description || 'item'}-${index}`}>
                 <View style={styles.itemRow}>
                   <View style={styles.itemInfo}>
                     <Text style={[styles.itemDescription, { color: theme.text }]}>

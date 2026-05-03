@@ -1,6 +1,7 @@
 import express, { Router } from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
+import compression from 'compression';
 import { randomUUID } from 'crypto';
 import path from 'path';
 import { fileURLToPath } from 'url';
@@ -35,6 +36,9 @@ app.use(
 
 // Trust proxy (for correct IP behind reverse proxy / load balancer)
 app.set('trust proxy', 1);
+
+// Response compression (gzip/deflate)
+app.use(compression());
 
 // Global rate limiting — applies to all routes
 app.use(generalLimiter);

@@ -24,6 +24,9 @@ export class S3Service {
   }
 
   private ensureConfigured(): void {
+    if (!s3Client) {
+      throw ApiError.internal('S3 client not configured. Set AWS_ACCESS_KEY_ID and AWS_SECRET_ACCESS_KEY in environment.');
+    }
     if (!S3_BUCKET) {
       throw ApiError.internal('S3 bucket not configured. Set AWS_S3_BUCKET in environment.');
     }
@@ -56,7 +59,7 @@ export class S3Service {
     });
 
     try {
-      const uploadUrl = await getSignedUrl(s3Client, command, { expiresIn: expirySeconds });
+      const uploadUrl = await getSignedUrl(s3Client!, command, { expiresIn: expirySeconds });
       return { uploadUrl, fileKey };
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Unknown S3 error';
@@ -80,7 +83,7 @@ export class S3Service {
     });
 
     try {
-      return await getSignedUrl(s3Client, command, { expiresIn: expirySeconds });
+      return await getSignedUrl(s3Client!, command, { expiresIn: expirySeconds });
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Unknown S3 error';
       throw ApiError.internal(`Failed to generate download URL: ${message}`);
@@ -127,7 +130,7 @@ export class S3Service {
     });
 
     try {
-      await s3Client.send(command);
+      await s3Client!.send(command);
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Unknown S3 error';
       throw ApiError.internal(`Failed to delete file: ${message}`);
@@ -162,6 +165,31 @@ export class S3Service {
 
     pendingUpload.consumed = true;
     await pendingUpload.save();
+  }
+
+  /**
+   * Upload a buffer directly to S3 (for server-generated content like PDFs).
+   *
+   * @param fileKey - The S3 object key
+   * @param buffer - The file content as a Buffer
+   * @param mimeType - MIME type of the content
+   */
+  async uploadBuffer(fileKey: string, buffer: Buffer, mimeType = 'application/octet-stream'): Promise<void> {
+    this.ensureConfigured();
+
+    const command = new PutObjectCommand({
+      Bucket: S3_BUCKET,
+      Key: fileKey,
+      Body: buffer,
+      ContentType: mimeType,
+    });
+
+    try {
+      await s3Client!.send(command);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Unknown S3 error';
+      throw ApiError.internal(`Failed to upload file: ${message}`);
+    }
   }
 }
 

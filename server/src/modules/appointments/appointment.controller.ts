@@ -5,6 +5,7 @@ import { Appointment } from './appointment.model.js';
 import { Doctor } from '../doctors/doctor.model.js';
 import { DoctorSchedule } from '../doctors/doctorSchedule.model.js';
 import { ApiError } from '../../shared/utils/ApiError.js';
+import { parsePagination, buildPaginatedResponse } from '../../shared/types/pagination.js';
 import { s3Service } from '../../shared/services/s3.service.js';
 import { formatFileReference } from '../../shared/utils/fileReference.js';
 import { getRequestContext, logger } from '../../shared/utils/logger.js';
@@ -140,9 +141,7 @@ export const getMyAppointments = async (req: Request, res: Response, next: NextF
     const userId = req.user?.id;
     if (!userId) return next(ApiError.unauthorized());
 
-    const page = Math.max(1, parseInt(req.query.page as string) || 1);
-    const limit = Math.min(100, Math.max(1, parseInt(req.query.limit as string) || 20));
-    const skip = (page - 1) * limit;
+    const { page, limit, skip } = parsePagination(req.query);
 
     const [appointments, total] = await Promise.all([
       Appointment.find({ patientId: userId })
@@ -157,7 +156,8 @@ export const getMyAppointments = async (req: Request, res: Response, next: NextF
       Appointment.countDocuments({ patientId: userId }),
     ]);
 
-    res.json({ success: true, data: { appointments, total, page, limit, pages: Math.ceil(total / limit) } });
+    const paginatedData = buildPaginatedResponse(appointments, total, page, limit);
+    res.json({ success: true, data: paginatedData });
   } catch (err) {
     next(err);
   }

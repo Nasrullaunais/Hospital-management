@@ -54,7 +54,15 @@ const medicineSchema = new Schema<IMedicine>(
       required: [true, 'Packaging image is required'],
     },
   },
-  { timestamps: true, versionKey: false },
+  { timestamps: true, versionKey: false, toJSON: {
+    virtuals: true,
+    transform: (_doc, ret) => {
+      ret.id = ret._id.toString();
+      delete ret._id;
+      delete ret.__v;
+      return ret;
+    },
+  } },
 );
 
 medicineSchema.index({ name: 1 }, { unique: true });

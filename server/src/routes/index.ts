@@ -1,4 +1,6 @@
 import { Router, type Request, type Response } from 'express';
+import mongoose from 'mongoose';
+import { reportGenerator } from '../shared/services/reportGenerator.js';
 import authRoutes from '../modules/auth/auth.routes.js';
 import doctorRoutes from '../modules/doctors/doctor.routes.js';
 import appointmentRoutes from '../modules/appointments/appointment.routes.js';
@@ -43,12 +45,10 @@ router.get('/api/health', (_req: Request, res: Response) => {
 // Deep health check (verifies DB + PDF generator health)
 router.get('/api/health/deep', async (_req: Request, res: Response) => {
   try {
-    const mongoose = await import('mongoose');
     const dbState = mongoose.connection.readyState === 1 ? 'connected' : 'disconnected';
 
     let pdfReady = false;
     try {
-      const { reportGenerator } = await import('../shared/services/reportGenerator.js');
       pdfReady = await reportGenerator.isPuppeteerHealthy();
     } catch {
       pdfReady = false;

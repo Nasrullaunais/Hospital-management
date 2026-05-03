@@ -3,9 +3,10 @@ import path from 'path';
 import fs from 'fs';
 import type { Request } from 'express';
 import { ApiError } from '../utils/ApiError.js';
+import { env } from '../../config/env.js';
 
 // ── Ensure uploads directory exists ───────────────────────────────────────────
-const UPLOADS_DIR = path.resolve(import.meta.dirname, '../../..', process.env['UPLOADS_DIR'] ?? 'uploads');
+const UPLOADS_DIR = path.resolve(import.meta.dirname, '../../..', env.UPLOADS_DIR ?? 'uploads');
 if (!fs.existsSync(UPLOADS_DIR)) {
   fs.mkdirSync(UPLOADS_DIR, { recursive: true });
 }
