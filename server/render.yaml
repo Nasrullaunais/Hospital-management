@@ -1,0 +1,36 @@
+# Render Blueprint for Hospital Management API
+#
+# COLD START MITIGATION:
+# - Set minInstances: 1 (paid, ~$25/mo) to eliminate cold starts entirely
+# - OR use a Render Cron Job to ping /api/health every 5 minutes:
+#   curl https://<your-app>.onrender.com/api/health
+# - The health check endpoint is lightweight (no DB query required)
+# - Puppeteer/Chromium adds ~2-3s to cold start; preloaded on instance
+# - Startup timing logs emit `startupDurationMs` for monitoring
+
+services:
+  - type: web
+    name: hospital-management-api
+    runtime: docker
+    repo: https://github.com/<your-org>/<your-repo>
+    branch: main
+    rootDir: server
+    dockerfilePath: ./Dockerfile
+    plan: standard
+    healthCheckPath: /api/health
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: "5000"
+      - key: LOG_LEVEL
+        value: info
+      - key: PUPPETEER_SKIP_DOWNLOAD
+        value: "true"
+      - key: PUPPETEER_EXECUTABLE_PATH
+        value: /usr/bin/chromium-browser
+      - fromGroup: hospital-management-secrets
+    autoDeploy: true
+    scaling:
+      minInstances: 1
+      maxInstances: 1

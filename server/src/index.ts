@@ -5,7 +5,11 @@ import { logger } from './shared/utils/logger.js';
 
 // ── Server Startup ─────────────────────────────────────────────────────────────
 async function startServer() {
+  const startupStart = Date.now();
+
+  const dbStart = Date.now();
   await connectDB();
+  logger.info({ event: 'db_connected', durationMs: Date.now() - dbStart }, 'Database connected');
 
   const server = app.listen(env.PORT, () => {
     logger.info(
@@ -13,10 +17,18 @@ async function startServer() {
         event: 'server_started',
         port: env.PORT,
         env: env.NODE_ENV,
+        startupDurationMs: Date.now() - startupStart,
         healthEndpoint: '/api/health',
       },
       'Server started',
     );
+  });
+
+  // Pre-warm: lazy-load heavy modules during startup
+  setImmediate(() => {
+    import('./shared/services/reportGenerator.js').catch((err) => {
+      logger.warn({ event: 'prewarm_warning', err }, 'Report generator pre-warm failed');
+    });
   });
 
   // ── Graceful Shutdown ────────────────────────────────────────────────────────

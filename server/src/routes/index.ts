@@ -19,12 +19,14 @@ import reportRoutes from '../modules/reports/report.routes.js';
 const router = Router();
 
 // ── Health Check ────────────────────────────────────────────────────────────────
+// Lightweight health check (for Render, load balancers, cold start probes)
 router.get('/health', (_req: Request, res: Response) => {
   res.json({
     success: true,
     message: 'Hospital Management API is running',
     timestamp: new Date().toISOString(),
     environment: process.env['NODE_ENV'] ?? 'development',
+    uptime: process.uptime(),
   });
 });
 
@@ -34,7 +36,42 @@ router.get('/api/health', (_req: Request, res: Response) => {
     message: 'Hospital Management API is running',
     timestamp: new Date().toISOString(),
     environment: process.env['NODE_ENV'] ?? 'development',
+    uptime: process.uptime(),
   });
+});
+
+// Deep health check (verifies DB + PDF generator health)
+router.get('/api/health/deep', async (_req: Request, res: Response) => {
+  try {
+    const mongoose = await import('mongoose');
+    const dbState = mongoose.connection.readyState === 1 ? 'connected' : 'disconnected';
+
+    let pdfReady = false;
+    try {
+      const { reportGenerator } = await import('../shared/services/reportGenerator.js');
+      pdfReady = await reportGenerator.isPuppeteerHealthy();
+    } catch {
+      pdfReady = false;
+    }
+
+    res.json({
+      success: true,
+      message: 'Hospital Management API is running',
+      timestamp: new Date().toISOString(),
+      environment: process.env['NODE_ENV'] ?? 'development',
+      uptime: process.uptime(),
+      checks: {
+        database: dbState,
+        pdfGenerator: pdfReady ? 'healthy' : 'unhealthy',
+      },
+    });
+  } catch {
+    res.status(503).json({
+      success: false,
+      message: 'Service unhealthy',
+      timestamp: new Date().toISOString(),
+    });
+  }
 });
 
 // ── Module Routes ──────────────────────────────────────────────────────────────

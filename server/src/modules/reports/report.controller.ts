@@ -2,6 +2,7 @@ import type { Request, Response, NextFunction } from 'express';
 import { MedicalRecord } from '../records/record.model.js';
 import { reportGenerator } from '../../shared/services/reportGenerator.js';
 import { ApiError } from '../../shared/utils/ApiError.js';
+import { logger, getRequestContext } from '../../shared/utils/logger.js';
 
 // ── Populated Shape Helpers ────────────────────────────────────────────────────
 // These describe the shape of Mongoose documents after .populate() so that
@@ -40,7 +41,10 @@ function formatDate(date: Date | string): string {
 // ── POST /api/reports/lab-report ────────────────────────────────────────────────
 
 export const generateLabReport = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+  const start = Date.now();
   try {
+    logger.info({ event: 'pdf_generation_started', ...getRequestContext(req), reportType: 'lab-report' }, 'PDF generation started');
+
     const { labReportId } = req.body;
     if (!labReportId) return next(ApiError.badRequest('labReportId is required'));
 
@@ -77,10 +81,13 @@ export const generateLabReport = async (req: Request, res: Response, next: NextF
       labType: (labReport.labType as string).toUpperCase(),
       testDate: formatDate(labReport.testDate),
       reportDate: formatDate(new Date()),
-      results: (labReport.results ?? []).map((r: Record<string, unknown>) => ({
-        ...r,
-        flagClass: r.flag === 'normal' ? 'normal' : r.flag === 'critical' ? 'critical' : 'abnormal',
-      })),
+      results: (labReport.results ?? []).map((r) => {
+        const obj = (r as any).toObject?.() ?? r;
+        return {
+          ...obj,
+          flagClass: obj.flag === 'normal' ? 'normal' : obj.flag === 'high' ? 'high' : obj.flag === 'low' ? 'low' : obj.flag === 'critical' ? 'critical' : 'normal',
+        };
+      }),
       interpretation: labReport.interpretation || 'No interpretation provided.',
       notes: labReport.notes || '',
       qrCodeDataUrl: '',
@@ -93,8 +100,11 @@ export const generateLabReport = async (req: Request, res: Response, next: NextF
       reportId: labReport._id.toString(),
     });
 
+    logger.info({ event: 'pdf_generation_completed', ...getRequestContext(req), reportType: 'lab-report', durationMs: Math.round(Date.now() - start), fileKey: result.fileKey }, 'PDF generated');
+
     res.json({ success: true, data: { downloadUrl: result.downloadUrl, fileKey: result.fileKey } });
   } catch (err) {
+    logger.error({ event: 'pdf_generation_failed', ...getRequestContext(req), reportType: 'lab-report', err }, 'PDF generation failed');
     next(err);
   }
 };
@@ -102,7 +112,10 @@ export const generateLabReport = async (req: Request, res: Response, next: NextF
 // ── POST /api/reports/prescription ──────────────────────────────────────────────
 
 export const generatePrescriptionPDF = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+  const start = Date.now();
   try {
+    logger.info({ event: 'pdf_generation_started', ...getRequestContext(req), reportType: 'prescription' }, 'PDF generation started');
+
     const { prescriptionId } = req.body;
     if (!prescriptionId) return next(ApiError.badRequest('prescriptionId is required'));
 
@@ -125,16 +138,23 @@ export const generatePrescriptionPDF = async (req: Request, res: Response, next:
       hospitalName: 'LIFELINE CARE HOSPITAL',
       hospitalAddress: '123 Healthcare Blvd, Medical District',
       hospitalPhone: '+1 (555) 123-4567',
-      reportId: prescription._id.toString().slice(-8).toUpperCase(),
+      prescriptionId: prescription._id.toString().slice(-8).toUpperCase(),
       patientName: patient.name,
       patientAge: calcAge(patient.dateOfBirth),
       patientGender: 'N/A',
       patientId: patient._id.toString().slice(-8),
       doctorName: doctor.userId.name,
       doctorSpecialization: doctor.specialization,
-      date: formatDate(new Date()),
-      items: prescription.items,
+      medicines: (prescription.items ?? []).map((item: any) => ({
+        medicineName: item.medicineName,
+        dosage: item.dosage,
+        frequency: 'As directed',
+        duration: 'As needed',
+        instructions: item.instructions || '',
+      })),
       notes: prescription.notes || '',
+      reportDate: formatDate(new Date()),
+      qrCodeDataUrl: '',
     };
 
     const result = await reportGenerator.generateReport({
@@ -144,8 +164,11 @@ export const generatePrescriptionPDF = async (req: Request, res: Response, next:
       reportId: prescription._id.toString(),
     });
 
+    logger.info({ event: 'pdf_generation_completed', ...getRequestContext(req), reportType: 'prescription', durationMs: Math.round(Date.now() - start), fileKey: result.fileKey }, 'PDF generated');
+
     res.json({ success: true, data: { downloadUrl: result.downloadUrl, fileKey: result.fileKey } });
   } catch (err) {
+    logger.error({ event: 'pdf_generation_failed', ...getRequestContext(req), reportType: 'prescription', err }, 'PDF generation failed');
     next(err);
   }
 };
@@ -153,7 +176,10 @@ export const generatePrescriptionPDF = async (req: Request, res: Response, next:
 // ── POST /api/reports/medical-certificate ───────────────────────────────────────
 
 export const generateMedicalCertificate = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+  const start = Date.now();
   try {
+    logger.info({ event: 'pdf_generation_started', ...getRequestContext(req), reportType: 'medical-certificate' }, 'PDF generation started');
+
     const { recordId, restFrom, restTo } = req.body;
     if (!recordId) return next(ApiError.badRequest('recordId is required'));
 
@@ -185,6 +211,10 @@ export const generateMedicalCertificate = async (req: Request, res: Response, ne
       restFrom: restFrom || '',
       restTo: restTo || '',
       date: formatDate(new Date()),
+      dateOfExamination: formatDate(record.dateRecorded || record.createdAt || new Date()),
+      reportDate: formatDate(new Date()),
+      restDays: (restFrom && restTo) ? Math.ceil((new Date(restTo).getTime() - new Date(restFrom).getTime()) / (1000 * 60 * 60 * 24)) : 0,
+      fitnessNote: 'The patient is advised rest and follow-up as needed.',
     };
 
     const result = await reportGenerator.generateReport({
@@ -194,8 +224,11 @@ export const generateMedicalCertificate = async (req: Request, res: Response, ne
       reportId: record._id.toString(),
     });
 
+    logger.info({ event: 'pdf_generation_completed', ...getRequestContext(req), reportType: 'medical-certificate', durationMs: Math.round(Date.now() - start), fileKey: result.fileKey }, 'PDF generated');
+
     res.json({ success: true, data: { downloadUrl: result.downloadUrl, fileKey: result.fileKey } });
   } catch (err) {
+    logger.error({ event: 'pdf_generation_failed', ...getRequestContext(req), reportType: 'medical-certificate', err }, 'PDF generation failed');
     next(err);
   }
 };
