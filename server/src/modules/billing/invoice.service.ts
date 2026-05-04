@@ -4,6 +4,7 @@ import { User } from '../auth/auth.model.js';
 import { Appointment } from '../appointments/appointment.model.js';
 import { ApiError } from '../../shared/utils/ApiError.js';
 import { logger } from '../../shared/utils/logger.js';
+import { isMongoDuplicateKeyError } from '../../shared/utils/mongoHelpers.js';
 import { INVOICE_PREFIX, MAX_INVOICE_AMOUNT } from '../../shared/constants/billing.js';
 import { Dispense } from '../dispensing/dispense.model.js';
 import { buildPaginatedResponse, parsePagination } from '../../shared/types/pagination.js';
@@ -69,36 +70,54 @@ export async function createInvoice(input: CreateInvoiceInput): Promise<InvoiceD
     throw ApiError.badRequest(`Total amount cannot exceed ${MAX_INVOICE_AMOUNT}`);
   }
 
-  const invoiceNumber = await generateInvoiceNumber();
   const issuedDate = new Date();
   const dueDate = new Date(issuedDate.getTime() + 30 * 24 * 60 * 60 * 1000);
 
-  const invoice = await Invoice.create({
-    patientId: input.patientId,
-    appointmentId: input.appointmentId,
-    invoiceNumber,
-    items: input.items,
-    discount,
-    issuedDate,
-    dueDate,
-    notes: input.notes,
-  });
+  // Retry on invoice number collision (race condition in generateInvoiceNumber)
+  const MAX_RETRIES = 3;
+  for (let attempt = 0; attempt < MAX_RETRIES; attempt++) {
+    const invoiceNumber = await generateInvoiceNumber();
+    try {
+      const invoice = await Invoice.create({
+        patientId: input.patientId,
+        appointmentId: input.appointmentId,
+        invoiceNumber,
+        items: input.items,
+        discount,
+        issuedDate,
+        dueDate,
+        notes: input.notes,
+      });
 
-  // Auto-link dispensings whose items match invoice line items
-  await linkDispensingsToInvoice(invoice);
+      // Auto-link dispensings whose items match invoice line items
+      await linkDispensingsToInvoice(invoice);
 
-  logger.info(
-    {
-      event: 'invoice_created',
-      invoiceId: invoice._id.toString(),
-      invoiceNumber,
-      patientId: input.patientId,
-      totalAmount,
-    },
-    'Invoice created',
-  );
+      logger.info(
+        {
+          event: 'invoice_created',
+          invoiceId: invoice._id.toString(),
+          invoiceNumber,
+          patientId: input.patientId,
+          totalAmount,
+        },
+        'Invoice created',
+      );
 
-  return invoice;
+      return invoice;
+    } catch (err) {
+      if (isMongoDuplicateKeyError(err) && attempt < MAX_RETRIES - 1) {
+        logger.warn(
+          { event: 'invoice_number_collision', invoiceNumber, attempt: attempt + 1 },
+          'Invoice number collision, retrying with new number',
+        );
+        continue;
+      }
+      throw err;
+    }
+  }
+
+  // Should never reach here due to the final throw in the loop
+  throw new ApiError(409, 'Invoice with this number already exists');
 }
 
 export async function getInvoiceById(
