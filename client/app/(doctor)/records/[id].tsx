@@ -63,7 +63,7 @@ export default function RecordDetailScreen() {
       setLoadingPrescriptions(true);
       try {
         const rxData = await prescriptionService.getPrescriptionsByRecordId(id);
-        setPrescriptions(rxData);
+        setPrescriptions(rxData ?? []);
       } catch {
         setPrescriptions([]);
       } finally {
@@ -247,7 +247,7 @@ export default function RecordDetailScreen() {
               placeholderTextColor={colors.textTertiary}
               multiline
             />
-          ) : prescriptions.length > 0 ? (
+          ) : prescriptions && prescriptions.length > 0 ? (
             <View style={styles.prescriptionList}>
               {prescriptions.map((rx, rxIndex) => (
                 <View key={rx._id ?? rxIndex} style={rxIndex > 0 ? { marginTop: spacing.md } : undefined}>

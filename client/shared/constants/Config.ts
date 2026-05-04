@@ -13,6 +13,8 @@ export const Config = {
   })(),
   API_URL: process.env['EXPO_PUBLIC_API_URL'] ?? 'http://localhost:5000/api',
   REQUEST_TIMEOUT_MS: 15_000,
+  /** PDF generation takes ~15-20s on cloud — needs higher timeout */
+  REPORT_TIMEOUT_MS: 60_000,
 } as const;
 
 export const LOW_STOCK_THRESHOLD = 10;

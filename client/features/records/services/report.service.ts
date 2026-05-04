@@ -4,6 +4,7 @@
  */
 import { apiClient } from '@/shared/api/client';
 import { ENDPOINTS } from '@/shared/api/endpoints';
+import { Config } from '@/shared/constants/Config';
 import type { ApiSuccessResponse, ReportGenerateResponse } from '@/shared/types';
 
 export const reportService = {
@@ -14,6 +15,7 @@ export const reportService = {
     const res = await apiClient.post<ApiSuccessResponse<ReportGenerateResponse>>(
       ENDPOINTS.REPORTS.LAB_REPORT,
       { labReportId },
+      { timeout: Config.REPORT_TIMEOUT_MS },
     );
     return res.data.data;
   },
@@ -25,6 +27,7 @@ export const reportService = {
     const res = await apiClient.post<ApiSuccessResponse<ReportGenerateResponse>>(
       ENDPOINTS.REPORTS.PRESCRIPTION,
       { prescriptionId },
+      { timeout: Config.REPORT_TIMEOUT_MS },
     );
     return res.data.data;
   },
@@ -36,6 +39,7 @@ export const reportService = {
     const res = await apiClient.post<ApiSuccessResponse<ReportGenerateResponse>>(
       ENDPOINTS.REPORTS.MEDICAL_CERTIFICATE,
       { recordId, restFrom, restTo },
+      { timeout: Config.REPORT_TIMEOUT_MS },
     );
     return res.data.data;
   },

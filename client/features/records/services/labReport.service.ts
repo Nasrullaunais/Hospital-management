@@ -4,7 +4,7 @@
  */
 import { apiClient } from '@/shared/api/client';
 import { ENDPOINTS } from '@/shared/api/endpoints';
-import type { LabReport, ApiSuccessResponse } from '@/shared/types';
+import type { LabReport, ApiSuccessResponse, PaginatedResponse } from '@/shared/types';
 
 export interface CreateLabReportPayload {
   patientId: string;
@@ -49,10 +49,10 @@ export const labReportService = {
    * Doctors can access any patient's reports; patients can only access their own.
    */
   getPatientLabReports: async (patientId: string): Promise<LabReport[]> => {
-    const res = await apiClient.get<ApiSuccessResponse<{ labReports: LabReport[]; count: number }>>(
+    const res = await apiClient.get<ApiSuccessResponse<PaginatedResponse<LabReport>>>(
       ENDPOINTS.LAB_REPORTS.BY_PATIENT(patientId),
     );
-    return res.data.data.labReports;
+    return res.data.data.items;
   },
 
   /**
