@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useState, useMemo, useRef } from 'react';
+import React, { useCallback, useEffect, useState, useMemo } from 'react';
 import { ROLES } from '@/shared/constants/roles';
 import {
   View,
@@ -142,10 +142,10 @@ export default function BillingScreen() {
     loadInitial();
   }, [loadInitial]);
 
-  const handleFilterChange = (filter: FilterOption) => {
+  const handleFilterChange = useCallback((filter: FilterOption) => {
     setActiveFilter(filter);
     fetchInvoices(filter);
-  };
+  }, [fetchInvoices]);
 
   const onRefresh = async () => {
     setRefreshing(true);
@@ -169,8 +169,8 @@ export default function BillingScreen() {
     <InvoiceCard invoice={item} isAdmin={isAdmin} userRole="admin" onUpdate={handleInvoiceUpdate} />
   );
 
-  const renderListHeader = () => (
-    <View>
+  const renderListHeader = useCallback(() => (
+    <View key="billing-list-header">
       {/* Page title */}
       <Text style={styles.header}>{isAdmin ? 'All Invoices' : 'My Bills'}</Text>
 
@@ -216,7 +216,7 @@ export default function BillingScreen() {
         </View>
       )}
     </View>
-  );
+  ), [isAdmin, refreshKey, activeFilter, handleFilterChange, styles, theme]);
 
   if (loading && invoices.length === 0) {
     return (

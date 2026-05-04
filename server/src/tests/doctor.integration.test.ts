@@ -57,20 +57,24 @@ function authToken(user: { _id: { toString: () => string }; email: string; role:
 }
 
 function buildDoctorForm(params: {
-  userId: string;
+  name?: string;
+  email?: string;
+  password?: string;
   specialization?: string;
   experienceYears?: string;
   consultationFee?: string;
-  availability?: string;
   fileType?: string;
   fileName?: string;
 }) {
   const form = new FormData();
-  form.append('userId', params.userId);
+  const uniqueEmail =
+    params.email ?? `doctor-${Date.now()}-${Math.floor(Math.random() * 100000)}@example.com`;
+  form.append('name', params.name ?? 'Dr. Test');
+  form.append('email', uniqueEmail);
+  form.append('password', params.password ?? 'Password123!');
   form.append('specialization', params.specialization ?? 'Cardiology');
   form.append('experienceYears', params.experienceYears ?? '8');
   form.append('consultationFee', params.consultationFee ?? '150');
-  form.append('availability', params.availability ?? 'Available');
 
   const fileType = params.fileType ?? 'application/pdf';
   const fileName = params.fileName ?? 'license.pdf';
@@ -174,8 +178,7 @@ describe('Doctor API integration', () => {
   });
 
   test('POST /api/doctors rejects unauthenticated requests', async () => {
-    const doctorUser = await createUser('doctor');
-    const form = buildDoctorForm({ userId: doctorUser._id.toString() });
+    const form = buildDoctorForm({});
 
     const res = await api('/api/doctors', { method: 'POST', body: form });
 
@@ -185,9 +188,8 @@ describe('Doctor API integration', () => {
 
   test('POST /api/doctors rejects non-admin users', async () => {
     const patient = await createUser('patient');
-    const doctorUser = await createUser('doctor');
     const token = authToken(patient);
-    const form = buildDoctorForm({ userId: doctorUser._id.toString() });
+    const form = buildDoctorForm({});
 
     const res = await api('/api/doctors', {
       method: 'POST',
@@ -201,11 +203,12 @@ describe('Doctor API integration', () => {
 
   test('POST /api/doctors fails when license document is missing', async () => {
     const admin = await createUser('admin');
-    const doctorUser = await createUser('doctor');
     const token = authToken(admin);
 
     const form = new FormData();
-    form.append('userId', doctorUser._id.toString());
+    form.append('name', 'Dr. No License');
+    form.append('email', `no-license-${Date.now()}@example.com`);
+    form.append('password', 'Password123!');
     form.append('specialization', 'Cardiology');
     form.append('experienceYears', '10');
     form.append('consultationFee', '200');
@@ -220,10 +223,11 @@ describe('Doctor API integration', () => {
     expect(res.body.message).toContain('License document is required');
   });
 
-  test('POST /api/doctors validates userId format', async () => {
+  test('POST /api/doctors validates name and email fields', async () => {
     const admin = await createUser('admin');
     const token = authToken(admin);
-    const form = buildDoctorForm({ userId: 'not-an-object-id' });
+
+    const form = buildDoctorForm({ name: '' });
 
     const res = await api('/api/doctors', {
       method: 'POST',
@@ -235,11 +239,11 @@ describe('Doctor API integration', () => {
     expect(res.body.success).toBe(false);
   });
 
-  test('POST /api/doctors rejects non-doctor linked users', async () => {
+  test('POST /api/doctors rejects invalid email format', async () => {
     const admin = await createUser('admin');
-    const patientUser = await createUser('patient');
     const token = authToken(admin);
-    const form = buildDoctorForm({ userId: patientUser._id.toString() });
+
+    const form = buildDoctorForm({ email: 'not-an-email' });
 
     const res = await api('/api/doctors', {
       method: 'POST',
@@ -247,15 +251,14 @@ describe('Doctor API integration', () => {
       body: form,
     });
 
-    expect(res.status).toBe(400);
-    expect(res.body.message).toContain('Linked user must have role doctor');
+    expect(res.status).toBe(422);
+    expect(res.body.success).toBe(false);
   });
 
   test('POST /api/doctors creates doctor profile and stores file path', async () => {
     const admin = await createUser('admin');
-    const doctorUser = await createUser('doctor');
     const token = authToken(admin);
-    const form = buildDoctorForm({ userId: doctorUser._id.toString() });
+    const form = buildDoctorForm({});
 
     const res = await api('/api/doctors', {
       method: 'POST',
@@ -265,24 +268,28 @@ describe('Doctor API integration', () => {
 
     expect(res.status).toBe(201);
     expect(res.body.success).toBe(true);
-    expect(res.body.data.doctor.userId).toBe(doctorUser._id.toString());
+    expect(res.body.data.doctor.userId).toBeDefined();
+    expect(res.body.data.doctor.userId.name).toBe('Dr. Test');
+    expect(res.body.data.doctor.userId.email).toMatch(/@example\.com$/);
+    expect(res.body.data.doctor.userId.role).toBe('doctor');
     expect(res.body.data.doctor.licenseDocumentUrl).toMatch(/^\/uploads\//);
   });
 
-  test('POST /api/doctors rejects duplicate doctor profile for same userId', async () => {
+  test('POST /api/doctors rejects duplicate email', async () => {
     const admin = await createUser('admin');
-    const doctorUser = await createUser('doctor');
     const token = authToken(admin);
+    const sharedEmail = `duplicate-${Date.now()}@example.com`;
 
     const first = await api('/api/doctors', {
       method: 'POST',
       headers: { Authorization: `Bearer ${token}` },
-      body: buildDoctorForm({ userId: doctorUser._id.toString() }),
+      body: buildDoctorForm({ email: sharedEmail }),
     });
+
     const second = await api('/api/doctors', {
       method: 'POST',
       headers: { Authorization: `Bearer ${token}` },
-      body: buildDoctorForm({ userId: doctorUser._id.toString(), fileName: 'license-2.pdf' }),
+      body: buildDoctorForm({ email: sharedEmail, fileName: 'license-2.pdf' }),
     });
 
     expect(first.status).toBe(201);
@@ -292,20 +299,21 @@ describe('Doctor API integration', () => {
 
   test('GET /api/doctors returns populated user details', async () => {
     const admin = await createUser('admin');
-    const doctorUser = await createUser('doctor');
     const token = authToken(admin);
+    const doctorName = 'Dr. Populated Test';
+    const doctorEmail = `populated-${Date.now()}@example.com`;
 
-    const created = await api('/api/doctors', {
+    await api('/api/doctors', {
       method: 'POST',
       headers: { Authorization: `Bearer ${token}` },
-      body: buildDoctorForm({ userId: doctorUser._id.toString(), specialization: 'Neurology' }),
+      body: buildDoctorForm({ name: doctorName, email: doctorEmail, specialization: 'Neurology' }),
     });
     const listRes = await api('/api/doctors');
 
     expect(listRes.status).toBe(200);
     expect(listRes.body.data.count).toBe(1);
-    expect(listRes.body.data.doctors[0].userId.name).toBe(doctorUser.name);
-    expect(listRes.body.data.doctors[0].userId.email).toBe(doctorUser.email);
+    expect(listRes.body.data.doctors[0].userId.name).toBe(doctorName);
+    expect(listRes.body.data.doctors[0].userId.email).toBe(doctorEmail);
   });
 
   test('GET /api/doctors validates query params', async () => {
@@ -326,7 +334,6 @@ describe('Doctor API integration', () => {
   test('PUT /api/doctors/:id enforces role and input constraints', async () => {
     const admin = await createUser('admin');
     const patient = await createUser('patient');
-    const doctorUser = await createUser('doctor');
 
     const adminToken = authToken(admin);
     const patientToken = authToken(patient);
@@ -334,7 +341,7 @@ describe('Doctor API integration', () => {
     const created = await api('/api/doctors', {
       method: 'POST',
       headers: { Authorization: `Bearer ${adminToken}` },
-      body: buildDoctorForm({ userId: doctorUser._id.toString() }),
+      body: buildDoctorForm({}),
     });
     const doctorId = created.body.data.doctor._id as string;
 
@@ -362,18 +369,24 @@ describe('Doctor API integration', () => {
 
   test('PUT /api/doctors/:id blocks doctors from editing other doctor profiles', async () => {
     const admin = await createUser('admin');
-    const doctorUserA = await createUser('doctor');
-    const doctorUserB = await createUser('doctor');
-
     const adminToken = authToken(admin);
-    const doctorTokenB = authToken(doctorUserB);
 
-    const created = await api('/api/doctors', {
+    // Create Doctor A
+    const createA = await api('/api/doctors', {
       method: 'POST',
       headers: { Authorization: `Bearer ${adminToken}` },
-      body: buildDoctorForm({ userId: doctorUserA._id.toString() }),
+      body: buildDoctorForm({ name: 'Doctor A', email: `doctor-a-${Date.now()}@example.com` }),
     });
-    const doctorIdA = created.body.data.doctor._id as string;
+    const doctorIdA = createA.body.data.doctor._id as string;
+
+    // Create Doctor B
+    const createB = await api('/api/doctors', {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${adminToken}` },
+      body: buildDoctorForm({ name: 'Doctor B', email: `doctor-b-${Date.now()}@example.com` }),
+    });
+    const doctorBUser = createB.body.data.doctor.userId as { _id: string; email: string; role: string };
+    const doctorTokenB = authToken(doctorBUser);
 
     const res = await api(`/api/doctors/${doctorIdA}`, {
       method: 'PUT',
@@ -390,13 +403,12 @@ describe('Doctor API integration', () => {
 
   test('PUT /api/doctors/:id allows admin updates', async () => {
     const admin = await createUser('admin');
-    const doctorUser = await createUser('doctor');
     const token = authToken(admin);
 
     const created = await api('/api/doctors', {
       method: 'POST',
       headers: { Authorization: `Bearer ${token}` },
-      body: buildDoctorForm({ userId: doctorUser._id.toString() }),
+      body: buildDoctorForm({}),
     });
     const doctorId = created.body.data.doctor._id as string;
 
@@ -417,7 +429,6 @@ describe('Doctor API integration', () => {
   test('DELETE /api/doctors/:id enforces auth and removes record', async () => {
     const admin = await createUser('admin');
     const patient = await createUser('patient');
-    const doctorUser = await createUser('doctor');
 
     const adminToken = authToken(admin);
     const patientToken = authToken(patient);
@@ -425,7 +436,7 @@ describe('Doctor API integration', () => {
     const created = await api('/api/doctors', {
       method: 'POST',
       headers: { Authorization: `Bearer ${adminToken}` },
-      body: buildDoctorForm({ userId: doctorUser._id.toString() }),
+      body: buildDoctorForm({}),
     });
     const doctorId = created.body.data.doctor._id as string;
 

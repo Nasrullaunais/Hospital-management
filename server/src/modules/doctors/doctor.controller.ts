@@ -43,23 +43,40 @@ export const createDoctor = async (req: Request, res: Response, next: NextFuncti
       return next(ApiError.badRequest('License document is required'));
     }
 
-    const linkedUser = await User.findById(req.body.userId);
-    if (!linkedUser) {
-      // Only clean up multer files (S3 files are handled by presigned URL lifecycle)
+    // Check if email already taken
+    const existingUser = await User.findOne({ email: req.body.email });
+    if (existingUser) {
       if (req.file) { await cleanupUploadedFile(req.file); }
-      return next(ApiError.badRequest('Linked user not found'));
-    }
-    if (linkedUser.role !== ROLES.DOCTOR) {
-      if (req.file) { await cleanupUploadedFile(req.file); }
-      return next(ApiError.badRequest('Linked user must have role doctor'));
+      return next(ApiError.conflict('A user with this email already exists'));
     }
 
-    const doctor = await Doctor.create({
-      ...req.body,
-      licenseDocumentUrl,
+    // Create the user account with doctor role
+    const user = await User.create({
+      name: req.body.name,
+      email: req.body.email,
+      password: req.body.password,
+      role: ROLES.DOCTOR,
     });
 
-    res.status(201).json({ success: true, message: 'Doctor created', data: { doctor } });
+    try {
+      const doctor = await Doctor.create({
+        userId: user._id,
+        specialization: req.body.specialization,
+        experienceYears: req.body.experienceYears,
+        consultationFee: req.body.consultationFee,
+        licenseDocumentUrl,
+      });
+
+      res.status(201).json({
+        success: true,
+        message: 'Doctor created',
+        data: { doctor: { ...doctor.toObject(), userId: user } },
+      });
+    } catch (doctorErr) {
+      // Best-effort rollback: delete the user we just created
+      try { await User.findByIdAndDelete(user._id); } catch { /* ignore rollback failure */ }
+      throw doctorErr;
+    }
   } catch (err) {
     await cleanupUploadedFile(req.file);
     if (isMongoDuplicateKeyError(err)) {

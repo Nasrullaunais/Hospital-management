@@ -3,7 +3,9 @@ import { body, query } from 'express-validator';
 const AVAILABILITIES = ['Available', 'Unavailable', 'On Leave'] as const;
 
 export const createDoctorValidation = [
-  body('userId').isMongoId().withMessage('A valid userId (MongoDB ObjectId) is required'),
+  body('name').trim().isLength({ min: 2, max: 100 }).withMessage('Name must be 2-100 characters'),
+  body('email').trim().isEmail().withMessage('A valid email is required'),
+  body('password').isLength({ min: 8 }).withMessage('Password must be at least 8 characters'),
   body('specialization').trim().notEmpty().withMessage('Specialization is required'),
   body('experienceYears')
     .isInt({ min: 0 })

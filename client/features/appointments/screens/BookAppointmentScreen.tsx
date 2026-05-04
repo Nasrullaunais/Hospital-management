@@ -2,7 +2,6 @@ import React, { useState, useCallback, useEffect, useMemo } from 'react';
 import {
   View,
   Text,
-  TextInput,
   TouchableOpacity,
   ActivityIndicator,
   StyleSheet,
@@ -14,7 +13,6 @@ import {
   Modal,
 } from 'react-native';
 import { Feather } from '@expo/vector-icons';
-import DateTimePicker, { type DateTimePickerEvent } from '@react-native-community/datetimepicker';
 import * as DocumentPicker from 'expo-document-picker';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useColorScheme } from '@/components/useColorScheme';
@@ -23,6 +21,7 @@ import { Input, Button } from '@/components/ui';
 import { spacing, radius } from '@/constants/ThemeTokens';
 import { appointmentService } from '../services/appointment.service';
 import { doctorService } from '@/features/doctors/services/doctor.service';
+import { DoctorScheduleCalendar } from '../../doctors/components/DoctorScheduleCalendar';
 import type { Doctor } from '@/shared/types';
 
 /**
@@ -52,12 +51,13 @@ export default function BookAppointmentScreen() {
   const [showDoctorPicker, setShowDoctorPicker] = useState(false);
   const [doctors, setDoctors] = useState<Doctor[]>([]);
   const [loadingDoctors, setLoadingDoctors] = useState(false);
-  const [date, setDate] = useState(preselectedSlotDate ?? new Date(Date.now() + MS_PER_DAY));
-  const [showDatePicker, setShowDatePicker] = useState(false);
-  const [showTimePicker, setShowTimePicker] = useState(false);
+  const [date] = useState(preselectedSlotDate ?? new Date(Date.now() + MS_PER_DAY));
   const [reason, setReason] = useState('');
   const [selectedFile, setSelectedFile] = useState<DocumentPicker.DocumentPickerAsset | null>(null);
   const [loading, setLoading] = useState(false);
+  // Calendar-based slot selection (when user picks from DoctorScheduleCalendar, not from params)
+  const [localSlotDate, setLocalSlotDate] = useState<string | null>(null);
+  const [localSlotTime, setLocalSlotTime] = useState<string | null>(null);
 
   // Fetch doctor details and set selectedDoctor when doctorId param is provided
   useEffect(() => {
@@ -91,28 +91,9 @@ export default function BookAppointmentScreen() {
   const handleSelectDoctor = (doctor: Doctor) => {
     setDoctorId(doctor._id);
     setSelectedDoctor(doctor);
+    setLocalSlotDate(null);
+    setLocalSlotTime(null);
     setShowDoctorPicker(false);
-  };
-
-  const onDateChange = (_event: DateTimePickerEvent, selectedDate?: Date) => {
-    setShowDatePicker(false);
-    if (selectedDate) {
-      const updated = new Date(selectedDate);
-      updated.setHours(date.getHours(), date.getMinutes());
-      setDate(updated);
-      if (Platform.OS === 'android') {
-        setTimeout(() => setShowTimePicker(true), 300);
-      }
-    }
-  };
-
-  const onTimeChange = (_event: DateTimePickerEvent, selectedTime?: Date) => {
-    setShowTimePicker(false);
-    if (selectedTime) {
-      const updated = new Date(date);
-      updated.setHours(selectedTime.getHours(), selectedTime.getMinutes());
-      setDate(updated);
-    }
   };
 
   const pickDocument = async () => {
@@ -147,6 +128,8 @@ export default function BookAppointmentScreen() {
     let appointmentISO: string;
     if (preselectedSlotDate) {
       appointmentISO = preselectedSlotDate.toISOString();
+    } else if (localSlotDate && localSlotTime) {
+      appointmentISO = buildSlotDate(localSlotDate, localSlotTime).toISOString();
     } else {
       // Fallback: strip local-timezone offset by constructing from UTC parts
       appointmentISO = new Date(
@@ -191,17 +174,6 @@ export default function BookAppointmentScreen() {
       setLoading(false);
     }
   };
-
-  const formattedDate = date.toLocaleDateString(undefined, {
-    weekday: 'short',
-    year: 'numeric',
-    month: 'long',
-    day: 'numeric',
-  });
-  const formattedTime = date.toLocaleTimeString(undefined, {
-    hour: '2-digit',
-    minute: '2-digit',
-  });
 
   return (
     <KeyboardAvoidingView
@@ -248,44 +220,34 @@ export default function BookAppointmentScreen() {
                   {paramDate} at {paramTime}
                 </Text>
               </View>
+            ) : localSlotDate && localSlotTime ? (
+              <View style={[styles.slotConfirmed, { backgroundColor: colors.successBg, borderColor: colors.success }]}>
+                <Feather name="check-circle" size={16} color={colors.success} style={{ marginRight: 8 }} />
+                <Text style={[styles.slotConfirmedText, { color: colors.success }]}>
+                  {localSlotDate} at {localSlotTime}
+                </Text>
+                <TouchableOpacity
+                  onPress={() => { setLocalSlotDate(null); setLocalSlotTime(null); }}
+                  style={{ marginLeft: 'auto' }}
+                >
+                  <Feather name="edit-2" size={14} color={colors.textTertiary} />
+                </TouchableOpacity>
+              </View>
+            ) : doctorId ? (
+              <DoctorScheduleCalendar
+                doctorId={doctorId}
+                onSlotSelect={(date: string, time: string) => {
+                  setLocalSlotDate(date);
+                  setLocalSlotTime(time);
+                }}
+              />
             ) : (
-              <>
-                <View style={styles.dateRow}>
-                  <TouchableOpacity
-                    style={[styles.dateButton, { flex: 1, backgroundColor: colors.inputBackground, borderColor: colors.inputBorder }]}
-                    onPress={() => setShowDatePicker(true)}
-                    disabled={loading}
-                  >
-                    <Feather name="calendar" size={16} color={colors.textTertiary} />
-                    <Text style={[styles.dateButtonText, { color: colors.text }]}>{formattedDate}</Text>
-                  </TouchableOpacity>
-                  <TouchableOpacity
-                    style={[styles.dateButton, { width: 110, backgroundColor: colors.inputBackground, borderColor: colors.inputBorder }]}
-                    onPress={() => setShowTimePicker(true)}
-                    disabled={loading}
-                  >
-                    <Feather name="clock" size={16} color={colors.textTertiary} />
-                    <Text style={[styles.dateButtonText, { color: colors.text }]}>{formattedTime}</Text>
-                  </TouchableOpacity>
-                </View>
-                {showDatePicker && (
-                  <DateTimePicker
-                    value={date}
-                    mode="date"
-                    display={Platform.OS === 'ios' ? 'inline' : 'default'}
-                    minimumDate={new Date()}
-                    onChange={onDateChange}
-                  />
-                )}
-                {showTimePicker && (
-                  <DateTimePicker
-                    value={date}
-                    mode="time"
-                    display={Platform.OS === 'ios' ? 'spinner' : 'default'}
-                    onChange={onTimeChange}
-                  />
-                )}
-              </>
+              <View style={[styles.slotPlaceholder, { backgroundColor: colors.surfaceTertiary, borderColor: colors.border }]}>
+                <Feather name="info" size={16} color={colors.textTertiary} style={{ marginRight: 8 }} />
+                <Text style={[styles.slotPlaceholderText, { color: colors.textTertiary }]}>
+                  Select a doctor to see available time slots.
+                </Text>
+              </View>
             )}
           </View>
 
@@ -418,22 +380,6 @@ const styles = StyleSheet.create({
   readOnlyText: {
     fontSize: 16,
   },
-  dateRow: {
-    flexDirection: 'row',
-    gap: spacing.sm,
-  },
-  dateButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.xs,
-    borderWidth: 1.5,
-    borderRadius: radius.md,
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.md,
-  },
-  dateButtonText: {
-    fontSize: 14,
-  },
   pickButton: {
     borderWidth: 1.5,
     borderStyle: 'dashed',
@@ -548,5 +494,17 @@ const styles = StyleSheet.create({
   slotConfirmedText: {
     fontSize: 16,
     fontWeight: '500',
+  },
+  slotPlaceholder: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderWidth: 1.5,
+    borderRadius: radius.md,
+    borderStyle: 'dashed',
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.lg,
+  },
+  slotPlaceholderText: {
+    fontSize: 14,
   },
 });

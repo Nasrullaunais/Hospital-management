@@ -24,7 +24,9 @@ export default function AddDoctorScreen() {
   const colorScheme = useColorScheme() ?? 'light';
   const colors = Colors[colorScheme];
 
-  const [userId, setUserId] = useState('');
+  const [name, setName] = useState('');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
   const [specialization, setSpecialization] = useState('');
   const [experienceYears, setExperienceYears] = useState('');
   const [consultationFee, setConsultationFee] = useState('');
@@ -44,7 +46,11 @@ export default function AddDoctorScreen() {
 
   const handleSubmit = async () => {
     const validationErrors: string[] = [];
-    if (!userId.trim()) validationErrors.push('User ID is required.');
+    if (!name.trim() || name.trim().length < 2) validationErrors.push('Name is required (min 2 characters).');
+    if (!email.trim() || !/^\S+@\S+\.\S+$/.test(email.trim()))
+      validationErrors.push('A valid email is required.');
+    if (!password || password.length < 8)
+      validationErrors.push('Password must be at least 8 characters.');
     if (!specialization.trim()) validationErrors.push('Specialization is required.');
     if (!experienceYears.trim() || Number(experienceYears) < 0)
       validationErrors.push('Valid experience years are required (must be 0 or greater).');
@@ -60,7 +66,9 @@ export default function AddDoctorScreen() {
     setSubmitting(true);
     try {
       const formData = new FormData();
-      formData.append('userId', userId.trim());
+      formData.append('name', name.trim());
+      formData.append('email', email.trim());
+      formData.append('password', password);
       formData.append('specialization', specialization.trim());
       formData.append('experienceYears', experienceYears.trim());
       formData.append('consultationFee', consultationFee.trim());
@@ -94,7 +102,7 @@ export default function AddDoctorScreen() {
             Add New Doctor
           </Text>
           <Text style={{ fontSize: 14, color: colors.textSecondary, marginBottom: spacing.lg }}>
-            Link an existing user account to a doctor profile.
+            Create a new doctor account and profile in one step.
           </Text>
 
           {/* Doctor Information Section */}
@@ -121,10 +129,29 @@ export default function AddDoctorScreen() {
             </Text>
 
             <Input
-              label="User ID"
-              placeholder="Paste the user's MongoDB _id"
-              value={userId}
-              onChangeText={setUserId}
+              label="Full Name"
+              placeholder="e.g. Dr. Jane Smith"
+              value={name}
+              onChangeText={setName}
+              autoCapitalize="words"
+            />
+
+            <Input
+              label="Email"
+              placeholder="doctor@hospital.com"
+              value={email}
+              onChangeText={setEmail}
+              keyboardType="email-address"
+              autoCapitalize="none"
+              autoCorrect={false}
+            />
+
+            <Input
+              label="Password"
+              placeholder="Min 8 characters"
+              value={password}
+              onChangeText={setPassword}
+              secureTextEntry
               autoCapitalize="none"
               autoCorrect={false}
             />

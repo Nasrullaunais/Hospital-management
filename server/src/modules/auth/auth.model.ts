@@ -90,6 +90,7 @@ const userSchema = new Schema<IUser>(
 
 // ── Indexes ────────────────────────────────────────────────────────────────────
 userSchema.index({ role: 1 });
+userSchema.index({ email: 1, isActive: 1 }); // Optimise login query: User.findOne({ email, isActive: true })
 
 // ── Pre-save Hook: Hash password ───────────────────────────────────────────────
 userSchema.pre('save', async function () {
