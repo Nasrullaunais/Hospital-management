@@ -123,11 +123,13 @@ const invoiceSchema = new Schema<IInvoice>(
     toJSON: {
       virtuals: true,
       transform: (_doc, ret) => {
-        const idStr = ret._id.toString();
-        ret.id = idStr;
-        ret._id = idStr;
-        delete ret.__v;
-        return ret;
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const r = ret as any;
+        const idStr = r._id.toString();
+        r.id = idStr;
+        r._id = idStr;
+        delete r.__v;
+        return r;
       },
     },
     toObject: { virtuals: true },

@@ -13,12 +13,28 @@ import { linkDispensingsToInvoice } from './invoice.linking.service.js';
 
 // ── Helpers ─────────────────────────────────────────────────────────────────────
 
+/**
+ * Generate next sequential invoice number: INV-YYYY-NNNN.
+ * Uses findOne sorted descending to get the actual highest number for the year,
+ * then increments. Combined with retry in createInvoice this handles
+ * concurrent inserts — a retry re-queries and sees the new highest number.
+ */
 export async function generateInvoiceNumber(): Promise<string> {
   const year = new Date().getFullYear();
-  const count = await Invoice.countDocuments({
-    issuedDate: { $gte: new Date(`${year}-01-01`), $lte: new Date(`${year}-12-31`) },
-  });
-  return `${INVOICE_PREFIX}-${year}-${String(count + 1).padStart(4, '0')}`;
+  const lastInvoice = await Invoice.findOne(
+    { invoiceNumber: { $regex: `^${INVOICE_PREFIX}-${year}-` } },
+    { invoiceNumber: 1 },
+  )
+    .sort({ invoiceNumber: -1 })
+    .lean();
+
+  if (!lastInvoice) {
+    return `${INVOICE_PREFIX}-${year}-0001`;
+  }
+
+  const match = lastInvoice.invoiceNumber.match(/(\d{4})$/);
+  const lastSeq = match ? parseInt(match[1], 10) : 0;
+  return `${INVOICE_PREFIX}-${year}-${String(lastSeq + 1).padStart(4, '0')}`;
 }
 
 export function computeTotal(items: IInvoiceItem[], discount = 0): number {
