@@ -1,69 +1,55 @@
-# Feature: Pharmacy — Member 5
+# Module: Pharmacy & Inventory Management
 
-## Assignment
-**Member 5** owns `client/features/pharmacy/` and `server/src/modules/pharmacy/`.
+**Assigned to:** Member 5 — Phase 5
+
+---
 
 ## Scope
-- Browse medicine catalog (filterable by category)
-- View individual medicine details
-- Admin: add, edit, delete medicines with optional image upload
 
-## Files
+Manage the hospital's medication inventory: add medicines, track stock levels, update prices and quantities, and upload packaging images.
 
-| File | Status | Notes |
-|---|---|---|
-| `services/medicine.service.ts` | ✅ Scaffold | All API calls typed |
-| `screens/MedicineListScreen.tsx` | ✅ Scaffold | Catalog with image, stock, expiry warnings |
-| `screens/MedicineDetailScreen.tsx` | ✅ Scaffold | Detail with admin actions |
-| `components/index.ts` | ✅ Scaffold | Add shared components here |
+---
 
-## Screens to Implement
+## Your Files
 
-| Screen | Route | Auth Required |
-|---|---|---|
-| `MedicineListScreen` | `/(tabs)/pharmacy` | Yes |
-| `MedicineDetailScreen` | `/pharmacy/[id]` | Yes |
+| File | Purpose |
+|------|---------|
+| `medicine.model.ts` | Mongoose Medicine schema — **DONE** |
+| `medicine.controller.ts` | Route handlers — **DONE** |
+| `medicine.routes.ts` | Route definitions — **DONE** |
+| `medicine.validation.ts` | Input validation — **DONE** |
 
-## API Endpoints Consumed
+---
 
-| Method | Endpoint | Auth | Purpose |
-|---|---|---|---|
-| `GET` | `/medicines` | Auth | List medicines (filterable) |
-| `GET` | `/medicines/:id` | Auth | Single medicine |
-| `POST` | `/medicines` | Admin | Add medicine |
-| `PUT` | `/medicines/:id` | Admin | Update medicine |
-| `DELETE` | `/medicines/:id` | Admin | Remove medicine |
+## API Endpoints
 
-## Filters
+| Method | Path | Auth | Description |
+|--------|------|------|-------------|
+| POST | `/api/medicines` | 🔒 Admin | Add medicine + upload packaging image |
+| GET | `/api/medicines` | 🔒 Any | List all medicines (filterable by category) |
+| GET | `/api/medicines/:id` | 🔒 Any | Get medicine details |
+| PUT | `/api/medicines/:id` | 🔒 Admin | Update stock, price, expiry |
+| DELETE | `/api/medicines/:id` | 🔒 Admin | Remove obsolete medicine |
 
-```
-GET /medicines?category=Antibiotic
-```
+---
 
-## Usage
+## Medicine Schema
 
-```tsx
-import { medicineService } from '@/features/pharmacy/services/medicine.service';
-
-// Browse all antibiotics:
-const meds = await medicineService.getMedicines({ category: 'Antibiotic' });
-
-// Admin adds a medicine with image:
-const formData = new FormData();
-formData.append('name', 'Amoxicillin');
-formData.append('category', 'Antibiotic');
-formData.append('price', '4.99');
-formData.append('stockQuantity', '500');
-formData.append('expiryDate', '2027-01-01');
-formData.append('file', { uri, name: 'amox.jpg', type: 'image/jpeg' } as any);
-await medicineService.createMedicine(formData);
+```typescript
+{
+  name: string             // required
+  category: string         // required
+  price: number            // required, min: 0
+  stockQuantity: number    // required, min: 0
+  expiryDate: Date         // required, must be future date
+  packagingImageUrl: string // required, from file upload
+}
 ```
 
-## TODOs
+---
 
-- [ ] Wire `MedicineListScreen` into tab navigator
-- [ ] Wire `MedicineDetailScreen` into `/pharmacy/[id]` dynamic route
-- [ ] Replace text category filter with chip selector
-- [ ] Admin: build "Add Medicine" form screen with `expo-image-picker` for packaging photo
-- [ ] Show expiry warning banner in detail screen (within 30 days)
-- [ ] Add low-stock alert for admin dashboard
+## Notes
+
+- Packaging image is required on creation (`packagingImage` form field).
+- Use `?category=Antibiotic` query param to filter by category.
+- Stock updates should use limited field updates (stockQuantity, price, expiryDate only) to prevent data corruption.
