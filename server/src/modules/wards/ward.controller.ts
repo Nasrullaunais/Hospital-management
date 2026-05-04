@@ -188,7 +188,7 @@ export const updateBeds = async (req: Request, res: Response, next: NextFunction
     const ward = await Ward.findByIdAndUpdate(
       wardId,
       { currentOccupancy, status: newStatus },
-      { returnDocument: 'after', runValidators: true },
+      { returnDocument: 'after' },
     );
     if (!ward) return next(ApiError.notFound('Ward not found'));
 

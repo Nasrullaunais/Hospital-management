@@ -310,7 +310,6 @@ export interface Ward {
   currentOccupancy: number;
   status: WardStatus;
   location: string;
-  phone: string;
   createdAt: string;
   updatedAt: string;
 }

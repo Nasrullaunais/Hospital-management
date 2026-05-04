@@ -18,7 +18,6 @@ export interface CreateWardPayload {
   totalBeds: number;
   currentOccupancy?: number;
   location?: string;
-  phone?: string;
 }
 
 export interface UpdateWardPayload {
@@ -28,7 +27,6 @@ export interface UpdateWardPayload {
   currentOccupancy?: number;
   status?: 'available' | 'full' | 'maintenance';
   location?: string;
-  phone?: string;
 }
 
 export interface UpdateBedsPayload {

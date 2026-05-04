@@ -6,7 +6,6 @@ export interface IWard extends Document {
   _id: mongoose.Types.ObjectId;
   name: string;
   location: string;
-  phone: string;
   type: 'general' | 'private' | 'icu' | 'emergency';
   totalBeds: number;
   currentOccupancy: number;
@@ -29,11 +28,6 @@ const wardSchema = new Schema<IWard>(
       type: String,
       trim: true,
       maxlength: [200, 'Location cannot exceed 200 characters'],
-    },
-    phone: {
-      type: String,
-      trim: true,
-      maxlength: [20, 'Phone cannot exceed 20 characters'],
     },
     type: {
       type: String,

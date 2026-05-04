@@ -125,7 +125,6 @@ export default function WardDetailScreen() {
         </View>
         <Text style={[styles.name, { color: c.text }]}>{ward.name}</Text>
         <Text style={[styles.subtitle, { color: c.textSecondary }]}>{wardLocation}</Text>
-        <Text style={[styles.subtitle, { color: c.textSecondary }]}>{ward.phone || 'No phone'}</Text>
         <View style={styles.roleRow}>
           <View style={[styles.roleBadge, { backgroundColor: c.primaryMuted }]}>
             <Text style={[styles.roleBadgeText, { color: c.primary }]}>

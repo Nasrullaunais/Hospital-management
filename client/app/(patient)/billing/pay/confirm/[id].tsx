@@ -37,6 +37,28 @@ export default function PaymentConfirmationScreen() {
     mimeType: string;
   } | null>(null);
 
+  // Card form state
+  const [cardNumber, setCardNumber] = useState('');
+  const [expiry, setExpiry] = useState('');
+  const [cvv, setCvv] = useState('');
+  const [cardholderName, setCardholderName] = useState('');
+
+  // Card errors state
+  const [cardErrors, setCardErrors] = useState<{
+    cardNumber?: string;
+    expiry?: string;
+    cvv?: string;
+    cardholderName?: string;
+  }>({});
+
+  // Touched state for tracking blur events
+  const [touched, setTouched] = useState({
+    cardNumber: false,
+    expiry: false,
+    cvv: false,
+    cardholderName: false,
+  });
+
   const isMockCard = method === 'mock_card';
   const formatCurrency = (amount: number) =>
     new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(amount);
@@ -86,12 +108,206 @@ export default function PaymentConfirmationScreen() {
     }
   }, []);
 
+  // ========== VALIDATION HELPERS ==========
+
+  const detectCardType = (num: string): string => {
+    const cleanNum = num.replace(/\s/g, '');
+    if (/^4/.test(cleanNum)) return 'Visa';
+    if (/^5[1-5]/.test(cleanNum)) return 'Mastercard';
+    if (/^2[2-7]/.test(cleanNum)) return 'Mastercard';
+    if (/^3[47]/.test(cleanNum)) return 'Amex';
+    if (/^6(?:011|5)/.test(cleanNum)) return 'Discover';
+    return '';
+  };
+
+  const validateCardNumber = (num: string): string | undefined => {
+    const cleanNum = num.replace(/\s/g, '');
+    if (!cleanNum) return 'Card number is required';
+    if (!/^\d{13,19}$/.test(cleanNum)) return 'Card number must be 13-19 digits';
+
+    // Luhn algorithm
+    let sum = 0;
+    let isEven = false;
+    for (let i = cleanNum.length - 1; i >= 0; i--) {
+      let digit = parseInt(cleanNum[i], 10);
+      if (isEven) {
+        digit *= 2;
+        if (digit > 9) digit -= 9;
+      }
+      sum += digit;
+      isEven = !isEven;
+    }
+    if (sum % 10 !== 0) return 'Invalid card number (failed Luhn check)';
+
+    return undefined;
+  };
+
+  const validateExpiry = (exp: string): string | undefined => {
+    if (!exp) return 'Expiry is required';
+    if (!/^\d{2}\/\d{2}$/.test(exp)) return 'Use MM/YY format';
+
+    const month = parseInt(exp.slice(0, 2), 10);
+    const year = parseInt(exp.slice(3, 5), 10);
+
+    if (month < 1 || month > 12) return 'Month must be 01-12';
+
+    const now = new Date();
+    const currentYear = now.getFullYear() % 100;
+    const currentMonth = now.getMonth() + 1;
+
+    // Year must be current year or up to 10 years ahead
+    if (year < currentYear || year > currentYear + 10) return 'Year out of valid range';
+
+    // Check if expired
+    if (year === currentYear && month < currentMonth) return 'Card has expired';
+
+    return undefined;
+  };
+
+  const validateCvv = (cv: string, cardType: string): string | undefined => {
+    if (!cv) return 'CVV is required';
+    const expectedLength = cardType === 'Amex' ? 4 : 3;
+    if (!/^\d+$/.test(cv)) return 'CVV must be digits only';
+    if (cv.length !== expectedLength) {
+      return `CVV must be ${expectedLength} digits`;
+    }
+    return undefined;
+  };
+
+  const validateCardholderName = (name: string): string | undefined => {
+    if (!name || !name.trim()) return 'Cardholder name is required';
+    if (name.trim().length < 2) return 'Name must be at least 2 characters';
+    if (!/^[a-zA-Z\s\-']+$/.test(name)) return 'Name can only contain letters, spaces, hyphens, apostrophes';
+    return undefined;
+  };
+
+  // ========== AUTO-FORMATTING HANDLERS ==========
+
+  const handleCardNumberChange = (text: string) => {
+    // Strip non-digits
+    const cleaned = text.replace(/\D/g, '');
+    // Limit to 16 digits (for formatting)
+    const limited = cleaned.slice(0, 16);
+    // Auto-format with space every 4 digits
+    const formatted = limited.replace(/(\d{4})(?=\d)/g, '$1 ').trim();
+    setCardNumber(formatted);
+    // Clear error when user starts typing
+    if (touched.cardNumber && cardErrors.cardNumber) {
+      setCardErrors((prev) => ({ ...prev, cardNumber: undefined }));
+    }
+  };
+
+  const handleExpiryChange = (text: string) => {
+    // Strip non-digits
+    const cleaned = text.replace(/\D/g, '');
+    // Limit to 4 digits
+    const limited = cleaned.slice(0, 4);
+    // Auto-format as MM/YY
+    let formatted = limited;
+    if (limited.length >= 2) {
+      formatted = limited.slice(0, 2) + '/' + limited.slice(2);
+    }
+    setExpiry(formatted);
+    // Clear error when user starts typing
+    if (touched.expiry && cardErrors.expiry) {
+      setCardErrors((prev) => ({ ...prev, expiry: undefined }));
+    }
+  };
+
+  const handleCvvChange = (text: string) => {
+    // Digits only
+    const cleaned = text.replace(/\D/g, '');
+    // Limit based on card type (Amex=4, others=3)
+    const cardType = detectCardType(cardNumber);
+    const maxLength = cardType === 'Amex' ? 4 : 3;
+    const limited = cleaned.slice(0, maxLength);
+    setCvv(limited);
+    // Clear error when user starts typing
+    if (touched.cvv && cardErrors.cvv) {
+      setCardErrors((prev) => ({ ...prev, cvv: undefined }));
+    }
+  };
+
+  const handleCardholderNameChange = (text: string) => {
+    // Capitalize words
+    const capitalized = text
+      .replace(/[^a-zA-Z\s\-']/g, '')
+      .split(' ')
+      .map((word) => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+      .join(' ');
+    setCardholderName(capitalized);
+    // Clear error when user starts typing
+    if (touched.cardholderName && cardErrors.cardholderName) {
+      setCardErrors((prev) => ({ ...prev, cardholderName: undefined }));
+    }
+  };
+
+  // ========== BLUR HANDLERS ==========
+
+  const handleCardNumberBlur = () => {
+    setTouched((prev) => ({ ...prev, cardNumber: true }));
+    const error = validateCardNumber(cardNumber);
+    if (error) {
+      setCardErrors((prev) => ({ ...prev, cardNumber: error }));
+    }
+  };
+
+  const handleExpiryBlur = () => {
+    setTouched((prev) => ({ ...prev, expiry: true }));
+    const error = validateExpiry(expiry);
+    if (error) {
+      setCardErrors((prev) => ({ ...prev, expiry: error }));
+    }
+  };
+
+  const handleCvvBlur = () => {
+    setTouched((prev) => ({ ...prev, cvv: true }));
+    const cardType = detectCardType(cardNumber);
+    const error = validateCvv(cvv, cardType);
+    if (error) {
+      setCardErrors((prev) => ({ ...prev, cvv: error }));
+    }
+  };
+
+  const handleCardholderNameBlur = () => {
+    setTouched((prev) => ({ ...prev, cardholderName: true }));
+    const error = validateCardholderName(cardholderName);
+    if (error) {
+      setCardErrors((prev) => ({ ...prev, cardholderName: error }));
+    }
+  };
+
+  // ========== SUBMIT HANDLER ==========
+
   const handleSubmit = useCallback(async () => {
     if (!id) return;
 
     if (!isMockCard && !receiptFile) {
       Alert.alert('Receipt Required', 'Please upload a transfer receipt before submitting.');
       return;
+    }
+
+    // Card payment validation
+    if (isMockCard) {
+      const cardType = detectCardType(cardNumber);
+      const errors = {
+        cardNumber: validateCardNumber(cardNumber),
+        expiry: validateExpiry(expiry),
+        cvv: validateCvv(cvv, cardType),
+        cardholderName: validateCardholderName(cardholderName),
+      };
+
+      // Mark all as touched and set errors
+      setTouched({ cardNumber: true, expiry: true, cvv: true, cardholderName: true });
+      setCardErrors(errors);
+
+      // Check if any errors exist
+      const hasErrors = Object.values(errors).some((e) => e !== null);
+      if (hasErrors) {
+        const firstError = errors.cardNumber || errors.expiry || errors.cvv || errors.cardholderName;
+        Alert.alert('Invalid Card Details', firstError || 'Please check your card information.');
+        return;
+      }
     }
 
     setSubmitting(true);
@@ -122,7 +338,7 @@ export default function PaymentConfirmationScreen() {
     } finally {
       setSubmitting(false);
     }
-  }, [id, method, isMockCard, receiptFile, router]);
+  }, [id, method, isMockCard, receiptFile, router, cardNumber, expiry, cvv, cardholderName]);
 
   if (loading) {
     return (
@@ -140,6 +356,16 @@ export default function PaymentConfirmationScreen() {
       </View>
     );
   }
+
+  // Card type detection for UI
+  const cardType = detectCardType(cardNumber);
+
+  // Validity states for visual feedback
+  const isCardNumberValid = touched.cardNumber && !cardErrors.cardNumber && cardNumber.length > 0;
+  const isExpiryValid = touched.expiry && !cardErrors.expiry && expiry.length > 0;
+  const isCvvValid = touched.cvv && !cardErrors.cvv && cvv.length > 0;
+  const isCardholderNameValid =
+    touched.cardholderName && !cardErrors.cardholderName && cardholderName.length > 0;
 
   return (
     <ScrollView
@@ -173,63 +399,145 @@ export default function PaymentConfirmationScreen() {
               Card Details
             </Text>
 
+            {/* Card Number */}
             <View style={styles.cardFieldGroup}>
               <Text style={[styles.fieldLabel, { color: theme.textSecondary }]}>Card Number</Text>
               <View
                 style={[
                   styles.cardField,
-                  { backgroundColor: theme.inputBackground, borderColor: theme.inputBorder },
+                  {
+                    backgroundColor: theme.inputBackground,
+                    borderColor: isCardNumberValid
+                      ? theme.success
+                      : touched.cardNumber && cardErrors.cardNumber
+                      ? theme.inputErrorBorder
+                      : theme.inputBorder,
+                  },
                 ]}
               >
                 <Ionicons name="card-outline" size={20} color={theme.textTertiary} />
                 <TextInput
                   style={[styles.cardFieldInput, { color: theme.inputText }]}
+                  value={cardNumber}
+                  onChangeText={handleCardNumberChange}
+                  onEndEditing={handleCardNumberBlur}
                   placeholder="4242 4242 4242 4242"
                   placeholderTextColor={theme.inputPlaceholder}
                   keyboardType="number-pad"
                   maxLength={19}
                 />
+                {isCardNumberValid && (
+                  <Ionicons
+                    name="checkmark-circle"
+                    size={20}
+                    color={theme.success}
+                    style={styles.validIcon}
+                  />
+                )}
               </View>
+              {/* Card type indicator */}
+              {cardType ? (
+                <Text style={[styles.cardTypeIndicator, { color: theme.textTertiary }]}>
+                  {cardType}
+                </Text>
+              ) : null}
+              {/* Error text */}
+              {touched.cardNumber && cardErrors.cardNumber ? (
+                <Text style={[styles.cardFieldError, { color: theme.error }]}>
+                  {cardErrors.cardNumber}
+                </Text>
+              ) : null}
             </View>
 
+            {/* Expiry and CVV Row */}
             <View style={styles.cardRow}>
+              {/* Expiry */}
               <View style={[styles.cardFieldHalf, { marginRight: spacing.sm }]}>
                 <Text style={[styles.fieldLabel, { color: theme.textSecondary }]}>Expiry</Text>
                 <View
                   style={[
                     styles.cardField,
-                    { backgroundColor: theme.inputBackground, borderColor: theme.inputBorder },
+                    {
+                      backgroundColor: theme.inputBackground,
+                      borderColor: isExpiryValid
+                        ? theme.success
+                        : touched.expiry && cardErrors.expiry
+                        ? theme.inputErrorBorder
+                        : theme.inputBorder,
+                    },
                   ]}
                 >
                   <TextInput
                     style={[styles.cardFieldInput, { color: theme.inputText }]}
+                    value={expiry}
+                    onChangeText={handleExpiryChange}
+                    onEndEditing={handleExpiryBlur}
                     placeholder="MM/YY"
                     placeholderTextColor={theme.inputPlaceholder}
                     keyboardType="number-pad"
                     maxLength={5}
                   />
+                  {isExpiryValid && (
+                    <Ionicons
+                      name="checkmark-circle"
+                      size={20}
+                      color={theme.success}
+                      style={styles.validIcon}
+                    />
+                  )}
                 </View>
+                {touched.expiry && cardErrors.expiry ? (
+                  <Text style={[styles.cardFieldError, { color: theme.error }]}>
+                    {cardErrors.expiry}
+                  </Text>
+                ) : null}
               </View>
+
+              {/* CVV */}
               <View style={[styles.cardFieldHalf, { marginLeft: spacing.sm }]}>
                 <Text style={[styles.fieldLabel, { color: theme.textSecondary }]}>CVV</Text>
                 <View
                   style={[
                     styles.cardField,
-                    { backgroundColor: theme.inputBackground, borderColor: theme.inputBorder },
+                    {
+                      backgroundColor: theme.inputBackground,
+                      borderColor: isCvvValid
+                        ? theme.success
+                        : touched.cvv && cardErrors.cvv
+                        ? theme.inputErrorBorder
+                        : theme.inputBorder,
+                    },
                   ]}
                 >
                   <TextInput
                     style={[styles.cardFieldInput, { color: theme.inputText }]}
-                    placeholder="123"
+                    value={cvv}
+                    onChangeText={handleCvvChange}
+                    onEndEditing={handleCvvBlur}
+                    placeholder={cardType === 'Amex' ? '1234' : '123'}
                     placeholderTextColor={theme.inputPlaceholder}
                     keyboardType="number-pad"
-                    maxLength={4}
+                    maxLength={cardType === 'Amex' ? 4 : 3}
                     secureTextEntry
                   />
+                  {isCvvValid && (
+                    <Ionicons
+                      name="checkmark-circle"
+                      size={20}
+                      color={theme.success}
+                      style={styles.validIcon}
+                    />
+                  )}
                 </View>
+                {touched.cvv && cardErrors.cvv ? (
+                  <Text style={[styles.cardFieldError, { color: theme.error }]}>
+                    {cardErrors.cvv}
+                  </Text>
+                ) : null}
               </View>
             </View>
 
+            {/* Cardholder Name */}
             <View style={styles.cardFieldGroup}>
               <Text style={[styles.fieldLabel, { color: theme.textSecondary }]}>
                 Cardholder Name
@@ -237,17 +545,40 @@ export default function PaymentConfirmationScreen() {
               <View
                 style={[
                   styles.cardField,
-                  { backgroundColor: theme.inputBackground, borderColor: theme.inputBorder },
+                  {
+                    backgroundColor: theme.inputBackground,
+                    borderColor: isCardholderNameValid
+                      ? theme.success
+                      : touched.cardholderName && cardErrors.cardholderName
+                      ? theme.inputErrorBorder
+                      : theme.inputBorder,
+                  },
                 ]}
               >
                 <Ionicons name="person-outline" size={20} color={theme.textTertiary} />
                 <TextInput
                   style={[styles.cardFieldInput, { color: theme.inputText }]}
+                  value={cardholderName}
+                  onChangeText={handleCardholderNameChange}
+                  onEndEditing={handleCardholderNameBlur}
                   placeholder="John Doe"
                   placeholderTextColor={theme.inputPlaceholder}
                   autoCapitalize="words"
                 />
+                {isCardholderNameValid && (
+                  <Ionicons
+                    name="checkmark-circle"
+                    size={20}
+                    color={theme.success}
+                    style={styles.validIcon}
+                  />
+                )}
               </View>
+              {touched.cardholderName && cardErrors.cardholderName ? (
+                <Text style={[styles.cardFieldError, { color: theme.error }]}>
+                  {cardErrors.cardholderName}
+                </Text>
+              ) : null}
             </View>
           </View>
 
@@ -549,5 +880,19 @@ const styles = StyleSheet.create({
   errorText: {
     fontSize: 16,
     marginTop: spacing.sm,
+  },
+  // New styles for card validation
+  cardFieldError: {
+    fontSize: 11,
+    marginTop: spacing.xs,
+    paddingLeft: spacing.xs,
+  },
+  cardTypeIndicator: {
+    fontSize: 11,
+    marginTop: spacing.xs,
+    textTransform: 'uppercase',
+  },
+  validIcon: {
+    marginLeft: spacing.xs,
   },
 });

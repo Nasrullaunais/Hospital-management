@@ -25,7 +25,6 @@ export default function AddWardScreen() {
 
   const [name, setName] = useState('');
   const [location, setLocation] = useState('');
-  const [phone, setPhone] = useState('');
   const [type, setType] = useState<typeof WARD_TYPES[number]>('general');
   const [totalBeds, setTotalBeds] = useState('');
   const [currentOccupancy, setCurrentOccupancy] = useState('0');
@@ -59,7 +58,6 @@ export default function AddWardScreen() {
         totalBeds: Number(totalBeds),
         currentOccupancy: Number(currentOccupancy) || 0,
         location: location.trim() || undefined,
-        phone: phone.trim() || undefined,
       });
       Alert.alert('Success', 'Ward created successfully.', [
         { text: 'OK', onPress: () => router.back() },
@@ -179,14 +177,6 @@ export default function AddWardScreen() {
               placeholder="e.g. Building A, 2nd Floor"
               value={location}
               onChangeText={setLocation}
-            />
-
-            <Input
-              label="Phone"
-              placeholder="e.g. +1-555-0123"
-              value={phone}
-              onChangeText={setPhone}
-              keyboardType="phone-pad"
             />
           </View>
 
